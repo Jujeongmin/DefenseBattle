@@ -1,21 +1,25 @@
-# Structure — basic-vite-react
+# Structure — RandomDefense
 
 ## `src/main.tsx`
-
-Entry point. Mounts `<App />` into `#root` via `createRoot`, wrapped in `StrictMode`. Imports `index.css`.
+Entry point. Mounts `<App />` into `#root` via `createRoot`, wrapped in `StrictMode`.
 
 ## `src/App.tsx`
+Root game component. Contains:
+- `reducer` — all game state management via `useReducer`
+- `processTick()` — game loop logic (spawning, movement, combat, effects)
+- JSX rendering — board, cells, towers, enemies, projectiles, HUD, overlays
 
-Root component. Renders a single counter button styled with Tailwind utility classes.
+## `src/types.ts`
+TypeScript type definitions for Tower, Enemy, Projectile, GameState, and actions.
+
+## `src/constants.ts`
+Game constants: grid size, path waypoints, tower definitions with stats, wave/scoring parameters.
+
+## `src/gameLogic.ts`
+Pure utility functions: grid building, enemy position calculation, target finding, path distance estimation.
 
 ## `src/App.css`
-
-Component-scoped styles for `App` (root layout: max-width, centered, padded).
+Full game styling: board layout, cell backgrounds, tower sprites, enemy bodies, projectiles, HUD, tooltips, overlays.
 
 ## `src/index.css`
-
-Global stylesheet — Tailwind `base`, `components`, `utilities` directives only.
-
-## `src/assets.json`
-
-Asset manifest. Empty (`{ "images": {} }`) in the baseline template.
+Tailwind directives + global html/body reset.

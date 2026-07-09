@@ -1,19 +1,22 @@
-# Context — basic-vite-react
+# Context — RandomDefense
 
 ## Project Overview
 
-Minimal React + TypeScript scaffold built with Vite and Tailwind CSS. `App.tsx` renders a single counter button wired to `useState`; `main.tsx` mounts it with `createRoot` under `StrictMode`. No 3D, no game engine, no networking — this is the baseline that every other template in the repo is derived from.
+RandomDefense is a tower defense game built with React + TypeScript + Vite. Players place towers along a winding path to stop waves of enemies. The twist: when you place a tower, you get a **random type** — adding strategy and unpredictability.
 
 ## Tech Stack
 
-_Exact versions are in `package.json`._
-
-- **Framework**: React, React DOM
+- **Framework**: React 18, React DOM
 - **Build / Lang**: Vite, TypeScript
-- **Styling**: Tailwind CSS, PostCSS (autoprefixer)
-- **Icons**: `lucide-react`
-- **Multiplayer (unwired)**: `@agent8/gameserver`
+- **Styling**: Tailwind CSS + custom CSS
+- **State**: useReducer for game state, requestAnimationFrame for game loop
 
-## Critical Memory
+## Game Features
 
-No template-specific runtime invariants. Standard React + Vite conventions apply.
+- 5 random tower types (Arrow, Cannon, Ice, Lightning, Fire) with unique abilities
+- Tower upgrade system (click existing tower)
+- Tower selling (right-click)
+- 15 waves of increasing difficulty
+- Splash damage, slow effects, and damage-over-time (burn)
+- Real-time projectile animation
+- HUD with gold, lives, wave counter

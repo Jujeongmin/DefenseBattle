@@ -1,13 +1,24 @@
-# Status — basic-vite-react
+# Status — RandomDefense
 
 ## Implemented
+- Game board with 16×9 grid and winding path
+- 5 tower types with random placement
+- Tower upgrade (click tower) and sell (right-click)
+- Enemy spawning, movement along path, health system
+- Projectile animation with homing behavior
+- Splash damage (Cannon), slow effect (Ice), burn DOT (Fire)
+- 15 waves with scaling difficulty
+- HUD: gold, lives, wave counter
+- Range indicator on tower hover
+- Tower info tooltip
+- Victory/Game Over screens with restart
 
-- React 18 root mount with `StrictMode` (`main.tsx`)
-- Counter demo component with `useState` (`App.tsx`)
-- Tailwind CSS pipeline (directives in `index.css`, PostCSS + autoprefixer)
-- Empty asset manifest (`src/assets.json`)
+## Active Work
+- Initial implementation complete
 
-## Installed but not wired
-
-- `@agent8/gameserver` — no networking / session code
-- `lucide-react` — no icons imported
+## Next Steps
+- Sound effects / music
+- More tower types
+- Multiple paths / random path generation
+- Mobile touch support
+- Leaderboard / scoring
