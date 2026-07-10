@@ -13,12 +13,12 @@
       <!-- 메인 화면 -->
       <div id="main-menu">
         <div class="menu-inner">
-          <h1 class="game-title">랜덤 디펜스</h1>
+          <h1 class="game-title" id="game-title">랜덤 디펜스</h1>
           <div class="menu-crystals"><span class="gem"></span> <span id="menu-crystal-amount">0</span></div>
           <button id="menu-start" class="menu-btn primary">게임 시작</button>
           <button id="menu-shop" class="menu-btn">🛒 상점</button>
           <button id="menu-lab" class="menu-btn">🔬 연구소</button>
-          <div class="menu-record">최고 기록: <span id="menu-best">0</span> 웨이브</div>
+          <div class="menu-record"><span id="menu-record-pre">최고 기록:</span> <span id="menu-best">0</span> <span id="menu-record-suf">웨이브</span></div>
         </div>
       </div>
 
@@ -64,7 +64,7 @@
             <button id="btn-sell-panel" class="side-btn">🛒<br />판매</button>
             <div class="summon-wrap">
               <button id="btn-summon" class="summon-btn">
-                <span class="summon-title">소환</span>
+                <span class="summon-title" id="summon-title">소환</span>
                 <span class="summon-cost"><span class="coin"></span>20</span>
               </button>
               <button id="btn-prob-info-game" class="prob-info-link">확률 정보 ⓘ</button>

@@ -8,7 +8,27 @@ import { UI } from './ui';
 import { Menu } from './menu';
 import { preloadAll } from './assets';
 import { audio } from './audio';
+import { t, getLang } from './i18n';
 
+// 정적 HTML(메인 화면/하단 조작부)의 문자열을 현재 언어로 적용
+function applyStaticI18n(): void {
+  document.documentElement.lang = getLang();
+  document.title = t('app.title');
+  const set = (id: string, text: string) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  const html = (id: string, markup: string) => { const el = document.getElementById(id); if (el) el.innerHTML = markup; };
+  set('game-title', t('app.title'));
+  set('menu-start', t('menu.start'));
+  set('menu-shop', t('menu.shop'));
+  set('menu-lab', t('menu.lab'));
+  set('menu-record-pre', t('menu.recordPre'));
+  set('menu-record-suf', t('menu.recordSuf'));
+  set('summon-title', t('hud.summon'));
+  set('btn-prob-info-game', t('hud.probInfo'));
+  html('btn-sell-panel', `🛒<br />${t('hud.sell')}`);
+  html('btn-menu', `🏠<br />${t('hud.home')}`);
+}
+
+applyStaticI18n();
 preloadAll();
 audio.installUnlock();
 

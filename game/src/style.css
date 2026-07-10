@@ -663,6 +663,19 @@ html, body {
   padding: 10px 2px;
 }
 .settings-label { flex: 0 0 88px; font-size: 14px; font-weight: 700; }
+.lang-btns { flex: 1; display: flex; gap: 6px; }
+.lang-btns button {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: #3a3f52;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.lang-btns button.active { background: var(--gold); color: #3a2f00; }
 .vol-slider {
   flex: 1;
   height: 6px;

@@ -4,12 +4,13 @@
 // ============================================================
 import {
   ECONOMY, WAVE, GRADE_BY_KEY, GRADE_INDEX, GRADE_RANGE,
-  DMG_MULT, RACES, JOB_KR, FULL_RANGE_FROM_INDEX, RESEARCH_PER,
+  DMG_MULT, RACES, FULL_RANGE_FROM_INDEX, RESEARCH_PER,
   rollGrade, rollJob,
 } from './config';
 import {
   meta, researchLevel, addDailyProgress, setDailyBestWave, unlockAchievement, collectionBonus,
 } from './meta';
+import { t, jobName, gradeName } from './i18n';
 import type {
   Job, Race, GradeKey, Unit, Mob, Zone, Effect, LogEntry, Banner, Stack, JobStack,
   WaveState, GameOverData, AchievementDef, DragState,
@@ -215,11 +216,11 @@ export class Game {
     this.placeInZone(unit, zone); // 구역 안 랜덤 배치 (겹침 허용)
 
     const rate = grade.summonRate;
-    const text = `${rate}% ${JOB_KR[job]} ${grade.kr}등급 소환`;
+    const jn = jobName(job), gn = gradeName(gradeKey);
     if (gIdx >= GRADE_INDEX['mythic']) {
-      this.mythicBanner = { text: `✨ ${JOB_KR[job]} ${grade.kr} 등급 소환! ✨`, ttl: 4 };
+      this.mythicBanner = { text: t('banner.mythic', { job: jn, grade: gn }), ttl: 4 };
     } else {
-      this.pushLog(text);
+      this.pushLog(t('log.summon', { rate, job: jn, grade: gn }));
     }
 
     if (gradeKey === 'legendary') this.tryAchieve('firstLegendary');
@@ -383,7 +384,7 @@ export class Game {
     this.updateCombat(dt);
     this.updateEffects(dt);
 
-    if (this.mobs.length >= WAVE.gameOverMobCount) this.gameOver('몹이 100마리를 넘었습니다');
+    if (this.mobs.length >= WAVE.gameOverMobCount) this.gameOver(t('over.mobLimit'));
   }
 
   updateWaveState(dt: number): void {
@@ -418,7 +419,7 @@ export class Game {
         this.waveState = 'rest';
         this.restTimer = WAVE.restBetween;
       } else if (this.bossTimer <= 0) {
-        this.gameOver('보스 제한시간 초과');
+        this.gameOver(t('over.bossTimeout'));
       }
     }
   }
@@ -529,7 +530,7 @@ export class Game {
     this.over = true;
     this.cleared = true;
     this.tryAchieve('clear50');
-    this.finish('50 웨이브 클리어!');
+    this.finish(t('over.clear50'));
   }
   finish(reason: string): void {
     this.emit('gameover', { wave: this.wave, reason, cleared: this.cleared });

@@ -2,7 +2,7 @@
 //  DOM UI - 상단바/소환/강화/판매/연구소/퀘스트/드래그
 // ============================================================
 import {
-  JOBS, JOB_KR, RACE_KR, GRADES, JOB_SPRITE, DMG_MULT, ECONOMY, WAVE, crystalReward,
+  JOBS, GRADES, JOB_SPRITE, DMG_MULT, ECONOMY, WAVE, crystalReward,
 } from './config';
 import { MAP, Game } from './engine';
 import { mobPortraitSrc } from './assets';
@@ -10,6 +10,7 @@ import { meta, saveMeta } from './meta';
 import { getPlatform } from './platform';
 import { audio } from './audio';
 import { GRADE_INDEX } from './config';
+import { t, jobName, gradeName, raceName } from './i18n';
 import { openProbabilityPanel } from './probabilityPanel';
 import { openSettingsPanel } from './settingsPanel';
 import type { Job, Race, GradeKey, GameOverData } from './types';
@@ -41,7 +42,7 @@ export class UI {
     this.bind();
     game.on('roster', () => this.renderStacks());
     game.on('gameover', (d) => this.showGameOver(d));
-    game.on('achievement', (a) => this.toast(`업적 달성: ${a.kr} (+${a.reward}💎)`));
+    game.on('achievement', (a) => this.toast(t('toast.achievement', { name: t(`a.${a.key}`), n: a.reward })));
     // 사운드
     game.on('shoot', () => audio.attack());
     game.on('kill', (boss) => audio.kill(boss));
@@ -127,8 +128,8 @@ export class UI {
   // ---------- 매 프레임 갱신 ----------
   update(): void {
     const g = this.game;
-    $('wave-label').textContent = `Wave ${Math.max(1, g.wave)}`;
-    $('mob-race').textContent = RACE_KR[g.currentRace];
+    $('wave-label').textContent = t('hud.wave', { n: Math.max(1, g.wave) });
+    $('mob-race').textContent = raceName(g.currentRace);
     const portrait = $('mob-portrait');
     if (portrait.dataset.race !== g.currentRace) {
       portrait.dataset.race = g.currentRace;
@@ -199,8 +200,8 @@ export class UI {
         <div class="count">${count}</div>
         <div class="dmg-pct" style="color:${pctColor(p)}">${p}%</div>
         <div class="frame-sprite" style="background-image:url(sprites/${JOB_SPRITE[job]}_${common.spriteIndex}.png)"></div>
-        <div class="name">${JOB_KR[job]} Lv.${level}</div>
-        <button class="up-btn" data-upgrade-cost="${cost}" data-unit-count="${count}">강화 <span class="coin"></span>${cost}</button>`;
+        <div class="name">${jobName(job)} Lv.${level}</div>
+        <button class="up-btn" data-upgrade-cost="${cost}" data-unit-count="${count}">${t('hud.upgrade')} <span class="coin"></span>${cost}</button>`;
       const btn = div.querySelector('.up-btn') as HTMLButtonElement;
       btn.disabled = count === 0 || this.game.gold < cost;
       btn.onclick = () => { if (this.game.upgrade(job)) audio.button(); };
@@ -229,7 +230,7 @@ export class UI {
         const sellQty = qty === Infinity ? cnt : Math.min(qty, cnt);
         const gold = sellQty * gr.sellGold;
         return `<div class="grade-card${cnt === 0 ? ' empty' : ''}" data-grade="${gr.key}">
-          <div class="gc-name" style="color:${gr.color}">${gr.kr}</div>
+          <div class="gc-name" style="color:${gr.color}">${gradeName(gr.key)}</div>
           <div class="frame-sprite" style="background-image:url(sprites/${JOB_SPRITE[job]}_${gr.spriteIndex}.png)"></div>
           <div class="gc-count">${cnt}</div>
           <div class="gc-gold">+${gold}</div>
@@ -238,18 +239,18 @@ export class UI {
       panel.innerHTML = `
         <div class="dialog sell-dialog${firstOpen ? ' anim' : ''}">
           <button class="close-x">✕</button>
-          <div class="sell-hint">한 번에 판매할 개수를 선택할 수 있어요</div>
+          <div class="sell-hint">${t('sell.hint')}</div>
           <div class="sell-head">
-            <h2>영웅 판매</h2>
+            <h2>${t('sell.title')}</h2>
             <div class="qty-row">
               <button data-qty="1" class="${qty === 1 ? 'active' : ''}">1</button>
               <button data-qty="10" class="${qty === 10 ? 'active' : ''}">10</button>
-              <button data-qty="all" class="${qty === Infinity ? 'active' : ''}">ALL</button>
+              <button data-qty="all" class="${qty === Infinity ? 'active' : ''}">${t('sell.all')}</button>
             </div>
           </div>
           <div class="grade-row">${cards}</div>
           <div class="job-tabs">
-            ${JOBS.map((j) => `<button data-job="${j}" class="${j === job ? 'active' : ''}">${JOB_KR[j]}</button>`).join('')}
+            ${JOBS.map((j) => `<button data-job="${j}" class="${j === job ? 'active' : ''}">${jobName(j)}</button>`).join('')}
           </div>
         </div>`;
       firstOpen = false; // 이후 재렌더(탭/수량 전환)에는 애니메이션 미적용
@@ -280,13 +281,13 @@ export class UI {
     this.game.paused = true; // 결정하는 동안 웨이브가 계속 진행되지 않도록 일시정지
     panel.innerHTML = `
       <div class="dialog">
-        <h2>메인으로 나갈까요?</h2>
+        <h2>${t('exit.title')}</h2>
         <div class="d" style="color:#bbb;text-align:center">
-          지금 나가면 이번 판(Wave ${Math.max(1, this.game.wave)}) 진행 상황이<br>저장되지 않고 사라집니다.
+          ${t('exit.body', { n: Math.max(1, this.game.wave) })}
         </div>
         <div class="confirm-btns">
-          <button class="cancel">계속하기</button>
-          <button class="danger">나가기</button>
+          <button class="cancel">${t('common.continue')}</button>
+          <button class="danger">${t('common.leave')}</button>
         </div>
       </div>`;
     const close = () => {
@@ -310,12 +311,12 @@ export class UI {
     saveMeta();
     panel.innerHTML = `
       <div class="dialog big-result">
-        <h2>${d.cleared ? '🎉 클리어!' : '게임 오버'}</h2>
+        <h2>${d.cleared ? t('over.clear') : t('over.gameover')}</h2>
         <div class="d" style="color:#bbb">${d.reason}</div>
-        <div class="wave-big">Wave ${d.wave}</div>
-        <div class="reward">획득 크리스탈 <span class="crystal"><span class="gem"></span> ${reward}</span></div>
-        <div class="d" style="color:#bbb">보유 <span class="gem"></span> ${meta.crystals}</div>
-        <button class="close" id="btn-restart">메인으로</button>
+        <div class="wave-big">${t('hud.wave', { n: d.wave })}</div>
+        <div class="reward">${t('over.reward')} <span class="crystal"><span class="gem"></span> ${reward}</span></div>
+        <div class="d" style="color:#bbb">${t('over.owned')} <span class="gem"></span> ${meta.crystals}</div>
+        <button class="close" id="btn-restart">${t('over.toMain')}</button>
       </div>`;
     $('btn-restart').onclick = () => this.onExit();
     panel.classList.remove('hidden');

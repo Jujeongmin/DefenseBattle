@@ -4,7 +4,7 @@
 import {
   DAILY_QUESTS, ACHIEVEMENTS,
   CRYSTAL_PACKAGES, AD_REMOVE_VX,
-  GACHA, GRADES, GRADE_BY_KEY, GRADE_INDEX, JOBS, JOB_KR, JOB_SPRITE, starUpCost,
+  GACHA, GRADES, GRADE_BY_KEY, GRADE_INDEX, JOBS, JOB_SPRITE, starUpCost,
   rollJob, rollGachaGrade, rollGachaMythicPlus, rollGachaLegendaryPlus,
 } from './config';
 import {
@@ -12,6 +12,7 @@ import {
 } from './meta';
 import { getPlatform } from './platform';
 import { audio } from './audio';
+import { t, jobName, gradeName } from './i18n';
 import { openProbabilityPanel } from './probabilityPanel';
 import type { AchievementDef, Job, GradeKey } from './types';
 
@@ -48,13 +49,13 @@ export class Menu {
       const body = tab === 'collection' ? this.collectionHtml() : this.questHtml();
       panel.innerHTML = `
         <div class="dialog drag-scroll">
-          <h2>연구소 <span class="crystal"><span class="gem"></span> ${meta.crystals}</span></h2>
+          <h2>${t('lab.title')} <span class="crystal"><span class="gem"></span> ${meta.crystals}</span></h2>
           <div class="tab-row">
-            <button data-tab="collection" class="${tab === 'collection' ? 'active' : ''}">유닛 강화</button>
-            <button data-tab="quest" class="${tab === 'quest' ? 'active' : ''}">퀘스트</button>
+            <button data-tab="collection" class="${tab === 'collection' ? 'active' : ''}">${t('lab.tabUnits')}</button>
+            <button data-tab="quest" class="${tab === 'quest' ? 'active' : ''}">${t('lab.tabQuest')}</button>
           </div>
           ${body}
-          <button class="close">닫기</button>
+          <button class="close">${t('common.close')}</button>
         </div>`;
       panel.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => {
         b.onclick = () => { tab = b.dataset.tab as typeof tab; render(); };
@@ -73,9 +74,9 @@ export class Menu {
 
   // 유닛 컬렉션 탭: 직업×등급 18종 스타업
   private collectionHtml(): string {
-    let html = '<div class="d" style="color:#bbb;font-size:12px;margin-bottom:6px">뽑은 유닛을 소모해 스타업하면 해당 유닛이 게임 내에서 영구 강화됩니다.</div>';
+    let html = `<div class="d" style="color:#bbb;font-size:12px;margin-bottom:6px">${t('lab.hint')}</div>`;
     for (const job of JOBS) {
-      html += `<div style="font-weight:700;margin:8px 0 4px">${JOB_KR[job]}</div>`;
+      html += `<div style="font-weight:700;margin:8px 0 4px">${jobName(job)}</div>`;
       for (const grade of GRADES) {
         const lv = collectionLevelOf(job, grade.key);
         const have = collectionCount(job, grade.key);
@@ -87,11 +88,11 @@ export class Menu {
           <div class="info" style="display:flex;align-items:center;gap:8px">
             <div class="frame-sprite" style="width:34px;height:34px;flex:0 0 34px;background-image:url(sprites/${JOB_SPRITE[job]}_${grade.spriteIndex}.png)"></div>
             <div>
-              <div class="t" style="color:${grade.color}">${grade.kr} <span style="color:#ffd54f">★${lv}</span> <span style="color:#7ee87e;font-size:11px">공격 +${bonusNow}%</span></div>
-              <div class="d">보유 ${have}${maxed ? '' : ` / ${need}`}</div>
+              <div class="t" style="color:${grade.color}">${gradeName(grade.key)} <span style="color:#ffd54f">★${lv}</span> <span style="color:#7ee87e;font-size:11px">${t('lab.atkBonus', { n: bonusNow })}</span></div>
+              <div class="d">${maxed ? t('lab.ownedMax', { have }) : t('lab.owned', { have, need })}</div>
             </div>
           </div>
-          <button data-star="${job}_${grade.key}" ${canUp ? '' : 'disabled'}>${maxed ? 'MAX' : '스타업'}</button>
+          <button data-star="${job}_${grade.key}" ${canUp ? '' : 'disabled'}>${maxed ? t('common.max') : t('lab.starUp')}</button>
         </div>`;
       }
     }
@@ -122,17 +123,17 @@ export class Menu {
       const done = prog >= q.goal;
       const claimed = meta.daily.claimed[q.key];
       return `<div class="row">
-        <div class="info"><div class="t">${q.kr}</div><div class="d">${prog}/${q.goal}</div></div>
-        <button data-daily="${q.key}" ${!done || claimed ? 'disabled' : ''}>${claimed ? '완료' : done ? `<span class="gem"></span> ${q.reward}` : '진행중'}</button></div>`;
+        <div class="info"><div class="t">${t(`q.${q.key}`)}</div><div class="d">${prog}/${q.goal}</div></div>
+        <button data-daily="${q.key}" ${!done || claimed ? 'disabled' : ''}>${claimed ? t('quest.done') : done ? `<span class="gem"></span> ${q.reward}` : t('quest.inProgress')}</button></div>`;
     }).join('');
     const ach = ACHIEVEMENTS.map((a: AchievementDef) => {
       const done = meta.achievements[a.key];
       return `<div class="row">
-        <div class="info"><div class="t">${a.kr}</div><div class="d">보상 <span class="gem"></span> ${a.reward}</div></div>
-        <button disabled>${done ? '달성 ✓' : '미달성'}</button></div>`;
+        <div class="info"><div class="t">${t(`a.${a.key}`)}</div><div class="d">${t('quest.rewardPre')} <span class="gem"></span> ${a.reward}</div></div>
+        <button disabled>${done ? t('quest.unlocked') : t('quest.locked')}</button></div>`;
     }).join('');
-    return `<div style="font-weight:700;margin:4px 0 6px">일일 퀘스트</div>${daily}
-            <div style="font-weight:700;margin:10px 0 6px">업적</div>${ach}`;
+    return `<div style="font-weight:700;margin:4px 0 6px">${t('quest.daily')}</div>${daily}
+            <div style="font-weight:700;margin:10px 0 6px">${t('quest.achievements')}</div>${ach}`;
   }
 
   private bindQuestButtons(panel: HTMLElement, render: () => void): void {
@@ -194,14 +195,14 @@ export class Menu {
       const pkgs = CRYSTAL_PACKAGES.map((p, i) => `
         <div class="row">
           <div class="info">
-            <div class="t"><span class="gem"></span> 보석 ${p.crystals.toLocaleString()}개${p.bonus ? ` <span style="color:#7ee87e">+${p.bonus}%</span>` : ''}</div>
+            <div class="t"><span class="gem"></span> ${t('shop.gemPack', { n: p.crystals.toLocaleString() })}${p.bonus ? ` <span style="color:#7ee87e">+${p.bonus}%</span>` : ''}</div>
             <div class="d">VX ${p.vx}</div>
           </div>
           <button data-pkg="${i}" ${vx < p.vx ? 'disabled' : ''}>VX ${p.vx}</button>
         </div>`).join('');
       panel.innerHTML = `
         <div class="dialog">
-          <h2>상점</h2>
+          <h2>${t('shop.title')}</h2>
           <div class="shop-balance">
             <span class="crystal"><span class="gem"></span> ${meta.crystals.toLocaleString()}</span>
             <span class="vx-badge">VX ${vx.toLocaleString()}</span>
@@ -210,34 +211,34 @@ export class Menu {
             <div class="gacha-hero-top">
               <div class="chest big"></div>
               <div class="gacha-hero-info">
-                <div class="gh-title">유닛 가챠</div>
-                <div class="gh-desc">랜덤 직업×등급 유닛 획득!<br>연구소에서 스타업 → 영구 강화</div>
+                <div class="gh-title">${t('shop.gachaTitle')}</div>
+                <div class="gh-desc">${t('shop.gachaDesc')}</div>
               </div>
             </div>
             <div class="gacha-hero-btns">
               <button id="gacha-1" ${meta.crystals < GACHA.singleCost ? 'disabled' : ''}>
-                1회 뽑기<br><span class="gh-cost"><span class="gem"></span> ${GACHA.singleCost}</span>
+                ${t('shop.pull1')}<br><span class="gh-cost"><span class="gem"></span> ${GACHA.singleCost}</span>
               </button>
               <button id="gacha-10" class="best" ${meta.crystals < GACHA.tenCost ? 'disabled' : ''}>
-                10연 뽑기 <span class="gh-sale">10%↓</span><br><span class="gh-cost"><span class="gem"></span> ${GACHA.tenCost}</span>
+                ${t('shop.pull10')} <span class="gh-sale">10%↓</span><br><span class="gh-cost"><span class="gem"></span> ${GACHA.tenCost}</span>
               </button>
             </div>
-            <button id="btn-prob-info-shop" class="prob-info-link">확률 정보 ⓘ</button>
+            <button id="btn-prob-info-shop" class="prob-info-link">${t('hud.probInfo')}</button>
           </div>
-          <div class="shop-section">보석 구매</div>
+          <div class="shop-section">${t('shop.buyGems')}</div>
           ${pkgs}
-          <div class="shop-section">패키지</div>
+          <div class="shop-section">${t('shop.packages')}</div>
           <div class="row">
             <div class="info">
-              <div class="t">광고 제거 패키지</div>
-              <div class="d">광고 제거 + 3배속 해금 · VX ${AD_REMOVE_VX}</div>
+              <div class="t">${t('shop.adTitle')}</div>
+              <div class="d">${t('shop.adDesc', { n: AD_REMOVE_VX })}</div>
             </div>
-            <button id="buy-adremove" ${owned || vx < AD_REMOVE_VX ? 'disabled' : ''}>${owned ? '보유 중 ✓' : `VX ${AD_REMOVE_VX}`}</button>
+            <button id="buy-adremove" ${owned || vx < AD_REMOVE_VX ? 'disabled' : ''}>${owned ? t('shop.owned') : `VX ${AD_REMOVE_VX}`}</button>
           </div>
           <div class="d" style="color:#888;font-size:12px;margin-top:8px">
-            * VX 충전(실제 결제)은 Verse8 연동 시 활성화됩니다. 현재는 데모 잔액입니다.
+            ${t('shop.vxNote')}
           </div>
-          <button class="close">닫기</button>
+          <button class="close">${t('common.close')}</button>
         </div>`;
 
       // 보석 패키지 구매 (VX 차감 → 크리스탈 지급)
@@ -328,15 +329,15 @@ export class Menu {
         const shiny = GRADE_INDEX[r.grade] >= GRADE_INDEX['legendary'] ? ' shiny' : '';
         return `<div class="gacha-card${shiny}" style="border-color:${g.color}">
           <div class="frame-sprite" style="background-image:url(sprites/${JOB_SPRITE[r.job]}_${g.spriteIndex}.png)"></div>
-          <div class="gc-grade" style="color:${g.color}">${g.kr}</div>
-          <div class="gc-job">${JOB_KR[r.job]}</div>
+          <div class="gc-grade" style="color:${g.color}">${gradeName(r.grade)}</div>
+          <div class="gc-job">${jobName(r.job)}</div>
         </div>`;
       }).join('');
     panel.innerHTML = `
       <div class="dialog">
-        <h2><span class="chest"></span> 유닛 획득!</h2>
+        <h2><span class="chest"></span> ${t('gacha.got')}</h2>
         <div class="gacha-grid">${cards}</div>
-        <button class="close">확인</button>
+        <button class="close">${t('common.confirm')}</button>
       </div>`;
     (panel.querySelector('.close') as HTMLElement).onclick = () => panel.classList.add('hidden');
     panel.classList.remove('hidden');
