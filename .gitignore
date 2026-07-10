@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Claude Code local tooling (launch.json 등, 로컬 전용)
+.claude
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
