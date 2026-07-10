@@ -35,7 +35,8 @@ function startGame(): void {
 function returnToMenu(): void {
   audio.stopBgm();
   gameFrame.classList.add('hidden');
-  document.getElementById('gameover-panel')!.classList.add('hidden');
+  // 게임 화면에서 뜬 오버레이(확인 패널, 게임오버 등)가 메인화면 위에 남지 않도록 전부 닫는다.
+  document.querySelectorAll('.overlay').forEach((el) => el.classList.add('hidden'));
   game = null;
   renderer = null;
   ui = null;

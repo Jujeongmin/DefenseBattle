@@ -292,7 +292,11 @@ export class UI {
       this.game.paused = wasPaused;
     };
     (panel.querySelector('.cancel') as HTMLElement).onclick = () => { audio.button(); close(); };
-    (panel.querySelector('.danger') as HTMLElement).onclick = () => { audio.button(); this.onExit(); };
+    (panel.querySelector('.danger') as HTMLElement).onclick = () => {
+      audio.button();
+      panel.classList.add('hidden'); // 메인화면으로 전환된 뒤에도 이 패널이 남아있지 않도록 직접 닫는다.
+      this.onExit();
+    };
     panel.classList.remove('hidden');
   }
 
