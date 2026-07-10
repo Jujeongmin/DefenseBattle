@@ -7,6 +7,34 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>랜덤 디펜스</title>
+    <script>
+      (function () {
+        function reportGameSize() {
+          const height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+
+          const width = Math.max(document.body.scrollWidth, document.documentElement.scrollWidth);
+
+          window.parent.postMessage(
+            {
+              type: 'GAME_SIZE_RESPONSE',
+              height: height,
+              width: width,
+            },
+            '*',
+          );
+        }
+
+        window.addEventListener('load', reportGameSize);
+
+        window.addEventListener('resize', reportGameSize);
+
+        window.addEventListener('message', function (event) {
+          if (event.data && event.data.type === 'REQUEST_GAME_SIZE') {
+            reportGameSize();
+          }
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="app">
