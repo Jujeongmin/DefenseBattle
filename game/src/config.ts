@@ -61,8 +61,10 @@ export const WAVE = {
   mobsPerWave: 40,
   hpBase: 100,
   // 기획서 원안은 +20%(지수)였으나, 그 값으로는 유닛 파워(선형)가 따라잡지 못해
-  // 50웨이브 클리어가 수학적으로 불가능. 하드코어(연구 필수) 곡선을 위해 +11% 로 완화.
-  hpGrowthPerWave: 0.11,
+  // 50웨이브 클리어가 수학적으로 불가능. 하드코어 곡선을 위해 완화.
+  // (연구소 제거 후 유일한 영구 성장 레버가 된 컬렉션 스타업 기준으로 재조정: +9%.
+  //  tools/simulateCollection.ts 로 검증 - ★0 하드코어 유지, ★8+ 100% 클리어)
+  hpGrowthPerWave: 0.09,
   mobSpeed: 1.2,
   cornerPause: 0.25,
   restBetween: 5.0,
@@ -178,7 +180,9 @@ export const GACHA = {
   singleCost: 20,     // 1회 뽑기 (크리스탈)
   tenCost: 180,       // 10연 (10% 할인)
   maxLevel: 10,       // 스타업 최대 레벨
-  bonusPerLevel: 0.05, // 스타업 레벨당 해당 유닛 공격력 +5%
+  // 스타업 레벨당 해당 유닛 공격력 +8% (최대 ★10 = +80%).
+  // tools/simulateCollection.ts 로 검증한 값 - 이보다 낮으면 최대 스타업으로도 50웨이브 클리어 불가.
+  bonusPerLevel: 0.08,
   mythicPityCount: 50, // 이 횟수 동안 신화 이상이 안 나오면 다음 뽑기는 신화 이상 확정(천장)
 } as const;
 
