@@ -2,10 +2,32 @@
 //  캔버스 렌더러
 // ============================================================
 import { MAP, Game } from './engine';
-import { unitSprite, mobSprite, tileSprite } from './assets';
+import { unitSprite, mobSprite, tileSprite, uiSprite } from './assets';
 import type { Job } from './types';
 
 const JOB_TINT: Record<Job, string> = { archer: '#3fae4a', wizard: '#8e5bd8', warrior: '#c9a13b' };
+
+// 직업×등급별 불릿 (ui/bullets.png = All_Fire_Bullet_Pixel_16x16, 16px 셀)
+// 직업 = 탄 계열(궁수=화살, 마법사=오브, 전사=별), 등급 = 같은 계열의 5단계 변형 + 태초 전용탄
+// 모든 탄은 우향 기준(회전으로 방향 처리), 별/오브는 대칭이라 무관
+const BULLET_SRC: Record<Job, { sx: number; sy: number }[]> = {
+  archer: [
+    { sx: 0, sy: 256 }, { sx: 16, sy: 256 }, { sx: 32, sy: 256 },
+    { sx: 48, sy: 256 }, { sx: 64, sy: 256 }, { sx: 288, sy: 256 }, // 태초: 흰 셰브런 화살
+  ],
+  wizard: [
+    { sx: 0, sy: 208 }, { sx: 16, sy: 208 }, { sx: 32, sy: 208 },
+    { sx: 48, sy: 208 }, { sx: 64, sy: 208 }, { sx: 272, sy: 240 }, // 태초: 대형 파이어볼
+  ],
+  warrior: [
+    { sx: 0, sy: 192 }, { sx: 16, sy: 192 }, { sx: 32, sy: 192 },
+    { sx: 48, sy: 192 }, { sx: 64, sy: 192 }, { sx: 272, sy: 256 }, // 태초: 빛나는 별
+  ],
+};
+// 등급이 오를수록 탄 크기도 커짐 (18 → 28px)
+function bulletSize(gradeIndex: number): number {
+  return 18 + gradeIndex * 2;
+}
 
 // 스프라이트 시트: 32x32 프레임, 3열(걷기) x 4행(하/좌/우/상)
 const FRAME = 32;
@@ -238,12 +260,24 @@ export class Renderer {
     const ctx = this.ctx;
     for (const e of this.game.effects) {
       if (e.type === 'shot') {
-        ctx.strokeStyle = this.hexA(JOB_TINT[e.job], Math.max(0, e.ttl / 0.15));
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(e.x1, e.y1);
-        ctx.lineTo(e.x2, e.y2);
-        ctx.stroke();
+        // 유닛 불릿: All_Fire_Bullet 시트의 발사체가 유닛→타겟으로 날아감
+        const bullets = uiSprite('bullets');
+        const p = 1 - Math.max(0, e.ttl) / 0.15; // 0→1 진행
+        const bx = e.x1 + (e.x2 - e.x1) * p;
+        const by = e.y1 + (e.y2 - e.y1) * p;
+        if (bullets.ready) {
+          const src = BULLET_SRC[e.job][e.gradeIndex] ?? BULLET_SRC[e.job][0];
+          const angle = Math.atan2(e.y2 - e.y1, e.x2 - e.x1);
+          const bs = bulletSize(e.gradeIndex);
+          ctx.save();
+          ctx.translate(bx, by);
+          ctx.rotate(angle);
+          ctx.drawImage(bullets.img, src.sx, src.sy, 16, 16, -bs / 2, -bs / 2, bs, bs);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = JOB_TINT[e.job];
+          ctx.beginPath(); ctx.arc(bx, by, 4, 0, Math.PI * 2); ctx.fill();
+        }
       } else if (e.type === 'pop') {
         const r = (0.4 - e.ttl) * (e.boss ? 60 : 30) + 4;
         ctx.strokeStyle = `rgba(255,240,150,${Math.max(0, e.ttl / 0.4)})`;

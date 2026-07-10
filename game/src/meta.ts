@@ -2,9 +2,9 @@
 //  글로벌(계정) 상태 - localStorage 영구 저장
 //  크리스탈, 연구소 레벨, 퀘스트/업적 진행도
 // ============================================================
-import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS } from './config';
+import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS, GACHA, collectionKey } from './config';
 import { getPlatform } from './platform';
-import type { MetaData, ResearchKey, QuestStat, AchievementDef } from './types';
+import type { MetaData, ResearchKey, QuestStat, AchievementDef, Job, GradeKey } from './types';
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -21,6 +21,8 @@ function freshMeta(): MetaData {
       claimed: Object.fromEntries(DAILY_QUESTS.map((q) => [q.key, false])),
     },
     bestWave: 0,
+    collection: {},
+    collectionLevel: {},
   };
 }
 
@@ -40,6 +42,8 @@ function load(): MetaData {
     m.daily.progress = Object.assign(fresh.daily.progress, m.daily.progress);
     m.daily.claimed = Object.assign(fresh.daily.claimed, m.daily.claimed);
   }
+  m.collection = m.collection || {};
+  m.collectionLevel = m.collectionLevel || {};
   return m;
 }
 
@@ -74,4 +78,20 @@ export function unlockAchievement(key: string): AchievementDef | null {
   meta.crystals += a.reward;
   saveMeta();
   return a;
+}
+
+// ---------- 유닛 컬렉션 (가챠 / 스타업) ----------
+export function collectionCount(job: Job, grade: GradeKey): number {
+  return meta.collection[collectionKey(job, grade)] || 0;
+}
+export function collectionLevelOf(job: Job, grade: GradeKey): number {
+  return meta.collectionLevel[collectionKey(job, grade)] || 0;
+}
+export function addToCollection(job: Job, grade: GradeKey, n = 1): void {
+  const k = collectionKey(job, grade);
+  meta.collection[k] = (meta.collection[k] || 0) + n;
+}
+// 스타업 레벨당 해당 유닛(직업×등급) 공격력 배율 보너스
+export function collectionBonus(job: Job, grade: GradeKey): number {
+  return collectionLevelOf(job, grade) * GACHA.bonusPerLevel;
 }

@@ -14,7 +14,7 @@
       <div id="main-menu">
         <div class="menu-inner">
           <h1 class="game-title">랜덤 디펜스</h1>
-          <div class="menu-crystals">💎 <span id="menu-crystal-amount">0</span></div>
+          <div class="menu-crystals"><span class="gem"></span> <span id="menu-crystal-amount">0</span></div>
           <button id="menu-start" class="menu-btn primary">게임 시작</button>
           <button id="menu-shop" class="menu-btn">🛒 상점</button>
           <button id="menu-lab" class="menu-btn">🔬 연구소</button>
@@ -62,10 +62,13 @@
         <section id="controls">
           <div class="control-buttons">
             <button id="btn-sell-panel" class="side-btn">🛒<br />판매</button>
-            <button id="btn-summon" class="summon-btn">
-              <span class="summon-title">소환</span>
-              <span class="summon-cost"><span class="coin">🪙</span>20</span>
-            </button>
+            <div class="summon-wrap">
+              <button id="btn-summon" class="summon-btn">
+                <span class="summon-title">소환</span>
+                <span class="summon-cost"><span class="coin">🪙</span>20</span>
+              </button>
+              <button id="btn-prob-info-game" class="prob-info-link">확률 정보 ⓘ</button>
+            </div>
             <button id="btn-menu" class="side-btn">🏠<br />메인</button>
           </div>
           <div id="unit-stacks"></div>
@@ -76,6 +79,8 @@
       <div id="sell-panel" class="overlay hidden"></div>
       <div id="lab-panel" class="overlay hidden"></div>
       <div id="shop-panel" class="overlay hidden"></div>
+      <div id="gacha-panel" class="overlay hidden"></div>
+      <div id="prob-panel" class="overlay hidden"></div>
       <div id="quest-panel" class="overlay hidden"></div>
       <div id="gameover-panel" class="overlay hidden"></div>
     </div>

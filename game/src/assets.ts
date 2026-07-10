@@ -49,6 +49,20 @@ export function tileSprite(name: string): SpriteEntry {
   return entry;
 }
 
+// UI 에셋 (public/ui/*.png - 불릿 시트 등)
+export function uiSprite(name: string): SpriteEntry {
+  const key = `ui:${name}`;
+  const cached = cache.get(key);
+  if (cached) return cached;
+  const img = new Image();
+  img.src = `ui/${name}.png`;
+  const entry: SpriteEntry = { img, ready: false };
+  img.onload = () => { entry.ready = true; };
+  img.onerror = () => { entry.error = true; };
+  cache.set(key, entry);
+  return entry;
+}
+
 export function mobPortraitSrc(race: Race): string {
   return `sprites/${RACE_SPRITE[race]}_0.png`;
 }
@@ -60,4 +74,5 @@ export function preloadAll(): void {
   for (const race of Object.keys(RACE_SPRITE) as Race[]) loadImage(`${RACE_SPRITE[race]}_0`);
   tileSprite('grass');
   tileSprite('dirt');
+  uiSprite('bullets');
 }

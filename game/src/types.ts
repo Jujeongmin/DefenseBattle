@@ -83,7 +83,7 @@ export interface Zone {
 }
 
 export type Effect =
-  | { type: 'shot'; x1: number; y1: number; x2: number; y2: number; job: Job; ttl: number }
+  | { type: 'shot'; x1: number; y1: number; x2: number; y2: number; job: Job; gradeIndex: number; ttl: number }
   | { type: 'pop'; x: number; y: number; ttl: number; boss: boolean }
   | { type: 'dmg'; x: number; y: number; ttl: number; value: number }
   | { type: 'burst'; x: number; y: number; ttl: number; seed: number }; // 태초 등급 타격 연출 (시각 전용)
@@ -143,6 +143,8 @@ export interface MetaData {
     claimed: Record<string, boolean>;
   };
   bestWave: number;
+  collection: Record<string, number>;      // `${job}_${grade}` -> 보유 유닛 개수 (가챠)
+  collectionLevel: Record<string, number>; // `${job}_${grade}` -> 스타업 레벨
 }
 
 // ============================================================

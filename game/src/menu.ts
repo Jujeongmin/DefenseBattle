@@ -2,13 +2,17 @@
 //  메인 화면 - 게임시작 / 상점 / 연구소 (게임 밖 메타 화면)
 // ============================================================
 import {
-  RESEARCH, researchCost, DAILY_QUESTS, ACHIEVEMENTS,
+  DAILY_QUESTS, ACHIEVEMENTS,
   CRYSTAL_PACKAGES, AD_REMOVE_VX,
+  GACHA, GRADES, GRADE_BY_KEY, GRADE_INDEX, JOBS, JOB_KR, JOB_SPRITE, starUpCost, rollGrade, rollJob,
 } from './config';
-import { meta, saveMeta, researchLevel } from './meta';
+import {
+  meta, saveMeta, researchLevel, collectionCount, collectionLevelOf, addToCollection,
+} from './meta';
 import { getPlatform } from './platform';
 import { audio } from './audio';
-import type { AchievementDef, ResearchKey } from './types';
+import { openProbabilityPanel } from './probabilityPanel';
+import type { AchievementDef, Job, GradeKey } from './types';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
   document.getElementById(id) as T;
@@ -38,50 +42,23 @@ export class Menu {
   // ---------- 연구소 (연구 + 퀘스트) ----------
   private openLab(): void {
     const panel = $('lab-panel');
-    let tab: 'research' | 'quest' = 'research';
+    let tab: 'collection' | 'quest' = 'collection';
     const render = () => {
-      let body = '';
-      if (tab === 'research') {
-        body = RESEARCH.map((r) => {
-          const lv = researchLevel(r.key);
-          const maxed = lv >= r.max;
-          const cost = researchCost(lv);
-          return `<div class="row">
-            <div class="info"><div class="t">${r.kr} <span style="color:#6fd1ff">Lv.${lv}/${r.max}</span></div>
-            <div class="d">${r.desc}</div></div>
-            <button data-res="${r.key}" ${maxed || meta.crystals < cost ? 'disabled' : ''}>
-              ${maxed ? 'MAX' : `💎 ${cost}`}</button></div>`;
-        }).join('');
-      } else {
-        body = this.questHtml();
-      }
+      const body = tab === 'collection' ? this.collectionHtml() : this.questHtml();
       panel.innerHTML = `
         <div class="dialog">
-          <h2>연구소 <span class="crystal">💎 ${meta.crystals}</span></h2>
+          <h2>연구소 <span class="crystal"><span class="gem"></span> ${meta.crystals}</span></h2>
           <div class="tab-row">
-            <button data-tab="research" class="${tab === 'research' ? 'active' : ''}">연구</button>
+            <button data-tab="collection" class="${tab === 'collection' ? 'active' : ''}">유닛 강화</button>
             <button data-tab="quest" class="${tab === 'quest' ? 'active' : ''}">퀘스트</button>
           </div>
           ${body}
           <button class="close">닫기</button>
         </div>`;
       panel.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => {
-        b.onclick = () => { tab = b.dataset.tab as 'research' | 'quest'; render(); };
+        b.onclick = () => { tab = b.dataset.tab as typeof tab; render(); };
       });
-      panel.querySelectorAll<HTMLButtonElement>('[data-res]').forEach((b) => {
-        b.onclick = () => {
-          const key = b.dataset.res as ResearchKey;
-          const lv = researchLevel(key);
-          const r = RESEARCH.find((x) => x.key === key)!;
-          const cost = researchCost(lv);
-          if (lv < r.max && meta.crystals >= cost) {
-            meta.crystals -= cost;
-            meta.research[key] = lv + 1;
-            saveMeta();
-            render();
-          }
-        };
-      });
+      this.bindCollectionButtons(panel, render);
       this.bindQuestButtons(panel, render);
       (panel.querySelector('.close') as HTMLElement).onclick = () => {
         panel.classList.add('hidden');
@@ -92,6 +69,51 @@ export class Menu {
     panel.classList.remove('hidden');
   }
 
+  // 유닛 컬렉션 탭: 직업×등급 18종 스타업
+  private collectionHtml(): string {
+    let html = '<div class="d" style="color:#bbb;font-size:12px;margin-bottom:6px">뽑은 유닛을 소모해 스타업하면 해당 유닛이 게임 내에서 영구 강화됩니다.</div>';
+    for (const job of JOBS) {
+      html += `<div style="font-weight:700;margin:8px 0 4px">${JOB_KR[job]}</div>`;
+      for (const grade of GRADES) {
+        const lv = collectionLevelOf(job, grade.key);
+        const have = collectionCount(job, grade.key);
+        const maxed = lv >= GACHA.maxLevel;
+        const need = starUpCost(lv);
+        const bonusNow = Math.round(lv * GACHA.bonusPerLevel * 100);
+        const canUp = !maxed && have >= need;
+        html += `<div class="row">
+          <div class="info" style="display:flex;align-items:center;gap:8px">
+            <div class="frame-sprite" style="width:34px;height:34px;flex:0 0 34px;background-image:url(sprites/${JOB_SPRITE[job]}_${grade.spriteIndex}.png)"></div>
+            <div>
+              <div class="t" style="color:${grade.color}">${grade.kr} <span style="color:#ffd54f">★${lv}</span> <span style="color:#7ee87e;font-size:11px">공격 +${bonusNow}%</span></div>
+              <div class="d">보유 ${have}${maxed ? '' : ` / ${need}`}</div>
+            </div>
+          </div>
+          <button data-star="${job}_${grade.key}" ${canUp ? '' : 'disabled'}>${maxed ? 'MAX' : '스타업'}</button>
+        </div>`;
+      }
+    }
+    return html;
+  }
+
+  private bindCollectionButtons(panel: HTMLElement, render: () => void): void {
+    panel.querySelectorAll<HTMLButtonElement>('[data-star]').forEach((b) => {
+      b.onclick = () => {
+        const [job, grade] = (b.dataset.star as string).split('_') as [Job, GradeKey];
+        const key = `${job}_${grade}`;
+        const lv = collectionLevelOf(job, grade);
+        const need = starUpCost(lv);
+        if (lv < GACHA.maxLevel && (meta.collection[key] || 0) >= need) {
+          meta.collection[key] -= need;              // 스타업: 개수 소모
+          meta.collectionLevel[key] = lv + 1;
+          saveMeta();
+          audio.button();
+          render();
+        }
+      };
+    });
+  }
+
   private questHtml(): string {
     const daily = DAILY_QUESTS.map((q) => {
       const prog = Math.min(q.goal, meta.daily.progress[q.key] || 0);
@@ -99,12 +121,12 @@ export class Menu {
       const claimed = meta.daily.claimed[q.key];
       return `<div class="row">
         <div class="info"><div class="t">${q.kr}</div><div class="d">${prog}/${q.goal}</div></div>
-        <button data-daily="${q.key}" ${!done || claimed ? 'disabled' : ''}>${claimed ? '완료' : done ? `💎 ${q.reward}` : '진행중'}</button></div>`;
+        <button data-daily="${q.key}" ${!done || claimed ? 'disabled' : ''}>${claimed ? '완료' : done ? `<span class="gem"></span> ${q.reward}` : '진행중'}</button></div>`;
     }).join('');
     const ach = ACHIEVEMENTS.map((a: AchievementDef) => {
       const done = meta.achievements[a.key];
       return `<div class="row">
-        <div class="info"><div class="t">${a.kr}</div><div class="d">보상 💎 ${a.reward}</div></div>
+        <div class="info"><div class="t">${a.kr}</div><div class="d">보상 <span class="gem"></span> ${a.reward}</div></div>
         <button disabled>${done ? '달성 ✓' : '미달성'}</button></div>`;
     }).join('');
     return `<div style="font-weight:700;margin:4px 0 6px">일일 퀘스트</div>${daily}
@@ -137,7 +159,7 @@ export class Menu {
       const pkgs = CRYSTAL_PACKAGES.map((p, i) => `
         <div class="row">
           <div class="info">
-            <div class="t">💎 보석 ${p.crystals.toLocaleString()}개${p.bonus ? ` <span style="color:#7ee87e">+${p.bonus}%</span>` : ''}</div>
+            <div class="t"><span class="gem"></span> 보석 ${p.crystals.toLocaleString()}개${p.bonus ? ` <span style="color:#7ee87e">+${p.bonus}%</span>` : ''}</div>
             <div class="d">VX ${p.vx}</div>
           </div>
           <button data-pkg="${i}" ${vx < p.vx ? 'disabled' : ''}>VX ${p.vx}</button>
@@ -146,8 +168,26 @@ export class Menu {
         <div class="dialog">
           <h2>상점</h2>
           <div class="shop-balance">
-            <span class="crystal">💎 ${meta.crystals.toLocaleString()}</span>
+            <span class="crystal"><span class="gem"></span> ${meta.crystals.toLocaleString()}</span>
             <span class="vx-badge">VX ${vx.toLocaleString()}</span>
+          </div>
+          <div class="gacha-hero">
+            <div class="gacha-hero-top">
+              <div class="chest big"></div>
+              <div class="gacha-hero-info">
+                <div class="gh-title">유닛 가챠</div>
+                <div class="gh-desc">랜덤 직업×등급 유닛 획득!<br>연구소에서 스타업 → 영구 강화</div>
+              </div>
+            </div>
+            <div class="gacha-hero-btns">
+              <button id="gacha-1" ${meta.crystals < GACHA.singleCost ? 'disabled' : ''}>
+                1회 뽑기<br><span class="gh-cost"><span class="gem"></span> ${GACHA.singleCost}</span>
+              </button>
+              <button id="gacha-10" class="best" ${meta.crystals < GACHA.tenCost ? 'disabled' : ''}>
+                10연 뽑기 <span class="gh-sale">10%↓</span><br><span class="gh-cost"><span class="gem"></span> ${GACHA.tenCost}</span>
+              </button>
+            </div>
+            <button id="btn-prob-info-shop" class="prob-info-link">확률 정보 ⓘ</button>
           </div>
           <div class="shop-section">보석 구매</div>
           ${pkgs}
@@ -178,6 +218,14 @@ export class Menu {
         };
       });
 
+      // 유닛 가챠 (크리스탈 차감 → 컬렉션 적립)
+      const g1 = panel.querySelector('#gacha-1') as HTMLButtonElement | null;
+      const g10 = panel.querySelector('#gacha-10') as HTMLButtonElement | null;
+      if (g1) g1.onclick = () => { if (this.pullGacha(1)) render(); };
+      if (g10) g10.onclick = () => { if (this.pullGacha(10)) render(); };
+      const probBtn = panel.querySelector('#btn-prob-info-shop') as HTMLButtonElement | null;
+      if (probBtn) probBtn.onclick = () => openProbabilityPanel();
+
       // 광고제거 패키지 (VX 차감 → 소유 등록)
       const buy = panel.querySelector('#buy-adremove') as HTMLButtonElement | null;
       if (buy && !owned) buy.onclick = async () => {
@@ -193,6 +241,52 @@ export class Menu {
       };
     };
     render();
+    panel.classList.remove('hidden');
+  }
+
+  // ---------- 유닛 가챠 ----------
+  private pullGacha(n: number): boolean {
+    const cost = n === 1 ? GACHA.singleCost : GACHA.tenCost;
+    if (meta.crystals < cost) return false;
+    meta.crystals -= cost;
+    const rareBonus = researchLevel('rare') * 0.5; // 희귀 소환 연구가 가챠에도 적용
+    const results: { job: Job; grade: GradeKey }[] = [];
+    for (let i = 0; i < n; i++) {
+      const grade = rollGrade(rareBonus);
+      const job = rollJob();
+      addToCollection(job, grade);
+      results.push({ job, grade });
+    }
+    saveMeta();
+    // 최고 등급에 맞춰 사운드
+    const best = Math.max(...results.map((r) => GRADE_INDEX[r.grade]));
+    audio.summon(best >= GRADE_INDEX['mythic']);
+    this.showGacha(results);
+    this.refresh();
+    return true;
+  }
+
+  private showGacha(results: { job: Job; grade: GradeKey }[]): void {
+    const panel = $('gacha-panel');
+    const cards = results
+      .slice()
+      .sort((a, b) => GRADE_INDEX[b.grade] - GRADE_INDEX[a.grade])
+      .map((r) => {
+        const g = GRADE_BY_KEY[r.grade];
+        const shiny = GRADE_INDEX[r.grade] >= GRADE_INDEX['legendary'] ? ' shiny' : '';
+        return `<div class="gacha-card${shiny}" style="border-color:${g.color}">
+          <div class="frame-sprite" style="background-image:url(sprites/${JOB_SPRITE[r.job]}_${g.spriteIndex}.png)"></div>
+          <div class="gc-grade" style="color:${g.color}">${g.kr}</div>
+          <div class="gc-job">${JOB_KR[r.job]}</div>
+        </div>`;
+      }).join('');
+    panel.innerHTML = `
+      <div class="dialog">
+        <h2><span class="chest"></span> 유닛 획득!</h2>
+        <div class="gacha-grid">${cards}</div>
+        <button class="close">확인</button>
+      </div>`;
+    (panel.querySelector('.close') as HTMLElement).onclick = () => panel.classList.add('hidden');
     panel.classList.remove('hidden');
   }
 }

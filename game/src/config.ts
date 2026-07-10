@@ -75,14 +75,19 @@ export const WAVE = {
 } as const;
 
 // ---------- 소환 확률 도우미 ----------
-export function rollGrade(rareBonus = 0): GradeKey {
+// 등급 확률 원본 테이블 (rollGrade 와 확률 고지 화면이 반드시 같은 값을 쓰도록 단일 소스로 분리)
+function rawGradeRates(rareBonus: number): { key: GradeKey; rate: number }[] {
   const table = GRADES.map((g) => ({ key: g.key, rate: g.summonRate }));
-  const bonus = rareBonus;
-  if (bonus > 0) {
-    table[3].rate += bonus * 0.7;
-    table[4].rate += bonus * 0.2;
-    table[5].rate += bonus * 0.1;
+  if (rareBonus > 0) {
+    table[3].rate += rareBonus * 0.7;
+    table[4].rate += rareBonus * 0.2;
+    table[5].rate += rareBonus * 0.1;
   }
+  return table;
+}
+
+export function rollGrade(rareBonus = 0): GradeKey {
+  const table = rawGradeRates(rareBonus);
   const total = table.reduce((s, t) => s + t.rate, 0);
   let r = Math.random() * total;
   for (const t of table) {
@@ -95,6 +100,15 @@ export function rollGrade(rareBonus = 0): GradeKey {
 export function rollJob(): Job {
   return JOBS[Math.floor(Math.random() * JOBS.length)];
 }
+
+// ---------- 확률 고지 (확률형 아이템 표시 의무 대응) ----------
+// 실제 rollGrade 가 사용하는 것과 동일한 원본 비율을 정규화해 %로 반환.
+export function gradeProbabilities(rareBonus = 0): { key: GradeKey; pct: number }[] {
+  const table = rawGradeRates(rareBonus);
+  const total = table.reduce((s, t) => s + t.rate, 0);
+  return table.map((t) => ({ key: t.key, pct: (t.rate / total) * 100 }));
+}
+export const JOB_PROBABILITY_PCT = 100 / JOBS.length; // 직업은 항상 균등 확률
 
 // ---------- 연구소 ----------
 // 하드코어 곡선을 위해 기획서 원안(+2%/레벨 등)보다 강화된 값 사용.
@@ -122,6 +136,23 @@ export const CRYSTAL_PACKAGES: CrystalPackage[] = [
   { crystals: 550,  vx: 50,  bonus: 10 },
   { crystals: 1200, vx: 100, bonus: 20 },
 ];
+
+// ---------- 유닛 가챠 / 컬렉션 (크리스탈로 뽑기 → 스타업) ----------
+export const GACHA = {
+  singleCost: 20,     // 1회 뽑기 (크리스탈)
+  tenCost: 180,       // 10연 (10% 할인)
+  maxLevel: 10,       // 스타업 최대 레벨
+  bonusPerLevel: 0.05, // 스타업 레벨당 해당 유닛 공격력 +5%
+} as const;
+
+// 직업_등급 컬렉션 키
+export function collectionKey(job: Job, grade: GradeKey): string {
+  return `${job}_${grade}`;
+}
+// level → level+1 스타업에 필요한 보유 개수 (Lv0→1:5, 1→2:10, 2→3:15 ...)
+export function starUpCost(level: number): number {
+  return 5 * (level + 1);
+}
 
 // ---------- 게임 종료 시 크리스탈 보상 ----------
 export function crystalReward(wave: number): number {

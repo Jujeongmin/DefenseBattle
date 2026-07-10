@@ -10,6 +10,7 @@ import { meta, saveMeta } from './meta';
 import { getPlatform } from './platform';
 import { audio } from './audio';
 import { GRADE_INDEX } from './config';
+import { openProbabilityPanel } from './probabilityPanel';
 import type { Job, Race, GradeKey, GameOverData } from './types';
 
 // 상성 % 색상
@@ -51,6 +52,7 @@ export class UI {
       if (u) audio.summon(u.gradeIndex >= GRADE_INDEX['mythic']);
       else if (this.game.gold < ECONOMY.summonCost) this.flashGold();
     };
+    $('btn-prob-info-game').onclick = () => openProbabilityPanel();
     $('btn-pause').onclick = () => {
       audio.button();
       this.game.paused = !this.game.paused;
@@ -234,8 +236,8 @@ export class UI {
         <h2>${d.cleared ? '🎉 클리어!' : '게임 오버'}</h2>
         <div class="d" style="color:#bbb">${d.reason}</div>
         <div class="wave-big">Wave ${d.wave}</div>
-        <div class="reward">획득 크리스탈 <span class="crystal">💎 ${reward}</span></div>
-        <div class="d" style="color:#bbb">보유 💎 ${meta.crystals}</div>
+        <div class="reward">획득 크리스탈 <span class="crystal"><span class="gem"></span> ${reward}</span></div>
+        <div class="d" style="color:#bbb">보유 <span class="gem"></span> ${meta.crystals}</div>
         <button class="close" id="btn-restart">메인으로</button>
       </div>`;
     $('btn-restart').onclick = () => this.onExit();

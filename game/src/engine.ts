@@ -8,7 +8,7 @@ import {
   rollGrade, rollJob,
 } from './config';
 import {
-  meta, researchLevel, addDailyProgress, setDailyBestWave, unlockAchievement,
+  meta, researchLevel, addDailyProgress, setDailyBestWave, unlockAchievement, collectionBonus,
 } from './meta';
 import type {
   Job, Race, GradeKey, Unit, Mob, Zone, Effect, LogEntry, Banner, Stack, JobStack,
@@ -356,6 +356,7 @@ export class Game {
     let dmg = u.baseAtk * (1 + (level - 1) * ECONOMY.upgradePerLevel);
     dmg *= DMG_MULT[u.job][mob.race];
     dmg *= 1 + researchLevel('atk') * RESEARCH_PER.atk;
+    dmg *= 1 + collectionBonus(u.job, u.grade); // 가챠 컬렉션 스타업 영구 강화
     if (mob.boss) dmg *= 1 + researchLevel('boss') * RESEARCH_PER.boss;
     return dmg;
   }
@@ -469,7 +470,7 @@ export class Game {
       this.emit('shoot', undefined);
       this.effects.push({
         type: 'shot', x1: u.x, y1: u.y, x2: best.x, y2: best.y,
-        job: u.job, ttl: 0.15,
+        job: u.job, gradeIndex: u.gradeIndex, ttl: 0.15,
       });
       // 데미지 숫자 (너무 많으면 생략해 성능/난잡함 방지)
       if (this.effects.length < 60) {
