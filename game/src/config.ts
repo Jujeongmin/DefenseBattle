@@ -18,8 +18,8 @@ export const RACE_SPRITE: Record<Race, string> = { troll: 'Mob_Troll', orc: 'Mob
 
 // ---------- 직업 x 종족 데미지 배율 ----------
 export const DMG_MULT: Record<Job, Record<Race, number>> = {
-  archer:  { troll: 0.8, orc: 1.0, undead: 0.8 },
-  wizard:  { troll: 0.6, orc: 0.8, undead: 1.0 },
+  archer:  { troll: 0.9, orc: 1.0, undead: 0.8 },
+  wizard:  { troll: 0.6, orc: 0.6, undead: 1.0 },
   warrior: { troll: 1.0, orc: 0.8, undead: 0.6 },
 };
 
