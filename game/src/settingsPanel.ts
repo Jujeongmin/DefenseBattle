@@ -1,10 +1,11 @@
 // ============================================================
 //  설정 패널 - 게임 화면 상단바 ⚙️ 버튼
-//  언어 / 음소거 / BGM·효과음 볼륨 / 진행 데이터 초기화
+//  음소거 / BGM·효과음 볼륨 / 진행 데이터 초기화
+//  (언어 설정은 메인화면 언어 버튼으로 분리)
 // ============================================================
 import { audio } from './audio';
 import { resetProgress } from './meta';
-import { t, getLang, setLang, type Lang } from './i18n';
+import { t } from './i18n';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
   document.getElementById(id) as T;
@@ -34,17 +35,9 @@ export function openSettingsPanel(): void {
     }
 
     const muted = audio.isMuted();
-    const lang = getLang();
     panel.innerHTML = `
       <div class="dialog">
         <h2>${t('set.title')}</h2>
-        <div class="settings-row">
-          <div class="settings-label">🌐 ${t('set.language')}</div>
-          <div class="lang-btns">
-            <button data-lang="en" class="${lang === 'en' ? 'active' : ''}">English</button>
-            <button data-lang="ko" class="${lang === 'ko' ? 'active' : ''}">한국어</button>
-          </div>
-        </div>
         <div class="row">
           <div class="info"><div class="t">${t('set.muteAll')}</div></div>
           <button id="btn-mute-toggle">${muted ? t('set.muteOn') : t('set.muteOff')}</button>
@@ -67,15 +60,6 @@ export function openSettingsPanel(): void {
         <button class="close">${t('common.close')}</button>
       </div>`;
 
-    panel.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((b) => {
-      b.onclick = () => {
-        const next = b.dataset.lang as Lang;
-        if (next === getLang()) return;
-        setLang(next);
-        // 정적 HTML/열려있는 패널 전체를 새 언어로 다시 그리기 위해 리로드
-        location.reload();
-      };
-    });
     (panel.querySelector('#btn-mute-toggle') as HTMLElement).onclick = () => {
       audio.toggleMute();
       render();

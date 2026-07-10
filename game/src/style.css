@@ -35,6 +35,7 @@ html, body {
 
 /* ---------- 메인 화면 ---------- */
 #main-menu {
+  position: relative;
   width: min(100vw, 480px);
   height: 100%;
   display: flex;
@@ -43,6 +44,16 @@ html, body {
   background: radial-gradient(circle at 50% 28%, #2c3d4d, #14181f 70%);
   padding: 24px;
 }
+/* 메인 화면 우상단 언어 전환 버튼 */
+.menu-lang {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  flex: 0 0 auto;
+  width: auto;
+  z-index: 5;
+}
+.menu-lang button { flex: 0 0 auto; padding: 6px 10px; font-size: 12px; }
 .menu-inner {
   width: 100%;
   max-width: 320px;

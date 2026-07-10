@@ -8,7 +8,21 @@ import { UI } from './ui';
 import { Menu } from './menu';
 import { preloadAll } from './assets';
 import { audio } from './audio';
-import { t, getLang } from './i18n';
+import { t, getLang, setLang } from './i18n';
+
+// 메인 화면 언어 버튼: 현재 언어 표시 + 클릭 시 전환 후 새로고침(패널 재렌더)
+function setupLangButtons(): void {
+  const cur = getLang();
+  document.querySelectorAll<HTMLButtonElement>('.menu-lang button').forEach((b) => {
+    const lang = b.dataset.lang as ('en' | 'ko');
+    b.classList.toggle('active', lang === cur);
+    b.onclick = () => {
+      if (lang === getLang()) return;
+      setLang(lang);
+      location.reload();
+    };
+  });
+}
 
 // 정적 HTML(메인 화면/하단 조작부)의 문자열을 현재 언어로 적용
 function applyStaticI18n(): void {
@@ -29,6 +43,7 @@ function applyStaticI18n(): void {
 }
 
 applyStaticI18n();
+setupLangButtons();
 preloadAll();
 audio.installUnlock();
 
