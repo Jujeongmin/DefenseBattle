@@ -9,6 +9,7 @@ import {
 } from './config';
 import {
   meta, saveMeta, collectionCount, collectionLevelOf, addToCollection,
+  gachaPityRemaining,
 } from './meta';
 import { getPlatform } from './platform';
 import { audio } from './audio';
@@ -223,6 +224,9 @@ export class Menu {
                 ${t('shop.pull10')} <span class="gh-sale">10%↓</span><br><span class="gh-cost"><span class="gem"></span> ${GACHA.tenCost}</span>
               </button>
             </div>
+            <div class="gacha-pity">${
+              gachaPityRemaining() <= 0 ? t('shop.pityReady') : t('shop.pityHint', { rem: gachaPityRemaining() })
+            }</div>
             <button id="btn-prob-info-shop" class="prob-info-link">${t('hud.probInfo')}</button>
           </div>
           <div class="shop-section">${t('shop.buyGems')}</div>

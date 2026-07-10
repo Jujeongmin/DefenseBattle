@@ -183,7 +183,7 @@ export const GACHA = {
   // 스타업 레벨당 해당 유닛 공격력 +8% (최대 ★10 = +80%).
   // tools/simulateCollection.ts 로 검증한 값 - 이보다 낮으면 최대 스타업으로도 50웨이브 클리어 불가.
   bonusPerLevel: 0.08,
-  mythicPityCount: 50, // 이 횟수 동안 신화 이상이 안 나오면 다음 뽑기는 신화 이상 확정(천장)
+  mythicPityCount: 20, // 이 횟수 동안 신화 이상이 안 나오면 다음 뽑기는 신화 이상 확정(천장)
 } as const;
 
 // 직업_등급 컬렉션 키

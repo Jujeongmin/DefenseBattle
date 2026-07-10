@@ -130,6 +130,8 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'shop.title':      { en: 'Shop', ko: '상점' },
   'shop.gachaTitle': { en: 'Unit Gacha', ko: '유닛 가챠' },
   'shop.gachaDesc':  { en: 'Get random job × grade units!<br>Star them up in the Lab for permanent power.', ko: '랜덤 직업×등급 유닛 획득!<br>연구소에서 스타업 → 영구 강화' },
+  'shop.pityHint':   { en: '🎯 {rem} more pull(s) → guaranteed Mythic+ (Mythic 80% / Eternal 20%)', ko: '🎯 {rem}번 더 뽑으면 신화 이상 확정 (신화 80% / 태초 20%)' },
+  'shop.pityReady':  { en: '🎯 Next pull is a guaranteed Mythic+! (Mythic 80% / Eternal 20%)', ko: '🎯 다음 뽑기는 신화 이상 확정! (신화 80% / 태초 20%)' },
   'shop.pull1':      { en: '1 Pull', ko: '1회 뽑기' },
   'shop.pull10':     { en: '10 Pull', ko: '10연 뽑기' },
   'shop.buyGems':    { en: 'Buy Gems', ko: '보석 구매' },

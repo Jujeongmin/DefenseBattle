@@ -609,6 +609,13 @@ html, body {
 .gacha-hero-btns button.best { background: var(--accent); box-shadow: 0 3px 0 #8a1f1f; }
 .gacha-hero-btns button:disabled { opacity: 0.5; }
 .gacha-hero-btns button:active:not(:disabled) { transform: translateY(2px); }
+.gacha-pity {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffd45e;
+}
 .gh-cost { font-size: 15px; color: #ffe28a; }
 .gh-sale {
   background: #7ee87e;
