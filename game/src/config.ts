@@ -134,13 +134,9 @@ function weightedPickFrom(pool: GradeKey[]): GradeKey {
 export function rollGachaGrade(): GradeKey {
   return weightedPickFrom(GRADES.map((g) => g.key));
 }
-// 천장(신화 이상 보장) 발동 시 신화/태초 중 비율대로 선택
+// 천장(신화 이상 보장) 발동 시 신화/태초 중 비율대로 선택 (신화:태초 = 4:1)
 export function rollGachaMythicPlus(): GradeKey {
   return weightedPickFrom(['mythic', 'eternal']);
-}
-// 10연 보장(전설 이상 최소 1개) 발동 시 전설/신화/태초 중 비율대로 선택
-export function rollGachaLegendaryPlus(): GradeKey {
-  return weightedPickFrom(['legendary', 'mythic', 'eternal']);
 }
 
 export function gachaGradeProbabilities(): { key: GradeKey; pct: number }[] {

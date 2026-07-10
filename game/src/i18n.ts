@@ -152,7 +152,7 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'prob.introSummon':{ en: 'On summon, grade and job are each rolled independently at the rates below. Multiply a grade odds by a job odds for the chance of one specific unit.', ko: '유닛 소환 시 아래 확률로 등급과 직업이 각각 독립적으로 결정됩니다. 등급과 직업 확률을 곱하면 특정 유닛이 나올 확률입니다.' },
   'prob.gradeHeader':{ en: 'Grade odds', ko: '등급 확률' },
   'prob.jobHeader':  { en: 'Job odds (equal)', ko: '직업 확률 (균등)' },
-  'prob.footerGacha':{ en: '* A 10-pull guarantees at least one Legendary+.<br>* If no Mythic+ appears for {pity} pulls, the next pull is a guaranteed Mythic+ ({cur}/{pity} now, {rem} left).<br>* Real payment (VX) is used only to buy gems and does not directly affect pull odds.', ko: '* 10연 뽑기는 전설 이상 유닛이 1개 이상 나오도록 보장됩니다.<br>* 신화 이상이 {pity}회 연속 나오지 않으면 다음 뽑기에서 신화 이상이 확정됩니다. (현재 {cur}/{pity}회, {rem}회 남음)<br>* 실제 결제(VX)는 보석 구매에만 사용되며 뽑기 확률에 직접 영향을 주지 않습니다.' },
+  'prob.footerGacha':{ en: '* If no Mythic+ appears for {pity} pulls, the next pull is a guaranteed Mythic+ ({cur}/{pity} now, {rem} left).<br>* A guaranteed Mythic+ splits Mythic : Eternal = 4 : 1 (Mythic 80% / Eternal 20%).<br>* Real payment (VX) is used only to buy gems and does not directly affect pull odds.', ko: '* 신화 이상이 {pity}회 연속 나오지 않으면 다음 뽑기에서 신화 이상이 확정됩니다. (현재 {cur}/{pity}회, {rem}회 남음)<br>* 신화 이상 확정 시 신화 : 태초 = 4 : 1 (신화 80% / 태초 20%)로 결정됩니다.<br>* 실제 결제(VX)는 보석 구매에만 사용되며 뽑기 확률에 직접 영향을 주지 않습니다.' },
   'prob.footerSummon':{ en: '* In-game 20-gold summon rolls grade at the rates above with no pity/guarantee.', ko: '* 게임 내 20골드 소환은 위 확률로 등급이 결정되며, 별도의 보장(천장)은 없습니다.' },
 
   // 설정

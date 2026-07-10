@@ -4,7 +4,7 @@
 // ============================================================
 import { meta, saveMeta } from '../game/src/meta';
 import {
-  GACHA, GRADES, GRADE_INDEX, GACHA_GRADE_RATES, rollGachaGrade, rollGachaMythicPlus, rollGachaLegendaryPlus,
+  GACHA, GRADES, GRADE_INDEX, GACHA_GRADE_RATES, rollGachaGrade, rollGachaMythicPlus,
   gachaGradeProbabilities, gradeProbabilities,
 } from '../game/src/config';
 import type { GradeKey } from '../game/src/types';
@@ -20,17 +20,6 @@ function pullOne(): GradeKey {
     if (GRADE_INDEX[grade] >= GRADE_INDEX['mythic']) meta.gachaPity = 0;
   }
   return grade;
-}
-
-function pullTen(): GradeKey[] {
-  const results: GradeKey[] = [];
-  for (let i = 0; i < 10; i++) results.push(pullOne());
-  if (!results.some((g) => GRADE_INDEX[g] >= GRADE_INDEX['legendary'])) {
-    const idx = results.length - 1;
-    results[idx] = rollGachaLegendaryPlus();
-    if (GRADE_INDEX[results[idx]] >= GRADE_INDEX['mythic']) meta.gachaPity = 0;
-  }
-  return results;
 }
 
 // ---- 1) 확률 분포 검증 (대량 시행, 천장 비활성 상태로) ----
@@ -80,17 +69,21 @@ function checkMythicPity() {
   meta.gachaPity = 0;
 }
 
-// ---- 3) 10연 보장(전설+) 검증: 매 10연마다 최소 1개 이상인지 ----
-function checkTenPullGuarantee(trials = 2000) {
-  let violations = 0;
-  for (let t = 0; t < trials; t++) {
-    meta.gachaPity = 0; // 천장과 무관하게 10연 보장만 독립적으로 확인
-    const results = pullTen();
-    const hasLegendaryPlus = results.some((g) => GRADE_INDEX[g] >= GRADE_INDEX['legendary']);
-    if (!hasLegendaryPlus) violations++;
+// ---- 3) 천장 발동 시 신화:태초 비율(4:1 = 신화 80% / 태초 20%) 검증 ----
+function checkMythicPlusSplit(n = 200000) {
+  let mythic = 0;
+  let eternal = 0;
+  for (let i = 0; i < n; i++) {
+    const g = rollGachaMythicPlus();
+    if (g === 'mythic') mythic++;
+    else if (g === 'eternal') eternal++;
   }
-  console.log(`\n=== 10연 전설+ 보장 검증 (${trials}회 10연) ===`);
-  console.log({ violations, expected: 0 });
+  console.log(`\n=== 신화+ 확정 시 신화:태초 비율 검증 (rollGachaMythicPlus, ${n}회) ===`);
+  console.log({
+    mythicPct: ((mythic / n) * 100).toFixed(2) + '% (기대 80%)',
+    eternalPct: ((eternal / n) * 100).toFixed(2) + '% (기대 20%)',
+    ratio: (mythic / eternal).toFixed(2) + ' : 1 (기대 4:1)',
+  });
 }
 
 // ---- 4) 게임 내 20골드 소환 확률표가 그대로인지 (가챠와 분리 확인) ----
@@ -102,6 +95,6 @@ function checkSummonUnaffected() {
 
 checkDistribution();
 checkMythicPity();
-checkTenPullGuarantee();
+checkMythicPlusSplit();
 checkSummonUnaffected();
 saveMeta();

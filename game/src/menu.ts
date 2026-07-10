@@ -5,7 +5,7 @@ import {
   DAILY_QUESTS, ACHIEVEMENTS,
   CRYSTAL_PACKAGES, AD_REMOVE_VX,
   GACHA, GRADES, GRADE_BY_KEY, GRADE_INDEX, JOBS, JOB_SPRITE, starUpCost,
-  rollJob, rollGachaGrade, rollGachaMythicPlus, rollGachaLegendaryPlus,
+  rollJob, rollGachaGrade, rollGachaMythicPlus,
 } from './config';
 import {
   meta, saveMeta, collectionCount, collectionLevelOf, addToCollection,
@@ -286,8 +286,8 @@ export class Menu {
 
   // ---------- 유닛 가챠 ----------
   // 확률은 config.GACHA_GRADE_RATES (게임 내 20골드 소환과는 분리된 전용 표).
-  // 천장 2종: ① 신화 이상이 GACHA.mythicPityCount 회 연속 안 나오면 다음 뽑기 신화 이상 확정
-  //          ② 10연 뽑기는 전설 이상이 하나도 없으면 마지막 결과를 전설 이상으로 승급
+  // 천장: 신화 이상이 GACHA.mythicPityCount 회 연속 안 나오면 다음 뽑기 신화 이상 확정
+  //       (확정 시 신화:태초 = 4:1 = 신화 80% / 태초 20%).
   private pullGacha(n: number): boolean {
     const cost = n === 1 ? GACHA.singleCost : GACHA.tenCost;
     if (meta.crystals < cost) return false;
@@ -305,12 +305,6 @@ export class Menu {
         if (GRADE_INDEX[grade] >= GRADE_INDEX['mythic']) meta.gachaPity = 0;
       }
       results.push({ job: rollJob(), grade });
-    }
-    // 10연 보장: 전설 이상이 하나도 없으면 마지막 슬롯을 전설 이상으로 승급
-    if (n >= 10 && !results.some((r) => GRADE_INDEX[r.grade] >= GRADE_INDEX['legendary'])) {
-      const last = results[results.length - 1];
-      last.grade = rollGachaLegendaryPlus();
-      if (GRADE_INDEX[last.grade] >= GRADE_INDEX['mythic']) meta.gachaPity = 0;
     }
     for (const r of results) addToCollection(r.job, r.grade);
     saveMeta();
