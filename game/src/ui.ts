@@ -66,6 +66,11 @@ export class UI {
     $('btn-sell-panel').onclick = () => { audio.button(); this.openSell(); };
     $('btn-menu').onclick = () => { audio.button(); this.openExitConfirm(); };
     $('btn-settings').onclick = () => { audio.button(); openSettingsPanel(); };
+    // 상단바 버튼은 DOM 이 판마다 재사용되므로, 새 게임 시작 시 이전 판의 표시값을 초기화한다.
+    this.speedIdx = 0;
+    this.game.speed = this.speeds[this.speedIdx];
+    $('btn-speed').textContent = this.game.speed + 'x';
+    $('btn-pause').textContent = '❚❚';
     this.bindDebug();
     this.setupDrag();
   }
@@ -195,7 +200,7 @@ export class UI {
         <div class="dmg-pct" style="color:${pctColor(p)}">${p}%</div>
         <div class="frame-sprite" style="background-image:url(sprites/${JOB_SPRITE[job]}_${common.spriteIndex}.png)"></div>
         <div class="name">${JOB_KR[job]} Lv.${level}</div>
-        <button class="up-btn" data-upgrade-cost="${cost}" data-unit-count="${count}">강화 🪙${cost}</button>`;
+        <button class="up-btn" data-upgrade-cost="${cost}" data-unit-count="${count}">강화 <span class="coin"></span>${cost}</button>`;
       const btn = div.querySelector('.up-btn') as HTMLButtonElement;
       btn.disabled = count === 0 || this.game.gold < cost;
       btn.onclick = () => { if (this.game.upgrade(job)) audio.button(); };

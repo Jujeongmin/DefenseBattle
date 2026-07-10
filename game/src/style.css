@@ -350,7 +350,14 @@ html, body {
   cursor: pointer;
 }
 .stack .up-btn:disabled { background: #555; opacity: 0.6; }
-.coin { font-size: 0.9em; }
+/* 골드 코인 아이콘 - 🪙 이모지 대체 (UI/CoinImg.png → ui/coin.png) */
+.coin {
+  display: inline-block;
+  width: 1.05em;
+  height: 1.05em;
+  vertical-align: -0.2em;
+  background: url("ui/coin.png") center/contain no-repeat;
+}
 
 /* 유닛 카드 상성 % */
 .stack .dmg-pct {
