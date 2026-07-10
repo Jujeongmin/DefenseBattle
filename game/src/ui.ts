@@ -63,7 +63,7 @@ export class UI {
       $('btn-speed').textContent = this.game.speed + 'x';
     };
     $('btn-sell-panel').onclick = () => { audio.button(); this.openSell(); };
-    $('btn-menu').onclick = () => { audio.button(); this.onExit(); };
+    $('btn-menu').onclick = () => { audio.button(); this.openExitConfirm(); };
     $('btn-mute').onclick = () => {
       const muted = audio.toggleMute();
       $('btn-mute').textContent = muted ? '🔇' : '🔊';
@@ -268,6 +268,31 @@ export class UI {
     render();
     // 배경(바텀 시트 바깥) 탭 시 닫기
     panel.onclick = (e) => { if (e.target === panel) panel.classList.add('hidden'); };
+    panel.classList.remove('hidden');
+  }
+
+  // ---------- 메인으로 나가기 확인 ----------
+  private openExitConfirm(): void {
+    const panel = $('confirm-panel');
+    const wasPaused = this.game.paused;
+    this.game.paused = true; // 결정하는 동안 웨이브가 계속 진행되지 않도록 일시정지
+    panel.innerHTML = `
+      <div class="dialog">
+        <h2>메인으로 나갈까요?</h2>
+        <div class="d" style="color:#bbb;text-align:center">
+          지금 나가면 이번 판(Wave ${Math.max(1, this.game.wave)}) 진행 상황이<br>저장되지 않고 사라집니다.
+        </div>
+        <div class="confirm-btns">
+          <button class="cancel">계속하기</button>
+          <button class="danger">나가기</button>
+        </div>
+      </div>`;
+    const close = () => {
+      panel.classList.add('hidden');
+      this.game.paused = wasPaused;
+    };
+    (panel.querySelector('.cancel') as HTMLElement).onclick = () => { audio.button(); close(); };
+    (panel.querySelector('.danger') as HTMLElement).onclick = () => { audio.button(); this.onExit(); };
     panel.classList.remove('hidden');
   }
 

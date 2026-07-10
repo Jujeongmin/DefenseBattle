@@ -633,3 +633,17 @@ html, body {
 .big-result { text-align: center; }
 .big-result .wave-big { font-size: 40px; font-weight: 800; color: var(--gold); margin: 8px 0; }
 .big-result .reward { font-size: 18px; margin: 10px 0; }
+
+/* 확인/취소 2버튼 팝업 (예: 게임 중 메인으로 나가기 확인) */
+.confirm-btns { display: flex; gap: 8px; margin-top: 14px; }
+.confirm-btns button {
+  flex: 1;
+  padding: 11px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+}
+.confirm-btns .cancel { background: #555; color: #fff; }
+.confirm-btns .danger { background: var(--accent); color: #fff; }
