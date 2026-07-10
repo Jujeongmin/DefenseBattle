@@ -110,6 +110,42 @@ export function gradeProbabilities(rareBonus = 0): { key: GradeKey; pct: number 
 }
 export const JOB_PROBABILITY_PCT = 100 / JOBS.length; // 직업은 항상 균등 확률
 
+// ---------- 가챠 전용 확률 (게임 내 20골드 소환과 분리) ----------
+// 가챠는 크리스탈(과금 재화 VX 로 구매 가능)로 뽑는 컬렉션 시스템이라,
+// 소환 확률표를 그대로 쓰면 고등급 중복 수집(스타업)이 사실상 불가능했다.
+// 그래서 가챠는 별도의, 훨씬 후한 확률표를 사용한다.
+export const GACHA_GRADE_RATES: Record<GradeKey, number> = {
+  common: 35, rare: 30, elite: 20, legendary: 10, mythic: 4, eternal: 1,
+}; // 합계 100
+
+function weightedPickFrom(pool: GradeKey[]): GradeKey {
+  const entries = pool.map((key) => ({ key, rate: GACHA_GRADE_RATES[key] }));
+  const total = entries.reduce((s, e) => s + e.rate, 0);
+  let r = Math.random() * total;
+  for (const e of entries) {
+    if (r < e.rate) return e.key;
+    r -= e.rate;
+  }
+  return pool[pool.length - 1];
+}
+
+export function rollGachaGrade(): GradeKey {
+  return weightedPickFrom(GRADES.map((g) => g.key));
+}
+// 천장(신화 이상 보장) 발동 시 신화/태초 중 비율대로 선택
+export function rollGachaMythicPlus(): GradeKey {
+  return weightedPickFrom(['mythic', 'eternal']);
+}
+// 10연 보장(전설 이상 최소 1개) 발동 시 전설/신화/태초 중 비율대로 선택
+export function rollGachaLegendaryPlus(): GradeKey {
+  return weightedPickFrom(['legendary', 'mythic', 'eternal']);
+}
+
+export function gachaGradeProbabilities(): { key: GradeKey; pct: number }[] {
+  const total = GRADES.reduce((s, g) => s + GACHA_GRADE_RATES[g.key], 0);
+  return GRADES.map((g) => ({ key: g.key, pct: (GACHA_GRADE_RATES[g.key] / total) * 100 }));
+}
+
 // ---------- 연구소 ----------
 // 하드코어 곡선을 위해 기획서 원안(+2%/레벨 등)보다 강화된 값 사용.
 // 연구 성장이 지수 HP 벽을 넘게 해주는 핵심 진행 요소.
@@ -143,6 +179,7 @@ export const GACHA = {
   tenCost: 180,       // 10연 (10% 할인)
   maxLevel: 10,       // 스타업 최대 레벨
   bonusPerLevel: 0.05, // 스타업 레벨당 해당 유닛 공격력 +5%
+  mythicPityCount: 50, // 이 횟수 동안 신화 이상이 안 나오면 다음 뽑기는 신화 이상 확정(천장)
 } as const;
 
 // 직업_등급 컬렉션 키

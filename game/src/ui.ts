@@ -50,7 +50,7 @@ export class UI {
 
   private bind(): void {
     this.bindHoldSummon();
-    $('btn-prob-info-game').onclick = () => openProbabilityPanel();
+    $('btn-prob-info-game').onclick = () => openProbabilityPanel('summon');
     $('btn-pause').onclick = () => {
       audio.button();
       this.game.paused = !this.game.paused;

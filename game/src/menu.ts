@@ -4,10 +4,11 @@
 import {
   DAILY_QUESTS, ACHIEVEMENTS,
   CRYSTAL_PACKAGES, AD_REMOVE_VX,
-  GACHA, GRADES, GRADE_BY_KEY, GRADE_INDEX, JOBS, JOB_KR, JOB_SPRITE, starUpCost, rollGrade, rollJob,
+  GACHA, GRADES, GRADE_BY_KEY, GRADE_INDEX, JOBS, JOB_KR, JOB_SPRITE, starUpCost,
+  rollJob, rollGachaGrade, rollGachaMythicPlus, rollGachaLegendaryPlus,
 } from './config';
 import {
-  meta, saveMeta, researchLevel, collectionCount, collectionLevelOf, addToCollection,
+  meta, saveMeta, collectionCount, collectionLevelOf, addToCollection,
 } from './meta';
 import { getPlatform } from './platform';
 import { audio } from './audio';
@@ -258,7 +259,7 @@ export class Menu {
       if (g1) g1.onclick = () => { if (this.pullGacha(1)) render(); };
       if (g10) g10.onclick = () => { if (this.pullGacha(10)) render(); };
       const probBtn = panel.querySelector('#btn-prob-info-shop') as HTMLButtonElement | null;
-      if (probBtn) probBtn.onclick = () => openProbabilityPanel();
+      if (probBtn) probBtn.onclick = () => openProbabilityPanel('gacha');
 
       // 광고제거 패키지 (VX 차감 → 소유 등록)
       const buy = panel.querySelector('#buy-adremove') as HTMLButtonElement | null;
@@ -279,19 +280,36 @@ export class Menu {
   }
 
   // ---------- 유닛 가챠 ----------
+  // 확률은 config.GACHA_GRADE_RATES (게임 내 20골드 소환과는 분리된 전용 표).
+  // 천장 2종: ① 신화 이상이 GACHA.mythicPityCount 회 연속 안 나오면 다음 뽑기 신화 이상 확정
+  //          ② 10연 뽑기는 전설 이상이 하나도 없으면 마지막 결과를 전설 이상으로 승급
   private pullGacha(n: number): boolean {
     const cost = n === 1 ? GACHA.singleCost : GACHA.tenCost;
     if (meta.crystals < cost) return false;
     meta.crystals -= cost;
-    const rareBonus = researchLevel('rare') * 0.5; // 희귀 소환 연구가 가챠에도 적용
+
     const results: { job: Job; grade: GradeKey }[] = [];
     for (let i = 0; i < n; i++) {
-      const grade = rollGrade(rareBonus);
-      const job = rollJob();
-      addToCollection(job, grade);
-      results.push({ job, grade });
+      meta.gachaPity = (meta.gachaPity || 0) + 1;
+      let grade: GradeKey;
+      if (meta.gachaPity >= GACHA.mythicPityCount) {
+        grade = rollGachaMythicPlus();
+        meta.gachaPity = 0;
+      } else {
+        grade = rollGachaGrade();
+        if (GRADE_INDEX[grade] >= GRADE_INDEX['mythic']) meta.gachaPity = 0;
+      }
+      results.push({ job: rollJob(), grade });
     }
+    // 10연 보장: 전설 이상이 하나도 없으면 마지막 슬롯을 전설 이상으로 승급
+    if (n >= 10 && !results.some((r) => GRADE_INDEX[r.grade] >= GRADE_INDEX['legendary'])) {
+      const last = results[results.length - 1];
+      last.grade = rollGachaLegendaryPlus();
+      if (GRADE_INDEX[last.grade] >= GRADE_INDEX['mythic']) meta.gachaPity = 0;
+    }
+    for (const r of results) addToCollection(r.job, r.grade);
     saveMeta();
+
     // 최고 등급에 맞춰 사운드
     const best = Math.max(...results.map((r) => GRADE_INDEX[r.grade]));
     audio.summon(best >= GRADE_INDEX['mythic']);

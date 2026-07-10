@@ -23,6 +23,7 @@ function freshMeta(): MetaData {
     bestWave: 0,
     collection: {},
     collectionLevel: {},
+    gachaPity: 0,
   };
 }
 
@@ -44,6 +45,7 @@ function load(): MetaData {
   }
   m.collection = m.collection || {};
   m.collectionLevel = m.collectionLevel || {};
+  m.gachaPity = m.gachaPity || 0;
   return m;
 }
 
@@ -94,4 +96,12 @@ export function addToCollection(job: Job, grade: GradeKey, n = 1): void {
 // 스타업 레벨당 해당 유닛(직업×등급) 공격력 배율 보너스
 export function collectionBonus(job: Job, grade: GradeKey): number {
   return collectionLevelOf(job, grade) * GACHA.bonusPerLevel;
+}
+
+// ---------- 가챠 천장(보장) 카운터 ----------
+export function gachaPityCount(): number {
+  return meta.gachaPity || 0;
+}
+export function gachaPityRemaining(): number {
+  return Math.max(0, GACHA.mythicPityCount - gachaPityCount());
 }
