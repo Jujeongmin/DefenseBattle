@@ -465,7 +465,9 @@ html, body {
   touch-action: none;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.dialog.drag-scroll::-webkit-scrollbar { display: none; }
 .dialog.drag-scroll.dragging { cursor: grabbing; }
 .dialog h2 { text-align: center; margin-bottom: 12px; font-size: 20px; }
 .dialog .close {
