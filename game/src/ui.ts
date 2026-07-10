@@ -226,30 +226,29 @@ export class UI {
         const cnt = this.game.countOf(job, gr.key);
         const sellQty = qty === Infinity ? cnt : Math.min(qty, cnt);
         const gold = sellQty * gr.sellGold;
-        return `<button class="grade-card${cnt === 0 ? ' empty' : ''}" data-grade="${gr.key}">
+        return `<div class="grade-card${cnt === 0 ? ' empty' : ''}" data-grade="${gr.key}">
+          <div class="gc-name" style="color:${gr.color}">${gr.kr}</div>
           <div class="frame-sprite" style="background-image:url(sprites/${JOB_SPRITE[job]}_${gr.spriteIndex}.png)"></div>
-          <div class="gc-info">
-            <div class="gc-name" style="color:${gr.color}">${gr.kr}</div>
-            <div class="gc-count">보유 ${cnt}</div>
-            <div class="gc-gold">+${gold}</div>
-          </div>
-        </button>`;
+          <div class="gc-count">${cnt}</div>
+          <div class="gc-gold">+${gold}</div>
+        </div>`;
       }).join('');
       panel.innerHTML = `
         <div class="dialog sell-dialog${firstOpen ? ' anim' : ''}">
+          <button class="close-x">✕</button>
+          <div class="sell-hint">한 번에 판매할 개수를 선택할 수 있어요</div>
           <div class="sell-head">
-            <h2>유닛 판매</h2>
-            <button class="close-x">×</button>
+            <h2>영웅 판매</h2>
+            <div class="qty-row">
+              <button data-qty="1" class="${qty === 1 ? 'active' : ''}">1</button>
+              <button data-qty="10" class="${qty === 10 ? 'active' : ''}">10</button>
+              <button data-qty="all" class="${qty === Infinity ? 'active' : ''}">ALL</button>
+            </div>
           </div>
+          <div class="grade-row">${cards}</div>
           <div class="job-tabs">
             ${JOBS.map((j) => `<button data-job="${j}" class="${j === job ? 'active' : ''}">${JOB_KR[j]}</button>`).join('')}
           </div>
-          <div class="qty-row">
-            <button data-qty="1" class="${qty === 1 ? 'active' : ''}">1개</button>
-            <button data-qty="10" class="${qty === 10 ? 'active' : ''}">10개</button>
-            <button data-qty="all" class="${qty === Infinity ? 'active' : ''}">전체</button>
-          </div>
-          <div class="grade-row sell-grid">${cards}</div>
         </div>`;
       firstOpen = false; // 이후 재렌더(탭/수량 전환)에는 애니메이션 미적용
       panel.querySelectorAll<HTMLButtonElement>('[data-qty]').forEach((b) => {
