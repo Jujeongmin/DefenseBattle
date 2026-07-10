@@ -69,7 +69,7 @@ export const WAVE = {
   spawnInterval: 0.6,
   gameOverMobCount: 100,
   bossEvery: 10,
-  bossTimeLimit: 120,
+  bossTimeLimit: 100,
   bossHpMult: 25,
   bossSizeMult: 2,
 } as const;

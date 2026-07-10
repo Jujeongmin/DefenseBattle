@@ -29,6 +29,8 @@ export class UI {
   private speeds: number[];
   private speedIdx = 0;
   private lastRace: Race | null = null;
+  private lastUpgradeGold = -1;
+  private summonHoldTimer: number | null = null;
 
   constructor(game: Game, onExit: () => void) {
     this.game = game;
@@ -47,11 +49,7 @@ export class UI {
   }
 
   private bind(): void {
-    $('btn-summon').onclick = () => {
-      const u = this.game.summon();
-      if (u) audio.summon(u.gradeIndex >= GRADE_INDEX['mythic']);
-      else if (this.game.gold < ECONOMY.summonCost) this.flashGold();
-    };
+    this.bindHoldSummon();
     $('btn-prob-info-game').onclick = () => openProbabilityPanel();
     $('btn-pause').onclick = () => {
       audio.button();
@@ -73,6 +71,41 @@ export class UI {
     $('btn-mute').textContent = audio.isMuted() ? '🔇' : '🔊';
     this.bindDebug();
     this.setupDrag();
+  }
+
+  private bindHoldSummon(): void {
+    const btn = $('btn-summon') as HTMLButtonElement;
+    const summonOnce = (): boolean => {
+      const u = this.game.summon();
+      if (u) {
+        audio.summon(u.gradeIndex >= GRADE_INDEX['mythic']);
+        return true;
+      }
+      if (this.game.gold < ECONOMY.summonCost) this.flashGold();
+      return false;
+    };
+    const stop = () => {
+      if (this.summonHoldTimer !== null) {
+        window.clearInterval(this.summonHoldTimer);
+        this.summonHoldTimer = null;
+      }
+      btn.classList.remove('holding');
+    };
+    const start = (ev: PointerEvent) => {
+      if (btn.disabled || this.summonHoldTimer !== null) return;
+      ev.preventDefault();
+      btn.setPointerCapture(ev.pointerId);
+      btn.classList.add('holding');
+      if (!summonOnce()) { stop(); return; }
+      this.summonHoldTimer = window.setInterval(() => {
+        if (btn.disabled || !summonOnce()) stop();
+      }, 170);
+    };
+    btn.onpointerdown = start;
+    btn.onpointerup = stop;
+    btn.onpointercancel = stop;
+    btn.onlostpointercapture = stop;
+    btn.oncontextmenu = (ev) => ev.preventDefault();
   }
 
   // 개발 서버에서만 노출되는 테스트용 강제 소환 버튼 (배포 빌드엔 표시 안 됨)
@@ -130,6 +163,10 @@ export class UI {
     }
 
     ($('btn-summon') as HTMLButtonElement).disabled = g.gold < ECONOMY.summonCost;
+    if (Math.floor(g.gold) !== this.lastUpgradeGold) {
+      this.lastUpgradeGold = Math.floor(g.gold);
+      this.updateUpgradeButtons();
+    }
   }
 
   private flashGold(): void {
@@ -161,12 +198,21 @@ export class UI {
         <div class="dmg-pct" style="color:${pctColor(p)}">${p}%</div>
         <div class="frame-sprite" style="background-image:url(sprites/${JOB_SPRITE[job]}_${common.spriteIndex}.png)"></div>
         <div class="name">${JOB_KR[job]} Lv.${level}</div>
-        <button class="up-btn">강화 🪙${cost}</button>`;
+        <button class="up-btn" data-upgrade-cost="${cost}" data-unit-count="${count}">강화 🪙${cost}</button>`;
       const btn = div.querySelector('.up-btn') as HTMLButtonElement;
       btn.disabled = count === 0 || this.game.gold < cost;
       btn.onclick = () => { if (this.game.upgrade(job)) audio.button(); };
       el.appendChild(div);
     }
+    this.lastUpgradeGold = Math.floor(this.game.gold);
+  }
+
+  private updateUpgradeButtons(): void {
+    document.querySelectorAll<HTMLButtonElement>('[data-upgrade-cost]').forEach((btn) => {
+      const cost = Number(btn.dataset.upgradeCost);
+      const count = Number(btn.dataset.unitCount);
+      btn.disabled = count === 0 || this.game.gold < cost;
+    });
   }
 
   // ---------- 판매 패널 (영웅 판매) ----------
@@ -180,29 +226,30 @@ export class UI {
         const cnt = this.game.countOf(job, gr.key);
         const sellQty = qty === Infinity ? cnt : Math.min(qty, cnt);
         const gold = sellQty * gr.sellGold;
-        return `<div class="grade-card${cnt === 0 ? ' empty' : ''}" data-grade="${gr.key}">
-          <div class="gc-name" style="color:${gr.color}">${gr.kr}</div>
+        return `<button class="grade-card${cnt === 0 ? ' empty' : ''}" data-grade="${gr.key}">
           <div class="frame-sprite" style="background-image:url(sprites/${JOB_SPRITE[job]}_${gr.spriteIndex}.png)"></div>
-          <div class="gc-count">${cnt}</div>
-          <div class="gc-gold">+${gold}</div>
-        </div>`;
+          <div class="gc-info">
+            <div class="gc-name" style="color:${gr.color}">${gr.kr}</div>
+            <div class="gc-count">보유 ${cnt}</div>
+            <div class="gc-gold">+${gold}</div>
+          </div>
+        </button>`;
       }).join('');
       panel.innerHTML = `
         <div class="dialog sell-dialog${firstOpen ? ' anim' : ''}">
-          <button class="close-x">✕</button>
-          <div class="sell-hint">한 번에 판매할 개수를 선택할 수 있어요</div>
           <div class="sell-head">
-            <h2>영웅 판매</h2>
-            <div class="qty-row">
-              <button data-qty="1" class="${qty === 1 ? 'active' : ''}">1</button>
-              <button data-qty="10" class="${qty === 10 ? 'active' : ''}">10</button>
-              <button data-qty="all" class="${qty === Infinity ? 'active' : ''}">ALL</button>
-            </div>
+            <h2>유닛 판매</h2>
+            <button class="close-x">×</button>
           </div>
-          <div class="grade-row">${cards}</div>
           <div class="job-tabs">
             ${JOBS.map((j) => `<button data-job="${j}" class="${j === job ? 'active' : ''}">${JOB_KR[j]}</button>`).join('')}
           </div>
+          <div class="qty-row">
+            <button data-qty="1" class="${qty === 1 ? 'active' : ''}">1개</button>
+            <button data-qty="10" class="${qty === 10 ? 'active' : ''}">10개</button>
+            <button data-qty="all" class="${qty === Infinity ? 'active' : ''}">전체</button>
+          </div>
+          <div class="grade-row sell-grid">${cards}</div>
         </div>`;
       firstOpen = false; // 이후 재렌더(탭/수량 전환)에는 애니메이션 미적용
       panel.querySelectorAll<HTMLButtonElement>('[data-qty]').forEach((b) => {
