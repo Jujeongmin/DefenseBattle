@@ -13,6 +13,8 @@ import { GRADE_INDEX } from './config';
 import { t, jobName, gradeName, raceName } from './i18n';
 import { openProbabilityPanel } from './probabilityPanel';
 import { openSettingsPanel } from './settingsPanel';
+import { GameServer } from '@agent8/gameserver';
+import { getLocalNickname, setLocalNickname } from './rankPanel';
 import type { Job, Race, GradeKey, GameOverData } from './types';
 
 // 상성 % 색상
@@ -309,16 +311,77 @@ export class UI {
     const reward = crystalReward(d.wave);
     meta.crystals += reward;
     saveMeta();
+
+    const currentNick = getLocalNickname();
+
     panel.innerHTML = `
-      <div class="dialog big-result">
+      <div class="dialog big-result" style="max-height: 90vh; overflow-y: auto; padding: 20px;">
         <h2>${d.cleared ? t('over.clear') : t('over.gameover')}</h2>
-        <div class="d" style="color:#bbb">${d.reason}</div>
-        <div class="wave-big">${t('hud.wave', { n: d.wave })}</div>
-        <div class="reward">${t('over.reward')} <span class="crystal"><span class="gem"></span> ${reward}</span></div>
-        <div class="d" style="color:#bbb">${t('over.owned')} <span class="gem"></span> ${meta.crystals}</div>
-        <button class="close" id="btn-restart">${t('over.toMain')}</button>
+        <div class="d" style="color:#bbb; margin-bottom: 8px;">${d.reason}</div>
+        <div class="wave-big" style="font-size: 32px; font-weight: 800; color: #ffcf3f; margin-bottom: 12px;">${t('hud.wave', { n: d.wave })}</div>
+        <div class="reward" style="margin-bottom: 4px;">${t('over.reward')} <span class="crystal"><span class="gem"></span> ${reward}</span></div>
+        <div class="d" style="color:#bbb; margin-bottom: 16px;">${t('over.owned')} <span class="gem"></span> ${meta.crystals}</div>
+        
+        <!-- 랭킹 등록 카드 -->
+        <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; text-align: center;">
+          <div style="font-weight: 800; font-size: 14px; color: #ffcf3f; margin-bottom: 6px;">🏆 실시간 랭킹 등록</div>
+          <div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">이번 판 기록(${d.wave}웨이브)을 랭킹에 올리세요!</div>
+          <div style="display: flex; gap: 8px; justify-content: center; align-items: stretch; height: 38px; max-width: 280px; margin: 0 auto;">
+            <input type="text" id="gameover-nickname" value="${currentNick}" style="flex: 1; min-width: 0; padding: 6px 12px; border: 1px solid #555; background: #222; color: #fff; border-radius: 8px; font-size: 13px; text-align: center;" maxLength="15" />
+            <button id="btn-submit-rank" class="wood-btn" style="padding: 0 16px; font-size: 13px; font-weight: 800; border-radius: 0;">기록 등록</button>
+          </div>
+          <div id="gameover-submit-status" style="font-size: 11px; color: #8892b0; margin-top: 6px; min-height: 16px;"></div>
+        </div>
+
+        <button class="close" id="btn-restart" style="width: 100%; max-width: 280px; margin: 0 auto;">${t('over.toMain')}</button>
       </div>`;
-    $('btn-restart').onclick = () => this.onExit();
+
+    const submitBtn = panel.querySelector('#btn-submit-rank') as HTMLButtonElement;
+    const nickInput = panel.querySelector('#gameover-nickname') as HTMLInputElement;
+    const statusDiv = panel.querySelector('#gameover-submit-status') as HTMLDivElement;
+
+    submitBtn.onclick = async () => {
+      audio.button();
+      const nick = nickInput.value.trim();
+      if (nick.length < 1) {
+        statusDiv.textContent = '⚠️ 닉네임을 입력해 주세요.';
+        statusDiv.style.color = '#ff5252';
+        return;
+      }
+      if (nick.length > 15) {
+        statusDiv.textContent = '⚠️ 닉네임은 최대 15자까지 가능합니다.';
+        statusDiv.style.color = '#ff5252';
+        return;
+      }
+
+      setLocalNickname(nick);
+      submitBtn.disabled = true;
+      nickInput.disabled = true;
+      statusDiv.textContent = '⏳ 서버에 등록하는 중...';
+      statusDiv.style.color = '#ffd54f';
+
+      try {
+        const server = GameServer.getInstance();
+        if (!server.connected) {
+          await server.connect();
+        }
+        const res = await server.remoteFunction('submitWave', [d.wave, nick]);
+        statusDiv.textContent = `✅ ${res.message}`;
+        statusDiv.style.color = '#4caf50';
+      } catch (e: any) {
+        console.error(e);
+        statusDiv.textContent = `❌ 등록 실패: ${e.message || '네트워크 오류'}`;
+        statusDiv.style.color = '#ff5252';
+        submitBtn.disabled = false;
+        nickInput.disabled = false;
+      }
+    };
+
+    $('btn-restart').onclick = () => {
+      audio.button();
+      panel.classList.add('hidden');
+      this.onExit();
+    };
     panel.classList.remove('hidden');
   }
 

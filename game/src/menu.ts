@@ -15,6 +15,7 @@ import { getPlatform } from './platform';
 import { audio } from './audio';
 import { t, jobName, gradeName } from './i18n';
 import { openProbabilityPanel } from './probabilityPanel';
+import { openRankPanel } from './rankPanel';
 import type { AchievementDef, Job, GradeKey } from './types';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
@@ -28,6 +29,11 @@ export class Menu {
     $('menu-start').onclick = () => { audio.button(); this.onStart(); };
     $('menu-shop').onclick = () => { audio.button(); this.openShop(); };
     $('menu-lab').onclick = () => { audio.button(); this.openLab(); };
+    $('menu-rank').onclick = () => { audio.button(); this.openRank(); };
+  }
+
+  private openRank(): void {
+    openRankPanel();
   }
 
   show(): void {

@@ -34,6 +34,7 @@ function applyStaticI18n(): void {
   set('menu-start', t('menu.start'));
   set('menu-shop', t('menu.shop'));
   set('menu-lab', t('menu.lab'));
+  set('menu-rank', t('menu.rank'));
   set('menu-record-pre', t('menu.recordPre'));
   set('menu-record-suf', t('menu.recordSuf'));
   set('summon-title', t('hud.summon'));
