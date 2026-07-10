@@ -146,6 +146,7 @@ export interface MetaData {
   collection: Record<string, number>;      // `${job}_${grade}` -> 보유 유닛 개수 (가챠)
   collectionLevel: Record<string, number>; // `${job}_${grade}` -> 스타업 레벨
   gachaPity: number;                       // 신화 이상 미획득 연속 뽑기 횟수 (천장 카운터)
+  tutorialDone: boolean;                    // 첫 플레이 온보딩 완료 여부
 }
 
 // ============================================================

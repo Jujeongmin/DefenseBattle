@@ -24,6 +24,7 @@ function freshMeta(): MetaData {
     collection: {},
     collectionLevel: {},
     gachaPity: 0,
+    tutorialDone: false,
   };
 }
 
