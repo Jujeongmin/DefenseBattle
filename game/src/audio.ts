@@ -5,12 +5,19 @@
 type Wave = OscillatorType;
 
 const MUTE_KEY = 'randomdefense.muted.v1';
+const BGM_VOL_KEY = 'randomdefense.bgmVolume.v1';
+const SFX_VOL_KEY = 'randomdefense.sfxVolume.v1';
+const DEFAULT_BGM_VOL = 50; // 0~100
+const DEFAULT_SFX_VOL = 70; // 0~100
 
 class AudioManager {
   private ctx: AudioContext | null = null;
-  private master: GainNode | null = null;
-  private bgmGain: GainNode | null = null;
+  private master: GainNode | null = null;  // 전체 음소거 스위치 (0 또는 1)
+  private bgmGain: GainNode | null = null; // 배경음악 볼륨
+  private sfxGain: GainNode | null = null; // 효과음 볼륨
   private muted: boolean;
+  private bgmVolume: number;  // 0~100
+  private sfxVolume: number;  // 0~100
   private lastAttack = 0;
   private lastKill = 0;
   private bgmStep = 0;
@@ -18,6 +25,15 @@ class AudioManager {
 
   constructor() {
     this.muted = localStorage.getItem(MUTE_KEY) === '1';
+    this.bgmVolume = this.readVol(BGM_VOL_KEY, DEFAULT_BGM_VOL);
+    this.sfxVolume = this.readVol(SFX_VOL_KEY, DEFAULT_SFX_VOL);
+  }
+
+  private readVol(key: string, fallback: number): number {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    const n = Number(raw);
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : fallback;
   }
 
   // 첫 사용자 입력에서 오디오 컨텍스트 해제 (브라우저 자동재생 정책)
@@ -33,11 +49,14 @@ class AudioManager {
       if (!Ctor) return;
       this.ctx = new Ctor();
       this.master = this.ctx.createGain();
-      this.master.gain.value = this.muted ? 0 : 0.5;
+      this.master.gain.value = this.muted ? 0 : 1;
       this.master.connect(this.ctx.destination);
       this.bgmGain = this.ctx.createGain();
-      this.bgmGain.gain.value = 0.5;
+      this.bgmGain.gain.value = this.bgmVolume / 100;
       this.bgmGain.connect(this.master);
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.gain.value = this.sfxVolume / 100;
+      this.sfxGain.connect(this.master);
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
   }
@@ -46,8 +65,23 @@ class AudioManager {
   toggleMute(): boolean {
     this.muted = !this.muted;
     localStorage.setItem(MUTE_KEY, this.muted ? '1' : '0');
-    if (this.master) this.master.gain.value = this.muted ? 0 : 0.5;
+    if (this.master) this.master.gain.value = this.muted ? 0 : 1;
     return this.muted;
+  }
+
+  getBgmVolume(): number { return this.bgmVolume; }
+  getSfxVolume(): number { return this.sfxVolume; }
+  setBgmVolume(v: number): void {
+    this.ensure();
+    this.bgmVolume = Math.max(0, Math.min(100, Math.round(v)));
+    localStorage.setItem(BGM_VOL_KEY, String(this.bgmVolume));
+    if (this.bgmGain) this.bgmGain.gain.value = this.bgmVolume / 100;
+  }
+  setSfxVolume(v: number): void {
+    this.ensure();
+    this.sfxVolume = Math.max(0, Math.min(100, Math.round(v)));
+    localStorage.setItem(SFX_VOL_KEY, String(this.sfxVolume));
+    if (this.sfxGain) this.sfxGain.gain.value = this.sfxVolume / 100;
   }
 
   // ---- 기본 톤 생성 ----
@@ -65,8 +99,8 @@ class AudioManager {
     o.start(t); o.stop(t + dur + 0.02);
   }
   private sfx(freq: number, dur: number, type: Wave, vol: number, slideTo?: number): void {
-    if (this.muted || !this.ctx || !this.master) return;
-    this.tone(freq, dur, type, vol, this.master, undefined, slideTo);
+    if (this.muted || !this.ctx || !this.sfxGain) return;
+    this.tone(freq, dur, type, vol, this.sfxGain, undefined, slideTo);
   }
 
   // ---- 효과음 ----
@@ -77,9 +111,9 @@ class AudioManager {
     this.sfx(400, 0.12, 'square', 0.18, 760);
   }
   private fanfare(): void {
-    if (this.muted || !this.ctx || !this.master) return;
+    if (this.muted || !this.ctx || !this.sfxGain) return;
     const notes = [523, 659, 784, 1047];
-    notes.forEach((n, i) => this.tone(n, 0.2, 'square', 0.2, this.master!, this.ctx!.currentTime + i * 0.1));
+    notes.forEach((n, i) => this.tone(n, 0.2, 'square', 0.2, this.sfxGain!, this.ctx!.currentTime + i * 0.1));
   }
 
   attack(): void {
@@ -99,11 +133,11 @@ class AudioManager {
 
   boss(): void { this.sfx(90, 0.6, 'sawtooth', 0.24, 60); } // 보스 등장 경고
   gameEnd(cleared: boolean): void {
-    if (this.muted || !this.ctx || !this.master) return;
+    if (this.muted || !this.ctx || !this.sfxGain) return;
     if (cleared) {
-      [523, 659, 784, 1047, 1319].forEach((n, i) => this.tone(n, 0.3, 'square', 0.22, this.master!, this.ctx!.currentTime + i * 0.13));
+      [523, 659, 784, 1047, 1319].forEach((n, i) => this.tone(n, 0.3, 'square', 0.22, this.sfxGain!, this.ctx!.currentTime + i * 0.13));
     } else {
-      [440, 349, 262, 196].forEach((n, i) => this.tone(n, 0.35, 'sawtooth', 0.2, this.master!, this.ctx!.currentTime + i * 0.14));
+      [440, 349, 262, 196].forEach((n, i) => this.tone(n, 0.35, 'sawtooth', 0.2, this.sfxGain!, this.ctx!.currentTime + i * 0.14));
     }
   }
 

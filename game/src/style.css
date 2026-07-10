@@ -647,3 +647,21 @@ html, body {
 }
 .confirm-btns .cancel { background: #555; color: #fff; }
 .confirm-btns .danger { background: var(--accent); color: #fff; }
+
+/* 설정 패널 - 볼륨 슬라이더 */
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 2px;
+}
+.settings-label { flex: 0 0 88px; font-size: 14px; font-weight: 700; }
+.vol-slider {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: #3a3f52;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+.vol-val { flex: 0 0 30px; text-align: right; font-weight: 800; color: var(--gold); font-size: 13px; }

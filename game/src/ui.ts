@@ -11,6 +11,7 @@ import { getPlatform } from './platform';
 import { audio } from './audio';
 import { GRADE_INDEX } from './config';
 import { openProbabilityPanel } from './probabilityPanel';
+import { openSettingsPanel } from './settingsPanel';
 import type { Job, Race, GradeKey, GameOverData } from './types';
 
 // 상성 % 색상
@@ -64,11 +65,7 @@ export class UI {
     };
     $('btn-sell-panel').onclick = () => { audio.button(); this.openSell(); };
     $('btn-menu').onclick = () => { audio.button(); this.openExitConfirm(); };
-    $('btn-mute').onclick = () => {
-      const muted = audio.toggleMute();
-      $('btn-mute').textContent = muted ? '🔇' : '🔊';
-    };
-    $('btn-mute').textContent = audio.isMuted() ? '🔇' : '🔊';
+    $('btn-settings').onclick = () => { audio.button(); openSettingsPanel(); };
     this.bindDebug();
     this.setupDrag();
   }
