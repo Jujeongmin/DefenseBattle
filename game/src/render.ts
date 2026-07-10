@@ -241,9 +241,9 @@ export class Renderer {
           const col = this.walkCol(u.id * 0.09, 0.14);
           this.frame(spr.img, col, u.dir, u.x - s / 2, u.y - s / 2, s);
         } else {
-          // 정지 상태: 정면(row 0). 공격 중일 때만 스윙, 그 외엔 고정 Idle 프레임
+          // 정지 상태: 마지막 이동/공격 방향을 바라본다. 공격 중일 때만 스윙 프레임 사용.
           const col = u.flash > 0 ? this.attackCol(u.flash) : 1;
-          this.frame(spr.img, col, 0, u.x - s / 2, u.y - s / 2, s);
+          this.frame(spr.img, col, u.dir, u.x - s / 2, u.y - s / 2, s);
         }
       } else {
         ctx.fillStyle = JOB_TINT[u.job];

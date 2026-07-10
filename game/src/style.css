@@ -460,6 +460,13 @@ html, body {
   max-height: 84%;
   overflow-y: auto;
 }
+.dialog.drag-scroll {
+  cursor: grab;
+  touch-action: none;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.dialog.drag-scroll.dragging { cursor: grabbing; }
 .dialog h2 { text-align: center; margin-bottom: 12px; font-size: 20px; }
 .dialog .close {
   display: block;

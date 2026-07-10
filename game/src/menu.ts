@@ -46,7 +46,7 @@ export class Menu {
     const render = () => {
       const body = tab === 'collection' ? this.collectionHtml() : this.questHtml();
       panel.innerHTML = `
-        <div class="dialog">
+        <div class="dialog drag-scroll">
           <h2>연구소 <span class="crystal"><span class="gem"></span> ${meta.crystals}</span></h2>
           <div class="tab-row">
             <button data-tab="collection" class="${tab === 'collection' ? 'active' : ''}">유닛 강화</button>
@@ -60,6 +60,7 @@ export class Menu {
       });
       this.bindCollectionButtons(panel, render);
       this.bindQuestButtons(panel, render);
+      this.bindDragScroll(panel.querySelector<HTMLElement>('.dialog'));
       (panel.querySelector('.close') as HTMLElement).onclick = () => {
         panel.classList.add('hidden');
         this.refresh();
@@ -147,6 +148,39 @@ export class Menu {
         }
       };
     });
+  }
+
+  private bindDragScroll(el: HTMLElement | null): void {
+    if (!el) return;
+    let pointerId = -1;
+    let startY = 0;
+    let startScrollTop = 0;
+
+    el.onpointerdown = (ev) => {
+      if ((ev.target as HTMLElement).closest('button')) return;
+      pointerId = ev.pointerId;
+      startY = ev.clientY;
+      startScrollTop = el.scrollTop;
+      el.classList.add('dragging');
+      el.setPointerCapture(pointerId);
+    };
+
+    el.onpointermove = (ev) => {
+      if (ev.pointerId !== pointerId) return;
+      const dy = ev.clientY - startY;
+      if (Math.abs(dy) > 2) ev.preventDefault();
+      el.scrollTop = startScrollTop - dy;
+    };
+
+    const stop = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return;
+      if (el.hasPointerCapture(pointerId)) el.releasePointerCapture(pointerId);
+      pointerId = -1;
+      el.classList.remove('dragging');
+    };
+
+    el.onpointerup = stop;
+    el.onpointercancel = stop;
   }
 
   // ---------- 상점 (VX 로 보석 구매 / 광고제거 패키지) ----------

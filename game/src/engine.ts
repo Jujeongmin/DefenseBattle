@@ -323,12 +323,16 @@ export class Game {
   // 목표 지점까지 걸어가는 트윈 시작 (구역 교환 시 사용)
   private startWalk(u: Unit, target: { x: number; y: number }, dur = 0.55): void {
     const dx = target.x - u.x, dy = target.y - u.y;
-    if (Math.abs(dx) > Math.abs(dy)) u.dir = dx > 0 ? 2 : 1; // 좌/우
-    else u.dir = dy > 0 ? 0 : 3;                              // 하/상
+    u.dir = this.directionFromDelta(dx, dy);
     u.moveFrom = { x: u.x, y: u.y };
     u.moveTo = target;
     u.moveElapsed = 0;
     u.moveDur = dur;
+  }
+
+  private directionFromDelta(dx: number, dy: number): number {
+    if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 2 : 1; // 좌/우
+    return dy > 0 ? 0 : 3;                                  // 하/상
   }
 
   // 매 프레임 걷기 트윈 진행
@@ -462,6 +466,7 @@ export class Game {
         if (d <= range && d < bestD) { bestD = d; best = m; }
       }
       if (!best) continue;
+      u.dir = this.directionFromDelta(best.x - u.x, best.y - u.y);
       const dmg = this.unitDamage(u, best);
       best.hp -= dmg;
       best.hitFlash = 0.12;
