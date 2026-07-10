@@ -208,7 +208,7 @@ export class Menu {
           <button data-pkg="${i}" ${vx < p.vx ? 'disabled' : ''}>VX ${p.vx}</button>
         </div>`).join('');
       panel.innerHTML = `
-        <div class="dialog">
+        <div class="dialog drag-scroll">
           <h2>${t('shop.title')}</h2>
           <div class="shop-balance">
             <span class="crystal"><span class="gem"></span> ${meta.crystals.toLocaleString()}</span>
@@ -280,6 +280,8 @@ export class Menu {
           render();
         }
       };
+
+      this.bindDragScroll(panel.querySelector<HTMLElement>('.dialog'));
 
       (panel.querySelector('.close') as HTMLElement).onclick = () => {
         panel.classList.add('hidden');
