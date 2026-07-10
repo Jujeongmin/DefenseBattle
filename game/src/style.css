@@ -450,9 +450,16 @@ html, body {
 .job-tabs button.active { background: var(--gold); color: #3a2f00; }
 
 /* ---------- 오버레이 패널 ---------- */
+/* #game-frame/#main-menu 와 동일하게 모바일 폭(min(100vw,480px))으로 제한.
+   inset:0 을 쓰면 #app(브라우저 전체 폭) 기준으로 퍼져서 넓은 화면에서
+   패널이 게임 프레임보다 커 보이는 문제가 있었음. */
 .overlay {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100vw, 480px);
+  height: 100%;
   background: rgba(0,0,0,0.7);
   display: flex;
   align-items: center;
