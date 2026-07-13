@@ -80,15 +80,22 @@ export function saveMeta(): void {
  */
 export async function syncWithServer(): Promise<void> {
   const server = GameServer.getInstance();
+  const timeout = (ms: number) => new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms));
   try {
     if (!server.connected) {
-      await server.connect();
+      await Promise.race([server.connect(), timeout(5000)]);
     }
+    if (!server.connected) return;
 
-    const serverData = await server.remoteFunction('loadPlayerData');
+    const serverData = await Promise.race([
+      server.remoteFunction('loadPlayerData'),
+      timeout(5000)
+    ]);
     if (!serverData) {
-      // If no server-side profile exists yet, save current local profile
-      await server.remoteFunction('savePlayerData', [meta, getNick()]);
+      await Promise.race([
+        server.remoteFunction('savePlayerData', [meta, getNick()]),
+        timeout(5000)
+      ]);
       return;
     }
 
@@ -143,7 +150,10 @@ export async function syncWithServer(): Promise<void> {
 
     // Save the fully merged progress to both Local Storage and Cloud Server
     getPlatform().saveMeta(meta);
-    await server.remoteFunction('savePlayerData', [meta, getNick()]);
+    await Promise.race([
+      server.remoteFunction('savePlayerData', [meta, getNick()]),
+      timeout(5000)
+    ]);
   } catch (err) {
     console.error('Failed to sync progress with cloud server:', err);
   }

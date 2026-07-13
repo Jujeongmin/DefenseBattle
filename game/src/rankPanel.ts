@@ -148,10 +148,20 @@ export function openRankPanel(): void {
 
       try {
         if (meta.bestWave > 0) {
-          // If the player has a best score, update or register it on the server with the new nickname
-          await server.remoteFunction('submitWave', [meta.bestWave, newNick]);
-          statusDiv.textContent = `✅ 닉네임이 변경되고 최고 기록(${meta.bestWave}웨이브)이 랭킹에 등록되었습니다!`;
-          statusDiv.style.color = '#4caf50';
+          const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('서버 연결 시간 초과')), ms));
+          if (!server.connected) {
+            await Promise.race([server.connect(), timeout(5000)]);
+          }
+          if (server.connected) {
+            await Promise.race([
+              server.remoteFunction('submitWave', [meta.bestWave, newNick]),
+              timeout(5000)
+            ]);
+            statusDiv.textContent = `✅ 닉네임이 변경되고 최고 기록(${meta.bestWave}웨이브)이 랭킹에 등록되었습니다!`;
+            statusDiv.style.color = '#4caf50';
+          } else {
+            throw new Error('서버에 연결할 수 없습니다');
+          }
         } else {
           statusDiv.textContent = '✅ 기기 닉네임이 성공적으로 설정되었습니다!';
           statusDiv.style.color = '#4caf50';

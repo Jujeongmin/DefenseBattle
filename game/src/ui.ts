@@ -434,11 +434,18 @@ export class UI {
       statusDiv.style.color = '#ffd54f';
 
       try {
+        const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('서버 연결 시간 초과')), ms));
         const server = GameServer.getInstance();
         if (!server.connected) {
-          await server.connect();
+          await Promise.race([server.connect(), timeout(5000)]);
         }
-        const res = await server.remoteFunction('submitWave', [d.wave, nick]);
+        if (!server.connected) {
+          throw new Error('서버에 연결할 수 없습니다');
+        }
+        const res = await Promise.race([
+          server.remoteFunction('submitWave', [d.wave, nick]),
+          timeout(5000)
+        ]);
         statusDiv.textContent = `✅ ${res.message}`;
         statusDiv.style.color = '#4caf50';
       } catch (e: any) {
