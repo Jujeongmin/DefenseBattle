@@ -8,7 +8,6 @@ import { UI } from './ui';
 import { Menu } from './menu';
 import { preloadAll } from './assets';
 import { audio } from './audio';
-import { adManager } from './ad';
 import { t, getLang, setLang } from './i18n';
 import { maybeStartTutorial, endTutorial } from './tutorial';
 
@@ -90,17 +89,13 @@ function startGame(): void {
 
 function returnToMenu(): void {
   audio.stopBgm();
-  endTutorial(); // 튜토리얼 중 나가기 시 오버레이 정리
+  endTutorial();
   gameFrame.classList.add('hidden');
   document.querySelectorAll('.overlay').forEach((el) => el.classList.add('hidden'));
   game = null;
   renderer = null;
   ui = null;
-
-  // 전면 광고 표시 후 메인메뉴 복귀
-  adManager.showInterstitial().then(() => {
-    menu.show();
-  });
+  menu.show();
 }
 
 menu.show();

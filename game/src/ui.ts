@@ -15,6 +15,7 @@ import { openProbabilityPanel } from './probabilityPanel';
 import { openSettingsPanel } from './settingsPanel';
 import { GameServer } from '@agent8/gameserver';
 import { getLocalNickname, setLocalNickname } from './rankPanel';
+import { adManager } from './ad';
 import type { Job, Race, GradeKey, GameOverData } from './types';
 
 // 상성 % 색상
@@ -305,9 +306,15 @@ export class UI {
   // ---------- 게임 오버 ----------
   private showGameOver(d: GameOverData): void {
     const panel = $('gameover-panel');
-    const reward = crystalReward(d.wave);
-    meta.crystals += reward;
-    saveMeta();
+    const baseReward = crystalReward(d.wave);
+    // 보상은 아직 지급하지 않음 — 광고 선택 후 지급
+    let rewardClaimed = false;
+    const grantReward = (multiplier: number) => {
+      if (rewardClaimed) return;
+      rewardClaimed = true;
+      meta.crystals += baseReward * multiplier;
+      saveMeta();
+    };
 
     const currentNick = getLocalNickname();
 
@@ -316,9 +323,20 @@ export class UI {
         <h2>${d.cleared ? t('over.clear') : t('over.gameover')}</h2>
         <div class="d" style="color:#bbb; margin-bottom: 8px;">${d.reason}</div>
         <div class="wave-big" style="font-size: 32px; font-weight: 800; color: #ffcf3f; margin-bottom: 12px;">${t('hud.wave', { n: d.wave })}</div>
-        <div class="reward" style="margin-bottom: 4px;">${t('over.reward')} <span class="crystal"><span class="gem"></span> ${reward}</span></div>
+        <div class="reward" style="margin-bottom: 4px;">${t('over.reward')} <span class="crystal"><span class="gem"></span> ${baseReward}</span></div>
         <div class="d" style="color:#bbb; margin-bottom: 16px;">${t('over.owned')} <span class="gem"></span> ${meta.crystals}</div>
-        
+
+        <!-- 2배 보상 광고 카드 -->
+        <div style="background: rgba(100, 255, 218, 0.05); border: 1px solid rgba(100, 255, 218, 0.2); border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; text-align: center;">
+          <div style="font-weight: 800; font-size: 14px; color: #64ffda; margin-bottom: 6px;">📺 광고 시청하고 2배 보상</div>
+          <div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">광고를 보면 보석을 <span style="color:#64ffda;font-weight:700;">2배 (${baseReward * 2}개)</span> 받을 수 있어요!</div>
+          <div style="display: flex; gap: 8px; justify-content: center; max-width: 280px; margin: 0 auto;">
+            <button id="btn-double-reward" class="wood-btn" style="flex:1; padding: 0 12px; font-size: 13px; font-weight: 800; border-radius: 0;">📺 2배 받기</button>
+            <button id="btn-skip-ad" class="wood-btn" style="flex:1; padding: 0 12px; font-size: 12px; border-radius: 0; opacity: 0.7;">그냥 받기</button>
+          </div>
+          <div id="double-reward-status" style="font-size: 11px; color: #8892b0; margin-top: 6px; min-height: 16px;"></div>
+        </div>
+
         <!-- 랭킹 등록 카드 -->
         <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; text-align: center;">
           <div style="font-weight: 800; font-size: 14px; color: #ffcf3f; margin-bottom: 6px;">🏆 실시간 랭킹 등록</div>
@@ -336,6 +354,60 @@ export class UI {
     const submitBtn = panel.querySelector('#btn-submit-rank') as HTMLButtonElement;
     const nickInput = panel.querySelector('#gameover-nickname') as HTMLInputElement;
     const statusDiv = panel.querySelector('#gameover-submit-status') as HTMLDivElement;
+
+    // 2배 보상 광고 버튼
+    const doubleBtn = panel.querySelector('#btn-double-reward') as HTMLButtonElement;
+    const skipBtn = panel.querySelector('#btn-skip-ad') as HTMLButtonElement;
+    const doubleStatus = panel.querySelector('#double-reward-status') as HTMLDivElement;
+
+    if (adManager.isAdRemoved()) {
+      // 광고제거 상태: 바로 2배 지급, 버튼 숨김
+      grantReward(2);
+      doubleBtn.style.display = 'none';
+      skipBtn.style.display = 'none';
+      doubleStatus.textContent = '✅ 광고제거 혜택: 2배 보석 자동 지급!';
+      doubleStatus.style.color = '#4caf50';
+    }
+
+    doubleBtn.onclick = async () => {
+      audio.button();
+      doubleBtn.disabled = true;
+      skipBtn.disabled = true;
+      doubleStatus.textContent = '⏳ 광고 로딩 중...';
+      doubleStatus.style.color = '#ffd54f';
+
+      try {
+        const ok = await adManager.watchRewardedAd('double-reward');
+        if (ok) {
+          grantReward(2);
+          doubleStatus.textContent = `✅ 2배 보상 지급 완료! (+${baseReward * 2} 보석)`;
+          doubleStatus.style.color = '#4caf50';
+          doubleBtn.style.display = 'none';
+          skipBtn.style.display = 'none';
+          // update displayed gem count
+          panel.querySelector('.reward .crystal')!.innerHTML = `<span class="gem"></span> ${baseReward * 2}`;
+        } else {
+          doubleBtn.disabled = false;
+          skipBtn.disabled = false;
+          doubleStatus.textContent = '⚠️ 광고를 끝까지 시청해야 2배 보상이 지급됩니다.';
+          doubleStatus.style.color = '#ff5252';
+        }
+      } catch {
+        doubleBtn.disabled = false;
+        skipBtn.disabled = false;
+        doubleStatus.textContent = '⚠️ 광고 로딩 실패. 다시 시도해 주세요.';
+        doubleStatus.style.color = '#ff5252';
+      }
+    };
+
+    skipBtn.onclick = () => {
+      audio.button();
+      grantReward(1);
+      doubleBtn.style.display = 'none';
+      skipBtn.style.display = 'none';
+      doubleStatus.textContent = `✅ 기본 보상 지급 완료 (+${baseReward} 보석)`;
+      doubleStatus.style.color = '#8892b0';
+    };
 
     submitBtn.onclick = async () => {
       audio.button();
