@@ -183,13 +183,6 @@ export class Game {
     return this.createUnit(job, gradeKey);
   }
 
-  // 디버그/테스트 전용: 직업은 랜덤이되 등급을 지정해 무료로 소환.
-  // 실제 UI는 개발 모드(import.meta.env.DEV)에서만 노출한다.
-  summonDebug(gradeKey: GradeKey): Unit | null {
-    if (this.over) return null;
-    return this.createUnit(rollJob(), gradeKey);
-  }
-
   // 소환 확정 로직 (직업/등급이 정해진 뒤 공통으로 처리)
   private createUnit(job: Job, gradeKey: GradeKey): Unit {
     const grade = GRADE_BY_KEY[gradeKey];

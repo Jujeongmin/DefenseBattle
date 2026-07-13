@@ -74,7 +74,6 @@ export class UI {
     this.game.speed = this.speeds[this.speedIdx];
     $('btn-speed').textContent = this.game.speed + 'x';
     $('btn-pause').textContent = '❚❚';
-    this.bindDebug();
     this.setupDrag();
   }
 
@@ -117,20 +116,6 @@ export class UI {
     btn.onpointercancel = stop;
     btn.onlostpointercapture = stop;
     btn.oncontextmenu = (ev) => ev.preventDefault();
-  }
-
-  // 개발 서버에서만 노출되는 테스트용 강제 소환 버튼 (배포 빌드엔 표시 안 됨)
-  private bindDebug(): void {
-    if (!import.meta.env.DEV) return;
-    $('debug-panel').classList.remove('hidden');
-    $('debug-mythic').onclick = () => {
-      const u = this.game.summonDebug('mythic');
-      if (u) audio.summon(true);
-    };
-    $('debug-eternal').onclick = () => {
-      const u = this.game.summonDebug('eternal');
-      if (u) audio.summon(true);
-    };
   }
 
   // ---------- 매 프레임 갱신 ----------

@@ -224,26 +224,6 @@ html, body {
 }
 @keyframes pop { from { transform: translateX(-50%) scale(0.4); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
 
-/* ---------- 디버그 패널 (개발 모드 전용, 배포 빌드엔 표시 안 됨) ---------- */
-#debug-panel {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  z-index: 40;
-  display: flex;
-  gap: 6px;
-}
-#debug-panel button {
-  background: rgba(0, 0, 0, 0.6);
-  color: #ffd54f;
-  border: 1px dashed #ffd54f;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
 /* ---------- 진행 바 ---------- */
 #progress-row {
   position: relative;
