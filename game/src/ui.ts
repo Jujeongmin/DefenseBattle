@@ -332,22 +332,22 @@ export class UI {
 
         <!-- 2배 보상 광고 카드 -->
         <div style="background: rgba(100, 255, 218, 0.05); border: 1px solid rgba(100, 255, 218, 0.2); border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; text-align: center;">
-          <div style="font-weight: 800; font-size: 14px; color: #64ffda; margin-bottom: 6px;">📺 광고 시청하고 2배 보상</div>
-          <div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">광고를 보면 보석을 <span style="color:#64ffda;font-weight:700;">2배 (${baseReward * 2}개)</span> 받을 수 있어요!</div>
+          <div style="font-weight: 800; font-size: 14px; color: #64ffda; margin-bottom: 6px;">${t('over.doubleAdTitle')}</div>
+          <div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">${t('over.doubleAdDesc', { n: baseReward * 2 })}</div>
           <div style="display: flex; gap: 8px; justify-content: center; max-width: 280px; margin: 0 auto;">
-            <button id="btn-double-reward" class="wood-btn" style="flex:1; padding: 0 12px; font-size: 13px; font-weight: 800; border-radius: 0;">📺 2배 받기</button>
-            <button id="btn-skip-ad" class="wood-btn" style="flex:1; padding: 0 12px; font-size: 12px; border-radius: 0; opacity: 0.7;">그냥 받기</button>
+            <button id="btn-double-reward" class="wood-btn" style="flex:1; padding: 0 12px; font-size: 13px; font-weight: 800; border-radius: 0;">${t('over.doubleBtn')}</button>
+            <button id="btn-skip-ad" class="wood-btn" style="flex:1; padding: 0 12px; font-size: 12px; border-radius: 0; opacity: 0.7;">${t('over.skipBtn')}</button>
           </div>
           <div id="double-reward-status" style="font-size: 11px; color: #8892b0; margin-top: 6px; min-height: 16px;"></div>
         </div>
 
         <!-- 랭킹 등록 카드 -->
         <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; text-align: center;">
-          <div style="font-weight: 800; font-size: 14px; color: #ffcf3f; margin-bottom: 6px;">🏆 실시간 랭킹 등록</div>
-          <div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">이번 판 기록(${d.wave}웨이브)을 랭킹에 올리세요!</div>
+          <div style="font-weight: 800; font-size: 14px; color: #ffcf3f; margin-bottom: 6px;">${t('over.rankTitle')}</div>
+          <div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">${t('over.rankDesc', { n: d.wave })}</div>
           <div style="display: flex; gap: 8px; justify-content: center; align-items: stretch; height: 38px; max-width: 280px; margin: 0 auto;">
             <input type="text" id="gameover-nickname" value="${currentNick}" style="flex: 1; min-width: 0; padding: 6px 12px; border: 1px solid #555; background: #222; color: #fff; border-radius: 8px; font-size: 13px; text-align: center;" maxLength="15" />
-            <button id="btn-submit-rank" class="wood-btn" style="padding: 0 16px; font-size: 13px; font-weight: 800; border-radius: 0;">기록 등록</button>
+            <button id="btn-submit-rank" class="wood-btn" style="padding: 0 16px; font-size: 13px; font-weight: 800; border-radius: 0;">${t('over.rankSubmitBtn')}</button>
           </div>
           <div id="gameover-submit-status" style="font-size: 11px; color: #8892b0; margin-top: 6px; min-height: 16px;"></div>
         </div>
@@ -369,7 +369,7 @@ export class UI {
       grantReward(2);
       doubleBtn.style.display = 'none';
       skipBtn.style.display = 'none';
-      doubleStatus.textContent = '✅ 광고제거 혜택: 2배 보석 자동 지급!';
+      doubleStatus.textContent = t('over.adRemovedAutoDouble');
       doubleStatus.style.color = '#4caf50';
     }
 
@@ -377,14 +377,14 @@ export class UI {
       audio.button();
       doubleBtn.disabled = true;
       skipBtn.disabled = true;
-      doubleStatus.textContent = '⏳ 광고 로딩 중...';
+      doubleStatus.textContent = t('over.adLoading');
       doubleStatus.style.color = '#ffd54f';
 
       try {
         const ok = await adManager.watchRewardedAd('double-reward');
         if (ok) {
           grantReward(2);
-          doubleStatus.textContent = `✅ 2배 보상 지급 완료! (+${baseReward * 2} 보석)`;
+          doubleStatus.textContent = t('over.doubleGranted', { n: baseReward * 2 });
           doubleStatus.style.color = '#4caf50';
           doubleBtn.style.display = 'none';
           skipBtn.style.display = 'none';
@@ -393,13 +393,13 @@ export class UI {
         } else {
           doubleBtn.disabled = false;
           skipBtn.disabled = false;
-          doubleStatus.textContent = '⚠️ 광고를 끝까지 시청해야 2배 보상이 지급됩니다.';
+          doubleStatus.textContent = t('over.adIncomplete');
           doubleStatus.style.color = '#ff5252';
         }
       } catch {
         doubleBtn.disabled = false;
         skipBtn.disabled = false;
-        doubleStatus.textContent = '⚠️ 광고 로딩 실패. 다시 시도해 주세요.';
+        doubleStatus.textContent = t('over.adLoadFailed');
         doubleStatus.style.color = '#ff5252';
       }
     };
@@ -409,7 +409,7 @@ export class UI {
       grantReward(1);
       doubleBtn.style.display = 'none';
       skipBtn.style.display = 'none';
-      doubleStatus.textContent = `✅ 기본 보상 지급 완료 (+${baseReward} 보석)`;
+      doubleStatus.textContent = t('over.baseGranted', { n: baseReward });
       doubleStatus.style.color = '#8892b0';
     };
 
@@ -417,12 +417,12 @@ export class UI {
       audio.button();
       const nick = nickInput.value.trim();
       if (nick.length < 1) {
-        statusDiv.textContent = '⚠️ 닉네임을 입력해 주세요.';
+        statusDiv.textContent = t('rank.nicknameEmpty');
         statusDiv.style.color = '#ff5252';
         return;
       }
       if (nick.length > 15) {
-        statusDiv.textContent = '⚠️ 닉네임은 최대 15자까지 가능합니다.';
+        statusDiv.textContent = t('rank.nicknameTooLong');
         statusDiv.style.color = '#ff5252';
         return;
       }
@@ -430,17 +430,17 @@ export class UI {
       setLocalNickname(nick);
       submitBtn.disabled = true;
       nickInput.disabled = true;
-      statusDiv.textContent = '⏳ 서버에 등록하는 중...';
+      statusDiv.textContent = t('over.rankRegistering');
       statusDiv.style.color = '#ffd54f';
 
       try {
-        const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('서버 연결 시간 초과')), ms));
+        const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error(t('rank.serverTimeout'))), ms));
         const server = GameServer.getInstance();
         if (!server.connected) {
           await Promise.race([server.connect(), timeout(5000)]);
         }
         if (!server.connected) {
-          throw new Error('서버에 연결할 수 없습니다');
+          throw new Error(t('rank.serverUnavailable'));
         }
         const res = await Promise.race([
           server.remoteFunction('submitWave', [d.wave, nick]),
@@ -450,7 +450,7 @@ export class UI {
         statusDiv.style.color = '#4caf50';
       } catch (e: any) {
         console.error(e);
-        statusDiv.textContent = `❌ 등록 실패: ${e.message || '네트워크 오류'}`;
+        statusDiv.textContent = t('over.rankSubmitFailed', { msg: e.message || t('over.networkError') });
         statusDiv.style.color = '#ff5252';
         submitBtn.disabled = false;
         nickInput.disabled = false;

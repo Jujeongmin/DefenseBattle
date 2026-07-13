@@ -189,6 +189,57 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'tut.race':        { en: 'The enemy race changes each wave (Troll/Orc/Undead). Check here and rely on the job that counters it.', ko: '적 종족은 웨이브마다 바뀝니다(트롤/오크/언데드). 여기서 확인하고 상성이 좋은 직업을 활용하세요.' },
   'tut.goldTitle':   { en: 'Earn gold', ko: '골드 획득' },
   'tut.gold':        { en: 'Defeated enemies drop gold — spend it to summon, upgrade, or sell. Survive all 50 waves. Good luck! ⚔️', ko: '적을 처치하면 골드를 얻습니다 — 소환·강화·판매에 쓰세요. 50웨이브까지 살아남으세요. 행운을 빕니다! ⚔️' },
+
+  // 상점 보상형 광고
+  'shop.adSection':  { en: 'Rewarded Ad', ko: '보상형 광고' },
+  'shop.adCooldownBtn': { en: '⏳ Available again in {time}', ko: '⏳ {time} 후 다시 시청 가능' },
+  'shop.adFreeBtn':  { en: '🎁 Claim free', ko: '🎁 광고 없이 받기' },
+  'shop.adWatchBtn': { en: '📺 Watch ad to claim', ko: '📺 광고 시청하고 받기' },
+  'shop.adRemovedInfo': { en: 'Ad-free: get free gems once every 30 minutes, no ad needed!', ko: '광고제거 상태: 30분마다 한 번, 광고 없이 무료 보석을 받으세요!' },
+  'shop.adInfo':     { en: 'Watch an ad once every 30 minutes for free gems.', ko: '30분마다 한 번, 광고를 보고 무료 보석을 받으세요!' },
+  'shop.minSec':     { en: '{m}m {s}s', ko: '{m}분 {s}초' },
+
+  // 게임오버 - 2배 보상 광고
+  'over.doubleAdTitle': { en: '📺 Watch ad for 2x reward', ko: '📺 광고 시청하고 2배 보상' },
+  'over.doubleAdDesc':  { en: 'Watch an ad to get 2x gems ({n})!', ko: '광고를 보면 보석을 2배 ({n}개) 받을 수 있어요!' },
+  'over.doubleBtn':     { en: '📺 Get 2x', ko: '📺 2배 받기' },
+  'over.skipBtn':       { en: 'Take as-is', ko: '그냥 받기' },
+  'over.adRemovedAutoDouble': { en: '✅ Ad-free bonus: 2x gems granted automatically!', ko: '✅ 광고제거 혜택: 2배 보석 자동 지급!' },
+  'over.adLoading':     { en: '⏳ Loading ad...', ko: '⏳ 광고 로딩 중...' },
+  'over.doubleGranted': { en: '✅ 2x reward granted! (+{n} gems)', ko: '✅ 2배 보상 지급 완료! (+{n} 보석)' },
+  'over.adIncomplete':  { en: '⚠️ Watch the full ad to get the 2x reward.', ko: '⚠️ 광고를 끝까지 시청해야 2배 보상이 지급됩니다.' },
+  'over.adLoadFailed':  { en: '⚠️ Failed to load ad. Please try again.', ko: '⚠️ 광고 로딩 실패. 다시 시도해 주세요.' },
+  'over.baseGranted':   { en: '✅ Base reward granted (+{n} gems)', ko: '✅ 기본 보상 지급 완료 (+{n} 보석)' },
+
+  // 게임오버 - 랭킹 등록
+  'over.rankTitle':     { en: '🏆 Live Rankings', ko: '🏆 실시간 랭킹 등록' },
+  'over.rankDesc':      { en: "Submit this run's record (Wave {n}) to the leaderboard!", ko: '이번 판 기록({n}웨이브)을 랭킹에 올리세요!' },
+  'over.rankSubmitBtn': { en: 'Submit', ko: '기록 등록' },
+  'over.rankRegistering': { en: '⏳ Submitting to server...', ko: '⏳ 서버에 등록하는 중...' },
+  'over.rankSubmitFailed': { en: '❌ Submit failed: {msg}', ko: '❌ 등록 실패: {msg}' },
+  'over.networkError':   { en: 'Network error', ko: '네트워크 오류' },
+
+  // 랭킹 패널
+  'rank.title':         { en: '🏆 Live Rankings', ko: '🏆 실시간 랭킹' },
+  'rank.loading':        { en: 'Loading rankings...', ko: '랭킹 데이터를 불러오는 중...' },
+  'rank.connectError':   { en: '❌ Failed to connect to the server.', ko: '❌ 서버 연결에 실패했습니다.' },
+  'rank.checkNetwork':   { en: 'Please check your network connection.', ko: '네트워크 상태를 확인해 주세요.' },
+  'rank.noRecords':      { en: 'No rankings registered yet.', ko: '등록된 랭킹 기록이 없습니다.' },
+  'rank.myBest':         { en: 'My Best', ko: '내 최고 기록 (My Best)' },
+  'rank.notRegistered':  { en: 'Not on the leaderboard yet.<br/>Register your best record (<b>Wave {n}</b>) below!', ko: '아직 랭킹에 등록되지 않았습니다.<br/>최고 기록(<b>{n}웨이브</b>)을 아래에서 등록해보세요!' },
+  'rank.waveSuf':        { en: 'Wave {n}', ko: '{n}웨이브' },
+  'rank.nicknameManage': { en: 'Nickname', ko: '닉네임 관리 (Set Nickname)' },
+  'rank.maxChars':       { en: 'Max 15 chars', ko: '최대 15자' },
+  'rank.changeNickname': { en: 'Change', ko: '닉네임 변경' },
+  'rank.nicknameEmpty':  { en: '⚠️ Please enter a nickname.', ko: '⚠️ 닉네임을 입력해 주세요.' },
+  'rank.nicknameTooLong':{ en: '⚠️ Nickname must be 15 characters or fewer.', ko: '⚠️ 닉네임은 최대 15자까지 가능합니다.' },
+  'rank.saving':         { en: '⏳ Saving...', ko: '⏳ 변경 완료 처리 중...' },
+  'rank.nicknameChangedRegistered': { en: '✅ Nickname changed and best record ({n} waves) registered!', ko: '✅ 닉네임이 변경되고 최고 기록({n}웨이브)이 랭킹에 등록되었습니다!' },
+  'rank.deviceNicknameSet': { en: '✅ Device nickname set successfully!', ko: '✅ 기기 닉네임이 성공적으로 설정되었습니다!' },
+  'rank.serverTimeout':  { en: 'Server connection timed out', ko: '서버 연결 시간 초과' },
+  'rank.serverUnavailable': { en: 'Could not connect to the server', ko: '서버에 연결할 수 없습니다' },
+  'rank.registerFailed': { en: '❌ Registration failed: {msg}', ko: '❌ 서버 등록 실패: {msg}' },
+  'rank.unknownError':   { en: 'Unknown error', ko: '알 수 없는 오류' },
 };
 
 export function t(key: string, params?: Params): string {

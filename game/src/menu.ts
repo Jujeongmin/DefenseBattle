@@ -237,17 +237,15 @@ export class Menu {
     const removed = adManager.isAdRemoved();
 
     const btnLabel = !available
-      ? `⏳ ${this.formatCooldown(cd)} 후 다시 시청 가능`
+      ? t('shop.adCooldownBtn', { time: this.formatCooldown(cd) })
       : removed
-        ? `🎁 광고 없이 <span class="gem"></span> ${AD_SHOP_REWARD_GEMS} 받기`
-        : `📺 광고 시청하고 <span class="gem"></span> ${AD_SHOP_REWARD_GEMS} 받기`;
+        ? `${t('shop.adFreeBtn')} <span class="gem"></span> ${AD_SHOP_REWARD_GEMS}`
+        : `${t('shop.adWatchBtn')} <span class="gem"></span> ${AD_SHOP_REWARD_GEMS}`;
 
-    const infoText = removed
-      ? '광고제거 상태: 30분마다 한 번, 광고 없이 무료 보석을 받으세요!'
-      : '30분마다 한 번, 광고를 보고 무료 보석을 받으세요!';
+    const infoText = removed ? t('shop.adRemovedInfo') : t('shop.adInfo');
 
     return `
-      <div class="shop-section" style="margin-top:14px;">보상형 광고</div>
+      <div class="shop-section" style="margin-top:14px;">${t('shop.adSection')}</div>
       <div class="shop-ad-box">
         <div class="shop-ad-info">${infoText}</div>
         <button id="btn-shop-ad" class="wood-btn shop-ad-btn" ${available ? '' : 'disabled'}>
@@ -259,7 +257,7 @@ export class Menu {
   private formatCooldown(seconds: number): string {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
-    return `${m}분 ${s}초`;
+    return t('shop.minSec', { m, s });
   }
 
   private refreshShopAdCooldown(btn: HTMLButtonElement): void {
@@ -267,11 +265,11 @@ export class Menu {
       const cd = adManager.getShopAdCooldownRemaining();
       if (cd <= 0) {
         btn.disabled = false;
-        btn.innerHTML = `📺 광고 시청하고 <span class="gem"></span> ${AD_SHOP_REWARD_GEMS} 받기`;
+        btn.innerHTML = `${t('shop.adWatchBtn')} <span class="gem"></span> ${AD_SHOP_REWARD_GEMS}`;
         return;
       }
       btn.disabled = true;
-      btn.innerHTML = `⏳ ${this.formatCooldown(cd)} 후 다시 시청 가능`;
+      btn.innerHTML = t('shop.adCooldownBtn', { time: this.formatCooldown(cd) });
       setTimeout(update, 1000);
     };
     update();

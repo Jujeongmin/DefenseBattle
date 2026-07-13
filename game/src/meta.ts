@@ -68,7 +68,7 @@ export function saveMeta(): void {
   // Background auto-save to cloud
   const server = GameServer.getInstance();
   if (server.connected) {
-    server.remoteFunction('savePlayerData', [meta, getNick()]).catch((err) => {
+    server.remoteFunction('savePlayerData', [meta, getNick()]).catch((err: unknown) => {
       console.warn('Failed to background auto-save player progress:', err);
     });
   }

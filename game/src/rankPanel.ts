@@ -23,10 +23,10 @@ export function openRankPanel(): void {
   const renderLoading = () => {
     panel.innerHTML = `
       <div class="dialog">
-        <h2>🏆 실시간 랭킹</h2>
+        <h2>${t('rank.title')}</h2>
         <div style="text-align:center; padding: 30px 0; color: #8892b0;">
           <span style="display:inline-block; animation: spin 1s linear infinite; margin-right: 8px;">⏳</span>
-          랭킹 데이터를 불러오는 중...
+          ${t('rank.loading')}
         </div>
         <button class="close">${t('common.close')}</button>
       </div>`;
@@ -37,9 +37,9 @@ export function openRankPanel(): void {
   const renderError = (errMsg: string) => {
     panel.innerHTML = `
       <div class="dialog">
-        <h2>🏆 실시간 랭킹</h2>
+        <h2>${t('rank.title')}</h2>
         <div style="text-align:center; padding: 20px 0; color: #ff5252;">
-          ❌ 서버 연결에 실패했습니다.<br/>
+          ${t('rank.connectError')}<br/>
           <span style="font-size:12px; color:#888;">${errMsg}</span>
         </div>
         <button class="close">${t('common.close')}</button>
@@ -64,13 +64,13 @@ export function openRankPanel(): void {
             </span>
           </div>
           <span style="font-weight:800; font-size:14px; color:#64ffda;">
-            ${r.wave}웨이브
+            ${t('rank.waveSuf', { n: r.wave })}
           </span>
         </div>`;
     }).join('');
 
-    const noRecordsHtml = rankingRows.length === 0 
-      ? `<div style="text-align:center; padding: 20px 0; color: #8892b0; font-size:13px;">등록된 랭킹 기록이 없습니다.</div>`
+    const noRecordsHtml = rankingRows.length === 0
+      ? `<div style="text-align:center; padding: 20px 0; color: #8892b0; font-size:13px;">${t('rank.noRecords')}</div>`
       : '';
 
     let myBestHtml = '';
@@ -79,28 +79,27 @@ export function openRankPanel(): void {
       if (!isTop20) {
         myBestHtml = `
           <div style="margin-top: 10px; border-top: 2px dashed rgba(255, 255, 255, 0.1); padding-top: 10px;">
-            <div style="font-weight:700; font-size:12px; color:#8892b0; margin-bottom: 4px;">내 최고 기록 (My Best)</div>
+            <div style="font-weight:700; font-size:12px; color:#8892b0; margin-bottom: 4px;">${t('rank.myBest')}</div>
             <div class="row" style="display:flex; justify-content:space-between; align-items:center; padding: 8px 12px; border-radius: 6px; background: rgba(255, 207, 63, 0.15); border: 1px solid rgba(255, 207, 63, 0.4);">
               <div style="display:flex; align-items:center; gap: 8px;">
                 <span style="font-weight:800; font-size:14px; width:24px; color:#ffcf3f;">#${myRankInfo.rank}</span>
                 <span style="font-weight:700; font-size:14px; color:#ffcf3f;">${myRankInfo.bestEntry.nickname}</span>
               </div>
-              <span style="font-weight:800; font-size:14px; color:#64ffda;">${myRankInfo.bestEntry.wave}웨이브</span>
+              <span style="font-weight:800; font-size:14px; color:#64ffda;">${t('rank.waveSuf', { n: myRankInfo.bestEntry.wave })}</span>
             </div>
           </div>`;
       }
     } else if (meta.bestWave > 0) {
       myBestHtml = `
         <div style="margin-top: 10px; text-align:center; background: rgba(255, 255, 255, 0.03); padding: 10px; border-radius: 6px; font-size: 12px; color: #aaa;">
-          아직 랭킹에 등록되지 않았습니다.<br/>
-          최고 기록(<b>${meta.bestWave}웨이브</b>)을 아래에서 등록해보세요!
+          ${t('rank.notRegistered', { n: meta.bestWave })}
         </div>`;
     }
 
     panel.innerHTML = `
       <div class="dialog" style="max-height:85vh; display:flex; flex-direction:column; overflow:hidden;">
-        <h2>🏆 실시간 랭킹</h2>
-        
+        <h2>${t('rank.title')}</h2>
+
         <div style="flex:1; overflow-y:auto; margin-bottom:12px; max-height:40vh; padding-right:4px;">
           ${rankingRows}
           ${noRecordsHtml}
@@ -109,12 +108,12 @@ export function openRankPanel(): void {
 
         <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
           <div style="font-weight:700; font-size:13px; margin-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
-            <span>닉네임 관리 (Set Nickname)</span>
-            <span style="font-size:11px; color:#888;">최대 15자</span>
+            <span>${t('rank.nicknameManage')}</span>
+            <span style="font-size:11px; color:#888;">${t('rank.maxChars')}</span>
           </div>
           <div style="display:flex; gap: 8px; align-items:stretch; height: 38px;">
             <input type="text" id="rank-panel-nickname" value="${currentNick}" style="flex:1; padding: 6px 12px; border: 1px solid #444; background: #222; color: #fff; border-radius: 8px; font-size: 13px;" maxLength="15" />
-            <button id="btn-save-nickname" class="wood-btn" style="padding: 0 16px; font-size: 13px; font-weight:800; border-radius:0;">닉네임 변경</button>
+            <button id="btn-save-nickname" class="wood-btn" style="padding: 0 16px; font-size: 13px; font-weight:800; border-radius:0;">${t('rank.changeNickname')}</button>
           </div>
           <div id="nickname-save-status" style="font-size:11px; color:#8892b0; margin-top:5px; min-height:16px;"></div>
         </div>
@@ -130,12 +129,12 @@ export function openRankPanel(): void {
       audio.button();
       const newNick = nickInput.value.trim();
       if (newNick.length < 1) {
-        statusDiv.textContent = '⚠️ 닉네임을 입력해 주세요.';
+        statusDiv.textContent = t('rank.nicknameEmpty');
         statusDiv.style.color = '#ff5252';
         return;
       }
       if (newNick.length > 15) {
-        statusDiv.textContent = '⚠️ 닉네임은 최대 15자까지 가능합니다.';
+        statusDiv.textContent = t('rank.nicknameTooLong');
         statusDiv.style.color = '#ff5252';
         return;
       }
@@ -143,12 +142,12 @@ export function openRankPanel(): void {
       setLocalNickname(newNick);
       saveBtn.disabled = true;
       nickInput.disabled = true;
-      statusDiv.textContent = '⏳ 변경 완료 처리 중...';
+      statusDiv.textContent = t('rank.saving');
       statusDiv.style.color = '#ffd54f';
 
       try {
         if (meta.bestWave > 0) {
-          const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('서버 연결 시간 초과')), ms));
+          const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error(t('rank.serverTimeout'))), ms));
           if (!server.connected) {
             await Promise.race([server.connect(), timeout(5000)]);
           }
@@ -157,20 +156,20 @@ export function openRankPanel(): void {
               server.remoteFunction('submitWave', [meta.bestWave, newNick]),
               timeout(5000)
             ]);
-            statusDiv.textContent = `✅ 닉네임이 변경되고 최고 기록(${meta.bestWave}웨이브)이 랭킹에 등록되었습니다!`;
+            statusDiv.textContent = t('rank.nicknameChangedRegistered', { n: meta.bestWave });
             statusDiv.style.color = '#4caf50';
           } else {
-            throw new Error('서버에 연결할 수 없습니다');
+            throw new Error(t('rank.serverUnavailable'));
           }
         } else {
-          statusDiv.textContent = '✅ 기기 닉네임이 성공적으로 설정되었습니다!';
+          statusDiv.textContent = t('rank.deviceNicknameSet');
           statusDiv.style.color = '#4caf50';
         }
-        
+
         // Refresh rankings after 1.5 seconds
         setTimeout(fetchAndRender, 1500);
       } catch (e: any) {
-        statusDiv.textContent = `❌ 서버 등록 실패: ${e.message || '알 수 없는 오류'}`;
+        statusDiv.textContent = t('rank.registerFailed', { msg: e.message || t('rank.unknownError') });
         statusDiv.style.color = '#ff5252';
       } finally {
         saveBtn.disabled = false;
@@ -185,7 +184,7 @@ export function openRankPanel(): void {
   };
 
   const fetchAndRender = async () => {
-    const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('서버 연결 시간 초과 (Timeout)')), ms));
+    const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error(t('rank.serverTimeout'))), ms));
 
     try {
       if (!server.connected) {
@@ -205,7 +204,7 @@ export function openRankPanel(): void {
       renderRankings(rankings, myRankInfo);
     } catch (err: any) {
       console.error(err);
-      renderError(err.message || '네트워크 상태를 확인해 주세요.');
+      renderError(err.message || t('rank.checkNetwork'));
     }
   };
 

@@ -23,7 +23,7 @@ class StubGameServer {
   async remoteFunction(_fn: string, _args?: any[]) {
     if (_fn === 'getTopRankings') return [];
     if (_fn === 'getMyBestRank') return { bestEntry: null, rank: -1 };
-    if (_fn === 'submitWave') return { updated: false, bestWave: 0, message: '개발 모드: 서버 없음' };
+    if (_fn === 'submitWave') return { updated: false, bestWave: 0, message: 'Dev mode: no server' };
     if (_fn === 'loadPlayerData') return null;
     if (_fn === 'savePlayerData') return true;
     return null;
