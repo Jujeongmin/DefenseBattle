@@ -175,14 +175,23 @@ export function openRankPanel(): void {
   };
 
   const fetchAndRender = async () => {
+    const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('서버 연결 시간 초과 (Timeout)')), ms));
+
     try {
       if (!server.connected) {
-        await server.connect();
+        await Promise.race([
+          server.connect(),
+          timeout(4000)
+        ]);
       }
-      const [rankings, myRankInfo] = await Promise.all([
-        server.remoteFunction('getTopRankings'),
-        server.remoteFunction('getMyBestRank'),
-      ]);
+      const [rankings, myRankInfo] = await Promise.race([
+        Promise.all([
+          server.remoteFunction('getTopRankings'),
+          server.remoteFunction('getMyBestRank'),
+        ]),
+        timeout(4000)
+      ]) as [any[], any];
+
       renderRankings(rankings, myRankInfo);
     } catch (err: any) {
       console.error(err);
