@@ -9,7 +9,7 @@ import {
 } from './config';
 import {
   meta, saveMeta, collectionCount, collectionLevelOf, addToCollection,
-  gachaPityRemaining,
+  gachaPityRemaining, resetProgress,
 } from './meta';
 import { getPlatform } from './platform';
 import { audio } from './audio';
@@ -31,10 +31,35 @@ export class Menu {
     $('menu-shop').onclick = () => { audio.button(); this.openShop(); };
     $('menu-lab').onclick = () => { audio.button(); this.openLab(); };
     $('menu-rank').onclick = () => { audio.button(); this.openRank(); };
+    $('menu-reset').onclick = () => { audio.button(); this.openResetConfirm(); };
   }
 
   private openRank(): void {
     openRankPanel();
+  }
+
+  private openResetConfirm(): void {
+    const panel = $('confirm-panel');
+    panel.innerHTML = `
+      <div class="dialog">
+        <h2>${t('set.resetTitle')}</h2>
+        <div class="d" style="color:#bbb;text-align:center">${t('set.resetBody')}</div>
+        <div class="confirm-btns">
+          <button class="cancel">${t('common.cancel')}</button>
+          <button class="danger">${t('set.resetBtn')}</button>
+        </div>
+      </div>`;
+    (panel.querySelector('.cancel') as HTMLElement).onclick = () => {
+      audio.button();
+      panel.classList.add('hidden');
+    };
+    (panel.querySelector('.danger') as HTMLElement).onclick = () => {
+      audio.button();
+      resetProgress();
+      this.refresh();
+      panel.classList.add('hidden');
+    };
+    panel.classList.remove('hidden');
   }
 
   show(): void {

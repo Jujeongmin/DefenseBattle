@@ -59,6 +59,7 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'menu.shop':       { en: '🛒 Shop', ko: '🛒 상점' },
   'menu.lab':        { en: '🔬 Lab', ko: '🔬 연구소' },
   'menu.rank':       { en: '🏆 Rankings', ko: '🏆 랭킹' },
+  'menu.reset':      { en: '🗑️ Reset Progress', ko: '🗑️ 데이터 초기화' },
   'menu.recordPre':  { en: 'Best:', ko: '최고 기록:' },
   'menu.recordSuf':  { en: 'waves', ko: '웨이브' },
   'hud.wave':        { en: 'Wave {n}', ko: '웨이브 {n}' },

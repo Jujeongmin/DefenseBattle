@@ -1,10 +1,10 @@
 // ============================================================
 //  설정 패널 - 게임 화면 상단바 ⚙️ 버튼
-//  음소거 / BGM·효과음 볼륨 / 진행 데이터 초기화
-//  (언어 설정은 메인화면 언어 버튼으로 분리)
+//  음소거 / BGM·효과음 볼륨
+//  (언어 설정, 데이터 초기화는 메인화면으로 분리)
 // ============================================================
 import { audio } from './audio';
-import { resetProgress, resetTutorial, meta } from './meta';
+import { resetTutorial, meta } from './meta';
 import { t } from './i18n';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
@@ -12,28 +12,8 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
 
 export function openSettingsPanel(): void {
   const panel = $('settings-panel');
-  let confirmingReset = false;
 
   const render = () => {
-    if (confirmingReset) {
-      panel.innerHTML = `
-        <div class="dialog">
-          <h2>${t('set.resetTitle')}</h2>
-          <div class="d" style="color:#bbb;text-align:center">${t('set.resetBody')}</div>
-          <div class="confirm-btns">
-            <button class="cancel">${t('common.cancel')}</button>
-            <button class="danger">${t('set.resetBtn')}</button>
-          </div>
-        </div>`;
-      (panel.querySelector('.cancel') as HTMLElement).onclick = () => { audio.button(); confirmingReset = false; render(); };
-      (panel.querySelector('.danger') as HTMLElement).onclick = () => {
-        resetProgress();
-        confirmingReset = false;
-        render();
-      };
-      return;
-    }
-
     const muted = audio.isMuted();
     panel.innerHTML = `
       <div class="dialog">
@@ -52,14 +32,9 @@ export function openSettingsPanel(): void {
           <input type="range" class="vol-slider" id="sfx-vol" min="0" max="100" value="${audio.getSfxVolume()}">
           <span class="vol-val" id="sfx-vol-val">${audio.getSfxVolume()}</span>
         </div>
-        <div class="shop-section">${t('set.dataSection')}</div>
         <div class="row">
           <div class="info"><div class="t">${t('set.tutorial')}</div><div class="d">${t('set.tutorialDesc')}</div></div>
           <button id="btn-tutorial" ${meta.tutorialDone ? '' : 'disabled'}>${meta.tutorialDone ? t('set.tutorialBtn') : t('set.tutorialDone')}</button>
-        </div>
-        <div class="row">
-          <div class="info"><div class="t">${t('set.reset')}</div><div class="d">${t('set.resetDesc')}</div></div>
-          <button id="btn-reset">${t('set.resetBtn')}</button>
         </div>
         <button class="close">${t('common.close')}</button>
       </div>`;
@@ -74,13 +49,12 @@ export function openSettingsPanel(): void {
     const sfxVal = panel.querySelector('#sfx-vol-val') as HTMLElement;
     bgmSlider.oninput = () => { const v = Number(bgmSlider.value); audio.setBgmVolume(v); bgmVal.textContent = String(v); };
     sfxSlider.oninput = () => { const v = Number(sfxSlider.value); audio.setSfxVolume(v); sfxVal.textContent = String(v); };
-    sfxSlider.onchange = () => audio.button(); // 손 뗐을 때 현재 볼륨으로 미리듣기
+    sfxSlider.onchange = () => audio.button();
     (panel.querySelector('#btn-tutorial') as HTMLElement).onclick = () => {
       audio.button();
-      resetTutorial(); // 다음 게임 시작 시 온보딩 재생 (진행 중인 판에는 영향 없음)
+      resetTutorial();
       render();
     };
-    (panel.querySelector('#btn-reset') as HTMLElement).onclick = () => { audio.button(); confirmingReset = true; render(); };
     (panel.querySelector('.close') as HTMLElement).onclick = () => panel.classList.add('hidden');
   };
 
