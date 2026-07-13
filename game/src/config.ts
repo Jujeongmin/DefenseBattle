@@ -41,8 +41,8 @@ export const GRADE_INDEX: Record<GradeKey, number> =
 export const FULL_RANGE_FROM_INDEX = 3;
 
 // 등급별 사거리(픽셀). 전설 이상은 Infinity 로 처리
-// (유닛/몹 크기 확대에 맞춰 상향 - 각 구역이 자기 경로 변을 넉넉히 커버)
-export const GRADE_RANGE: number[] = [215, 270, 330, Infinity, Infinity, Infinity];
+// (일반~정예 사거리를 330 으로 통일)
+export const GRADE_RANGE: number[] = [330, 330, 330, Infinity, Infinity, Infinity];
 
 // ---------- 경제 ----------
 export const ECONOMY = {
