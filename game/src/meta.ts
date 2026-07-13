@@ -28,7 +28,7 @@ function freshMeta(): MetaData {
     collection: {},
     collectionLevel: {},
     gachaPity: 0,
-    tutorialDone: false,
+    adRemoved: false,
   };
 }
 
@@ -38,6 +38,10 @@ function load(): MetaData {
   const data = getPlatform().loadMeta();
   const base = freshMeta();
   const m: MetaData = Object.assign(base, data || {});
+  
+  if (getPlatform().isAdRemoved()) {
+    m.adRemoved = true;
+  }
   // 누락 필드 보정 (버전 업/신규 연구 대응)
   const fresh = freshMeta();
   m.research = Object.assign(fresh.research, m.research || {});
@@ -56,6 +60,9 @@ function load(): MetaData {
 }
 
 export function saveMeta(): void {
+  if (meta.adRemoved) {
+    localStorage.setItem('randomdefense.adRemoved.v1', '1');
+  }
   getPlatform().saveMeta(meta);
 
   // Background auto-save to cloud
@@ -89,6 +96,15 @@ export async function syncWithServer(): Promise<void> {
     meta.crystals = Math.max(meta.crystals, Number(serverData.crystals || 0));
     meta.bestWave = Math.max(meta.bestWave, Number(serverData.bestWave || 0));
     meta.gachaPity = Math.max(meta.gachaPity, Number(serverData.gachaPity || 0));
+
+    if (serverData.adRemoved || meta.adRemoved) {
+      meta.adRemoved = true;
+      localStorage.setItem('randomdefense.adRemoved.v1', '1');
+    }
+
+    if (serverData.tutorialDone || meta.tutorialDone) {
+      meta.tutorialDone = true;
+    }
 
     if (serverData.research) {
       for (const k in meta.research) {

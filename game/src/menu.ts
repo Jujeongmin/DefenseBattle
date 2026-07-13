@@ -362,6 +362,8 @@ export class Menu {
       if (buy && !owned) buy.onclick = async () => {
         if (await plat.spendVX(AD_REMOVE_VX)) {
           await plat.purchaseAdRemoval();
+          meta.adRemoved = true;
+          saveMeta();
           render();
         }
       };
