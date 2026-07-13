@@ -47,6 +47,7 @@ function load(): MetaData {
   m.collection = m.collection || {};
   m.collectionLevel = m.collectionLevel || {};
   m.gachaPity = m.gachaPity || 0;
+  m.tutorialDone = m.tutorialDone || false;
   return m;
 }
 
@@ -58,6 +59,16 @@ export function saveMeta(): void {
 // meta 는 다른 모듈이 참조로 들고 있으므로 재할당 대신 내용만 새 기본값으로 교체한다.
 export function resetProgress(): void {
   Object.assign(meta, freshMeta());
+  saveMeta();
+}
+
+// 온보딩 완료 표시 / 다시보기(설정에서 호출)
+export function markTutorialDone(): void {
+  meta.tutorialDone = true;
+  saveMeta();
+}
+export function resetTutorial(): void {
+  meta.tutorialDone = false;
   saveMeta();
 }
 

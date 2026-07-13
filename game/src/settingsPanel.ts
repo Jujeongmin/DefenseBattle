@@ -4,7 +4,7 @@
 //  (언어 설정은 메인화면 언어 버튼으로 분리)
 // ============================================================
 import { audio } from './audio';
-import { resetProgress } from './meta';
+import { resetProgress, resetTutorial, meta } from './meta';
 import { t } from './i18n';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
@@ -54,6 +54,10 @@ export function openSettingsPanel(): void {
         </div>
         <div class="shop-section">${t('set.dataSection')}</div>
         <div class="row">
+          <div class="info"><div class="t">${t('set.tutorial')}</div><div class="d">${t('set.tutorialDesc')}</div></div>
+          <button id="btn-tutorial" ${meta.tutorialDone ? '' : 'disabled'}>${meta.tutorialDone ? t('set.tutorialBtn') : t('set.tutorialDone')}</button>
+        </div>
+        <div class="row">
           <div class="info"><div class="t">${t('set.reset')}</div><div class="d">${t('set.resetDesc')}</div></div>
           <button id="btn-reset">${t('set.resetBtn')}</button>
         </div>
@@ -71,6 +75,11 @@ export function openSettingsPanel(): void {
     bgmSlider.oninput = () => { const v = Number(bgmSlider.value); audio.setBgmVolume(v); bgmVal.textContent = String(v); };
     sfxSlider.oninput = () => { const v = Number(sfxSlider.value); audio.setSfxVolume(v); sfxVal.textContent = String(v); };
     sfxSlider.onchange = () => audio.button(); // 손 뗐을 때 현재 볼륨으로 미리듣기
+    (panel.querySelector('#btn-tutorial') as HTMLElement).onclick = () => {
+      audio.button();
+      resetTutorial(); // 다음 게임 시작 시 온보딩 재생 (진행 중인 판에는 영향 없음)
+      render();
+    };
     (panel.querySelector('#btn-reset') as HTMLElement).onclick = () => { audio.button(); confirmingReset = true; render(); };
     (panel.querySelector('.close') as HTMLElement).onclick = () => panel.classList.add('hidden');
   };

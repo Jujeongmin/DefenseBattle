@@ -703,3 +703,47 @@ html, body {
   cursor: pointer;
 }
 .vol-val { flex: 0 0 30px; text-align: right; font-weight: 800; color: var(--gold); font-size: 13px; }
+
+/* ---------- 튜토리얼 / 온보딩 ---------- */
+#tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+#tutorial-overlay.dimmed { background: rgba(0, 0, 0, 0.72); pointer-events: auto; }
+.tut-spot {
+  position: fixed;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.72), 0 0 0 3px var(--gold);
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+.tut-bubble {
+  position: fixed;
+  pointer-events: auto;
+  width: min(78vw, 300px);
+  background: var(--panel);
+  border: 2px solid var(--gold);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 101;
+}
+.tut-step { font-size: 11px; font-weight: 800; color: var(--gold); letter-spacing: 1px; margin-bottom: 4px; }
+.tut-bubble h3 { margin: 0 0 6px; font-size: 16px; color: var(--gold); }
+.tut-bubble p { margin: 0; font-size: 13px; line-height: 1.55; color: #e6e6ee; }
+.tut-bubble p.tut-final { font-size: 34px; text-align: center; margin: 4px 0; }
+.tut-btns { display: flex; gap: 8px; margin-top: 12px; }
+.tut-btns button {
+  flex: 1;
+  padding: 9px;
+  border: none;
+  border-radius: 9px;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+}
+.tut-skip { background: #3a3f52; color: #cfd6e4; }
+.tut-primary { background: var(--accent); color: #fff; box-shadow: 0 3px 0 #8a1f1f; }
+.tut-primary:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a1f1f; }

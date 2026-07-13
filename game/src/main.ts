@@ -9,6 +9,7 @@ import { Menu } from './menu';
 import { preloadAll } from './assets';
 import { audio } from './audio';
 import { t, getLang, setLang } from './i18n';
+import { maybeStartTutorial, endTutorial } from './tutorial';
 
 // 메인 화면 언어 버튼: 현재 언어 표시 + 클릭 시 전환 후 새로고침(패널 재렌더)
 function setupLangButtons(): void {
@@ -66,10 +67,13 @@ function startGame(): void {
   document.getElementById('gameover-panel')!.classList.add('hidden');
   gameFrame.classList.remove('hidden');
   audio.startBgm();
+  // 첫 플레이 온보딩 (레이아웃이 잡힌 뒤 위치 계산해야 하므로 다음 프레임에)
+  requestAnimationFrame(() => maybeStartTutorial(game!));
 }
 
 function returnToMenu(): void {
   audio.stopBgm();
+  endTutorial(); // 튜토리얼 중 나가기 시 오버레이 정리
   gameFrame.classList.add('hidden');
   // 게임 화면에서 뜬 오버레이(확인 패널, 게임오버 등)가 메인화면 위에 남지 않도록 전부 닫는다.
   document.querySelectorAll('.overlay').forEach((el) => el.classList.add('hidden'));

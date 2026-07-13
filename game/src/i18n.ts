@@ -170,6 +170,23 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'set.resetBtn':    { en: 'Reset', ko: '초기화' },
   'set.resetTitle':  { en: 'Really reset?', ko: '정말 초기화할까요?' },
   'set.resetBody':   { en: 'All progress (gems, collection, achievements, best record) will be permanently deleted and cannot be undone.', ko: '보석·컬렉션·업적·최고 기록 등 모든 진행 데이터가 영구히 삭제되며 되돌릴 수 없습니다.' },
+  'set.tutorial':    { en: 'Replay tutorial', ko: '튜토리얼 다시보기' },
+  'set.tutorialDesc':{ en: 'Show the beginner guide on your next game', ko: '다음 게임 시작 시 초보 가이드 표시' },
+  'set.tutorialBtn': { en: 'Replay', ko: '다시보기' },
+  'set.tutorialDone':{ en: 'On next game ✓', ko: '다음 게임에 표시 ✓' },
+
+  // 튜토리얼 / 온보딩
+  'tut.skip':        { en: 'Skip', ko: '건너뛰기' },
+  'tut.next':        { en: 'Next', ko: '다음' },
+  'tut.start':       { en: "Let's go!", ko: '시작하기!' },
+  'tut.summonTitle': { en: 'Recruit units', ko: '유닛 소환' },
+  'tut.summon':      { en: 'Hold the Summon button to recruit random units. Each summon costs {cost} gold. Try it now! 👇', ko: '소환 버튼을 길게 눌러 랜덤 유닛을 뽑으세요. 한 번에 {cost} 골드가 듭니다. 지금 눌러보세요! 👇' },
+  'tut.stacksTitle': { en: 'Job & matchup', ko: '직업과 상성' },
+  'tut.stacks':      { en: 'Units are grouped by job (Mage/Archer/Warrior). The % is their damage vs THIS wave\'s enemy — 🟢 green is strong, 🔴 red is weak. Stack up your strong jobs!', ko: '유닛은 직업(마법사/궁수/전사)별로 묶입니다. %는 이번 웨이브 적에 대한 피해량이에요 — 🟢 초록은 강함, 🔴 빨강은 약함. 강한 직업을 많이 모으세요!' },
+  'tut.raceTitle':   { en: 'Watch the enemy', ko: '적 종족 확인' },
+  'tut.race':        { en: 'The enemy race changes each wave (Troll/Orc/Undead). Check here and rely on the job that counters it.', ko: '적 종족은 웨이브마다 바뀝니다(트롤/오크/언데드). 여기서 확인하고 상성이 좋은 직업을 활용하세요.' },
+  'tut.goldTitle':   { en: 'Earn gold', ko: '골드 획득' },
+  'tut.gold':        { en: 'Defeated enemies drop gold — spend it to summon, upgrade, or sell. Survive all 50 waves. Good luck! ⚔️', ko: '적을 처치하면 골드를 얻습니다 — 소환·강화·판매에 쓰세요. 50웨이브까지 살아남으세요. 행운을 빕니다! ⚔️' },
 };
 
 export function t(key: string, params?: Params): string {
