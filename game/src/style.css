@@ -642,6 +642,25 @@ html, body {
   border-radius: 8px; padding: 8px; font-weight: 700; cursor: pointer;
 }
 .tab-row button.active { background: var(--accent); }
+/* 연구소 컬렉션 직업 서브탭 (스크롤 없이 직업별 6등급만 표시) */
+.job-tab-row { display: flex; gap: 6px; margin-bottom: 10px; }
+.job-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: #3a3f52;
+  color: #cfd6e4;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 4px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.job-tab.active { background: var(--gold); color: #3a2f00; }
+.job-tab .frame-sprite { width: 22px; height: 22px; flex: 0 0 22px; display: inline-block; }
 .sell-jobs { display: flex; gap: 6px; margin-bottom: 10px; }
 .sell-jobs button { flex: 1; }
 .big-result { text-align: center; }

@@ -53,10 +53,11 @@ export class Menu {
   private openLab(): void {
     const panel = $('lab-panel');
     let tab: 'collection' | 'quest' = 'collection';
+    let jobTab: Job = JOBS[0]; // 컬렉션 탭: 직업별로 나눠 스크롤 없이 6등급만 표시
     // keepScroll: 스타업/보상수령 후 재렌더 시 스크롤 위치 유지 (탭 전환은 맨 위로)
     const render = (keepScroll = false) => {
       const prevScroll = keepScroll ? (panel.querySelector<HTMLElement>('.dialog')?.scrollTop ?? 0) : 0;
-      const body = tab === 'collection' ? this.collectionHtml() : this.questHtml();
+      const body = tab === 'collection' ? this.collectionHtml(jobTab) : this.questHtml();
       panel.innerHTML = `
         <div class="dialog drag-scroll">
           <h2>${t('lab.title')} <span class="crystal"><span class="gem"></span> ${meta.crystals}</span></h2>
@@ -69,6 +70,9 @@ export class Menu {
         </div>`;
       panel.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => {
         b.onclick = () => { tab = b.dataset.tab as typeof tab; render(); };
+      });
+      panel.querySelectorAll<HTMLButtonElement>('[data-job]').forEach((b) => {
+        b.onclick = () => { jobTab = b.dataset.job as Job; audio.button(); render(); };
       });
       this.bindCollectionButtons(panel, render);
       this.bindQuestButtons(panel, render);
@@ -84,29 +88,33 @@ export class Menu {
     panel.classList.remove('hidden');
   }
 
-  // 유닛 컬렉션 탭: 직업×등급 18종 스타업
-  private collectionHtml(): string {
-    let html = `<div class="d" style="color:#bbb;font-size:12px;margin-bottom:6px">${t('lab.hint')}</div>`;
-    for (const job of JOBS) {
-      html += `<div style="font-weight:700;margin:8px 0 4px">${jobName(job)}</div>`;
-      for (const grade of GRADES) {
-        const lv = collectionLevelOf(job, grade.key);
-        const have = collectionCount(job, grade.key);
-        const maxed = lv >= GACHA.maxLevel;
-        const need = starUpCost(lv);
-        const bonusNow = Math.round(lv * GACHA.bonusPerLevel * 100);
-        const canUp = !maxed && have >= need;
-        html += `<div class="row">
-          <div class="info" style="display:flex;align-items:center;gap:8px">
-            <div class="frame-sprite" style="width:34px;height:34px;flex:0 0 34px;background-image:url(sprites/${JOB_SPRITE[job]}_${grade.spriteIndex}.png)"></div>
-            <div>
-              <div class="t" style="color:${grade.color}">${gradeName(grade.key)} <span style="color:#ffd54f">★${lv}</span> <span style="color:#7ee87e;font-size:11px">${t('lab.atkBonus', { n: bonusNow })}</span></div>
-              <div class="d">${maxed ? t('lab.ownedMax', { have }) : t('lab.owned', { have, need })}</div>
-            </div>
+  // 유닛 컬렉션 탭: 직업 서브탭으로 나눠 한 화면에 6등급만 표시 (스크롤 불필요)
+  private collectionHtml(jobTab: Job): string {
+    const jobBtns = JOBS.map((j) => {
+      const sprite = `sprites/${JOB_SPRITE[j]}_${GRADES[0].spriteIndex}.png`;
+      return `<button data-job="${j}" class="job-tab ${j === jobTab ? 'active' : ''}">
+        <span class="frame-sprite" style="background-image:url(${sprite})"></span>${jobName(j)}
+      </button>`;
+    }).join('');
+    let html = `<div class="d" style="color:#bbb;font-size:12px;margin-bottom:6px">${t('lab.hint')}</div>
+      <div class="job-tab-row">${jobBtns}</div>`;
+    for (const grade of GRADES) {
+      const lv = collectionLevelOf(jobTab, grade.key);
+      const have = collectionCount(jobTab, grade.key);
+      const maxed = lv >= GACHA.maxLevel;
+      const need = starUpCost(lv);
+      const bonusNow = Math.round(lv * GACHA.bonusPerLevel * 100);
+      const canUp = !maxed && have >= need;
+      html += `<div class="row">
+        <div class="info" style="display:flex;align-items:center;gap:8px">
+          <div class="frame-sprite" style="width:34px;height:34px;flex:0 0 34px;background-image:url(sprites/${JOB_SPRITE[jobTab]}_${grade.spriteIndex}.png)"></div>
+          <div>
+            <div class="t" style="color:${grade.color}">${gradeName(grade.key)} <span style="color:#ffd54f">★${lv}</span> <span style="color:#7ee87e;font-size:11px">${t('lab.atkBonus', { n: bonusNow })}</span></div>
+            <div class="d">${maxed ? t('lab.ownedMax', { have }) : t('lab.owned', { have, need })}</div>
           </div>
-          <button data-star="${job}_${grade.key}" ${canUp ? '' : 'disabled'}>${maxed ? t('common.max') : t('lab.starUp')}</button>
-        </div>`;
-      }
+        </div>
+        <button data-star="${jobTab}_${grade.key}" ${canUp ? '' : 'disabled'}>${maxed ? t('common.max') : t('lab.starUp')}</button>
+      </div>`;
     }
     return html;
   }
