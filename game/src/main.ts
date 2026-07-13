@@ -8,6 +8,7 @@ import { UI } from './ui';
 import { Menu } from './menu';
 import { preloadAll } from './assets';
 import { audio } from './audio';
+import { adManager } from './ad';
 import { t, getLang, setLang } from './i18n';
 import { maybeStartTutorial, endTutorial } from './tutorial';
 
@@ -90,12 +91,15 @@ function returnToMenu(): void {
   audio.stopBgm();
   endTutorial(); // 튜토리얼 중 나가기 시 오버레이 정리
   gameFrame.classList.add('hidden');
-  // 게임 화면에서 뜬 오버레이(확인 패널, 게임오버 등)가 메인화면 위에 남지 않도록 전부 닫는다.
   document.querySelectorAll('.overlay').forEach((el) => el.classList.add('hidden'));
   game = null;
   renderer = null;
   ui = null;
-  menu.show();
+
+  // 전면 광고 표시 후 메인메뉴 복귀
+  adManager.showInterstitial(() => {
+    menu.show();
+  });
 }
 
 menu.show();

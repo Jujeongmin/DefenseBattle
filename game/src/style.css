@@ -736,3 +736,112 @@ html, body {
 .tut-skip { background: #3a3f52; color: #cfd6e4; }
 .tut-primary { background: var(--accent); color: #fff; box-shadow: 0 3px 0 #8a1f1f; }
 .tut-primary:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a1f1f; }
+
+/* ======== 광고 오버레이 (Ad Overlay) ======== */
+.ad-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: adFadeIn 0.25s ease;
+}
+@keyframes adFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.ad-container {
+  background: var(--panel);
+  border: 2px solid var(--panel2);
+  border-radius: 18px;
+  width: min(340px, 88vw);
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.ad-container.rewarded { border-color: #ffd700; }
+
+.ad-label {
+  background: #e94560;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  padding: 6px 0;
+  letter-spacing: 1px;
+}
+.ad-container.rewarded .ad-label { background: #6a1b9a; }
+
+.ad-content {
+  padding: 20px 20px 16px;
+  text-align: center;
+}
+
+.ad-icon { font-size: 40px; margin-bottom: 8px; }
+
+.ad-message {
+  font-size: 15px;
+  color: #ddd;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.ad-countdown {
+  font-size: 14px;
+  font-weight: 700;
+  color: #8892b0;
+  margin-bottom: 10px;
+}
+
+.ad-progress {
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.ad-progress-fill {
+  height: 100%;
+  background: #e94560;
+  border-radius: 2px;
+  width: 0%;
+  transition: width 1s linear;
+}
+.ad-progress-fill.rewarded-fill { background: #ffd700; }
+
+.ad-skip, .ad-close {
+  display: inline-block;
+  padding: 8px 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
+  color: #ccc;
+  transition: background 0.15s;
+}
+.ad-skip:not(:disabled):hover, .ad-close:hover { background: rgba(255,255,255,0.15); }
+.ad-skip:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.ad-powered {
+  font-size: 10px;
+  color: #555;
+  margin-top: 10px;
+}
+
+/* 광고 시청 보상 버튼 (인게임) */
+.ad-reward-btn {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 6px solid transparent;
+  border-image: url("/ui/btn_wood.png") 5 fill stretch;
+  image-rendering: pixelated;
+  background: none;
+  color: #ffd700;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ad-reward-btn:active { border-image-source: url("/ui/btn_wood_dark.png"); transform: translateY(1px); }
+.ad-reward-btn:disabled { opacity: 0.45; }

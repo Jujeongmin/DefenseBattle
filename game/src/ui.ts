@@ -15,6 +15,8 @@ import { openProbabilityPanel } from './probabilityPanel';
 import { openSettingsPanel } from './settingsPanel';
 import { GameServer } from '@agent8/gameserver';
 import { getLocalNickname, setLocalNickname } from './rankPanel';
+import { adManager } from './ad';
+import { AD_REWARD_GOLD } from './config';
 import type { Job, Race, GradeKey, GameOverData } from './types';
 
 // 상성 % 색상
@@ -69,12 +71,31 @@ export class UI {
     $('btn-sell-panel').onclick = () => { audio.button(); this.openSell(); };
     $('btn-menu').onclick = () => { audio.button(); this.openExitConfirm(); };
     $('btn-settings').onclick = () => { audio.button(); openSettingsPanel(); };
+    $('btn-ad-reward').onclick = () => { audio.button(); this.watchRewardedAd(); };
     // 상단바 버튼은 DOM 이 판마다 재사용되므로, 새 게임 시작 시 이전 판의 표시값을 초기화한다.
     this.speedIdx = 0;
     this.game.speed = this.speeds[this.speedIdx];
     $('btn-speed').textContent = this.game.speed + 'x';
     $('btn-pause').textContent = '❚❚';
     this.setupDrag();
+  }
+
+  /** 보상형 광고 시청 → 게임 골드 지급 */
+  private async watchRewardedAd(): Promise<void> {
+    const btn = $('btn-ad-reward') as HTMLButtonElement;
+    btn.disabled = true;
+
+    try {
+      const completed = await adManager.watchRewardedAd();
+      if (completed) {
+        this.game.gold += AD_REWARD_GOLD;
+        this.toast(`+${AD_REWARD_GOLD} 골드 획득!`);
+      }
+    } catch {
+      /* ad error - just ignore */
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   private bindHoldSummon(): void {
