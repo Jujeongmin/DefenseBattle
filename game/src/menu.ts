@@ -3,7 +3,7 @@
 // ============================================================
 import {
   DAILY_QUESTS, ACHIEVEMENTS,
-  CRYSTAL_PACKAGES, AD_REMOVE_VX,
+  CRYSTAL_PACKAGES, AD_REMOVE_VX, AD_SHOP_REWARD_GEMS,
   GACHA, GRADES, GRADE_BY_KEY, GRADE_INDEX, JOBS, JOB_SPRITE, starUpCost,
   rollJob, rollGachaGrade, rollGachaMythicPlus,
 } from './config';
@@ -16,6 +16,7 @@ import { audio } from './audio';
 import { t, jobName, gradeName } from './i18n';
 import { openProbabilityPanel } from './probabilityPanel';
 import { openRankPanel } from './rankPanel';
+import { adManager } from './ad';
 import type { AchievementDef, Job, GradeKey } from './types';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
@@ -197,6 +198,46 @@ export class Menu {
   }
 
   // ---------- 상점 (VX 로 보석 구매 / 광고제거 패키지) ----------
+  private shopAdHtml(): string {
+    const cd = adManager.getShopAdCooldownRemaining();
+    const available = cd <= 0 && adManager.isRewardAvailable();
+    if (!adManager.isRewardAvailable()) return '';
+
+    const btnLabel = available
+      ? `📺 광고 시청하고 <span class="gem"></span> ${AD_SHOP_REWARD_GEMS} 받기`
+      : `⏳ ${this.formatCooldown(cd)} 후 다시 시청 가능`;
+
+    return `
+      <div class="shop-section" style="margin-top:14px;">보상형 광고</div>
+      <div class="shop-ad-box">
+        <div class="shop-ad-info">30분마다 한 번, 광고를 보고 무료 보석을 받으세요!</div>
+        <button id="btn-shop-ad" class="wood-btn shop-ad-btn" ${available ? '' : 'disabled'}>
+          ${btnLabel}
+        </button>
+      </div>`;
+  }
+
+  private formatCooldown(seconds: number): string {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}분 ${s}초`;
+  }
+
+  private refreshShopAdCooldown(btn: HTMLButtonElement): void {
+    const update = () => {
+      const cd = adManager.getShopAdCooldownRemaining();
+      if (cd <= 0) {
+        btn.disabled = false;
+        btn.innerHTML = `📺 광고 시청하고 <span class="gem"></span> ${AD_SHOP_REWARD_GEMS} 받기`;
+        return;
+      }
+      btn.disabled = true;
+      btn.innerHTML = `⏳ ${this.formatCooldown(cd)} 후 다시 시청 가능`;
+      setTimeout(update, 1000);
+    };
+    update();
+  }
+
   private openShop(): void {
     const panel = $('shop-panel');
     const plat = getPlatform();
@@ -252,6 +293,7 @@ export class Menu {
           <div class="d" style="color:#888;font-size:12px;margin-top:8px">
             ${t('shop.vxNote')}
           </div>
+          ${this.shopAdHtml()}
           <button class="close">${t('common.close')}</button>
         </div>`;
 
@@ -286,6 +328,27 @@ export class Menu {
       };
 
       this.bindDragScroll(panel.querySelector<HTMLElement>('.dialog'));
+
+      // 상점 보상형 광고 버튼
+      const shopAdBtn = panel.querySelector('#btn-shop-ad') as HTMLButtonElement | null;
+      if (shopAdBtn && adManager.isRewardAvailable()) {
+        this.refreshShopAdCooldown(shopAdBtn);
+        shopAdBtn.onclick = async () => {
+          audio.button();
+          shopAdBtn.disabled = true;
+          try {
+            const ok = await adManager.watchShopRewardedAd();
+            if (ok) {
+              meta.crystals += AD_SHOP_REWARD_GEMS;
+              saveMeta();
+              this.refresh();
+              render();
+            }
+          } catch { /* ignore */ }
+          shopAdBtn.disabled = false;
+          this.refreshShopAdCooldown(shopAdBtn);
+        };
+      }
 
       (panel.querySelector('.close') as HTMLElement).onclick = () => {
         panel.classList.add('hidden');

@@ -166,6 +166,8 @@ export const RESEARCH_PER: Record<ResearchKey, number> =
 export const AD_REMOVE_VX = 300; // 광고제거 패키지 가격(VX)
 export const AD_INTERSTITIAL_COOLDOWN = 90; // 전면광고 최소 간격(초)
 export const AD_REWARD_GOLD = 50;             // 보상형 광고 시청 보상 골드
+export const AD_SHOP_REWARD_GEMS = 50;        // 상점 보상형 광고 보상 보석
+export const AD_SHOP_COOLDOWN_MINUTES = 30;   // 상점 보상형 광고 쿨다운(분)
 export interface CrystalPackage { crystals: number; vx: number; bonus?: number }
 export const CRYSTAL_PACKAGES: CrystalPackage[] = [
   { crystals: 100,  vx: 10 },

@@ -1,5 +1,8 @@
 import { Verse8Ads } from '@verse8/ads';
 import { getPlatform } from './platform';
+import { AD_SHOP_COOLDOWN_MINUTES } from './config';
+
+const SHOP_AD_COOLDOWN_KEY = 'randomdefense.shopAdCooldown.v1';
 
 class AdManager {
   private interstitialActive = false;
@@ -74,6 +77,48 @@ class AdManager {
 
   isInterstitialActive(): boolean {
     return this.interstitialActive;
+  }
+
+  /** 상점 보상형 광고 쿨다운 남은 시간(초). 0 이하면 시청 가능. */
+  getShopAdCooldownRemaining(): number {
+    const raw = localStorage.getItem(SHOP_AD_COOLDOWN_KEY);
+    if (!raw) return 0;
+    const nextAvailable = Number(raw);
+    if (!Number.isFinite(nextAvailable)) return 0;
+    return Math.max(0, Math.ceil((nextAvailable - Date.now()) / 1000));
+  }
+
+  /** 상점 보상형 광고 시청. 쿨다운이 지나지 않았으면 바로 false 반환. */
+  async watchShopRewardedAd(): Promise<boolean> {
+    if (this.isRemoved() || this.unsupported || this.rewardedActive) return false;
+    if (this.getShopAdCooldownRemaining() > 0) return false;
+
+    this.rewardedActive = true;
+
+    try {
+      const result = await Verse8Ads.showRewarded({ placementId: 'shop-gems' });
+
+      switch (result.status) {
+        case 'rewarded': {
+          const nextTime = Date.now() + AD_SHOP_COOLDOWN_MINUTES * 60 * 1000;
+          localStorage.setItem(SHOP_AD_COOLDOWN_KEY, String(nextTime));
+          return true;
+        }
+        case 'dismissed':
+          return false;
+        case 'failed':
+          if (result.error.code === 'unsupported_env') {
+            this.unsupported = true;
+          }
+          return false;
+        default:
+          return false;
+      }
+    } catch {
+      return false;
+    } finally {
+      this.rewardedActive = false;
+    }
   }
 }
 
