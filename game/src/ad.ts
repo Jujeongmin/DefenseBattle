@@ -15,7 +15,12 @@ class AdManager {
 
   /** 보상형 광고 버튼 활성화 여부 (미지원 환경이면 숨김) */
   isRewardAvailable(): boolean {
-    return !this.isRemoved() && !this.unsupported;
+    return !this.unsupported;
+  }
+
+  /** 광고제거 상태인지 (상점 광고 즉시지급 판단용) */
+  isAdRemoved(): boolean {
+    return this.isRemoved();
   }
 
   /**
@@ -88,9 +93,17 @@ class AdManager {
     return Math.max(0, Math.ceil((nextAvailable - Date.now()) / 1000));
   }
 
-  /** 상점 보상형 광고 시청. 쿨다운이 지나지 않았으면 바로 false 반환. */
+  /** 상점 보상형 광고 시청. 광고제거 상태면 광고 없이 즉시 보상. */
   async watchShopRewardedAd(): Promise<boolean> {
-    if (this.isRemoved() || this.unsupported || this.rewardedActive) return false;
+    if (this.isRemoved()) {
+      // 광고제거 상태: 쿨다운만 체크하고 즉시 보상
+      if (this.getShopAdCooldownRemaining() > 0) return false;
+      const nextTime = Date.now() + AD_SHOP_COOLDOWN_MINUTES * 60 * 1000;
+      localStorage.setItem(SHOP_AD_COOLDOWN_KEY, String(nextTime));
+      return true;
+    }
+
+    if (this.unsupported || this.rewardedActive) return false;
     if (this.getShopAdCooldownRemaining() > 0) return false;
 
     this.rewardedActive = true;

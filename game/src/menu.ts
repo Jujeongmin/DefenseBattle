@@ -208,17 +208,23 @@ export class Menu {
   // ---------- 상점 (VX 로 보석 구매 / 광고제거 패키지) ----------
   private shopAdHtml(): string {
     const cd = adManager.getShopAdCooldownRemaining();
-    const available = cd <= 0 && adManager.isRewardAvailable();
-    if (!adManager.isRewardAvailable()) return '';
+    const available = cd <= 0;
+    const removed = adManager.isAdRemoved();
 
-    const btnLabel = available
-      ? `📺 광고 시청하고 <span class="gem"></span> ${AD_SHOP_REWARD_GEMS} 받기`
-      : `⏳ ${this.formatCooldown(cd)} 후 다시 시청 가능`;
+    const btnLabel = !available
+      ? `⏳ ${this.formatCooldown(cd)} 후 다시 시청 가능`
+      : removed
+        ? `🎁 광고 없이 <span class="gem"></span> ${AD_SHOP_REWARD_GEMS} 받기`
+        : `📺 광고 시청하고 <span class="gem"></span> ${AD_SHOP_REWARD_GEMS} 받기`;
+
+    const infoText = removed
+      ? '광고제거 상태: 30분마다 한 번, 광고 없이 무료 보석을 받으세요!'
+      : '30분마다 한 번, 광고를 보고 무료 보석을 받으세요!';
 
     return `
       <div class="shop-section" style="margin-top:14px;">보상형 광고</div>
       <div class="shop-ad-box">
-        <div class="shop-ad-info">30분마다 한 번, 광고를 보고 무료 보석을 받으세요!</div>
+        <div class="shop-ad-info">${infoText}</div>
         <button id="btn-shop-ad" class="wood-btn shop-ad-btn" ${available ? '' : 'disabled'}>
           ${btnLabel}
         </button>
