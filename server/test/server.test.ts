@@ -1,8 +1,8 @@
 /**
- * GameServer test suite for RandomDefense
+ * GameServer test suite for RandomDefense (Rankings & Progress Syncing)
  */
 
-describe('Server Rankings', () => {
+describe('Server Rankings & Cloud Save', () => {
   test('submitWave and getTopRankings work correctly', async (server) => {
     // 1. Submit a score for user A
     server.connect({ account: 'user-a' });
@@ -43,5 +43,33 @@ describe('Server Rankings', () => {
     const myBestAlice = await server.getMyBestRank();
     expect(myBestAlice.rank).toBe(2);
     expect(myBestAlice.bestEntry.wave).toBe(20);
+  });
+
+  test('savePlayerData and loadPlayerData work correctly', async (server) => {
+    server.connect({ account: 'user-c' });
+
+    // 1. Save dummy progress
+    const dummyProgress = {
+      crystals: 450,
+      bestWave: 34,
+      research: { atk: 5, startGold: 2 }
+    };
+    
+    const saveRes = await server.savePlayerData(dummyProgress, 'Charlie');
+    expect(saveRes).toBe(true);
+
+    // 2. Load progress
+    const loadedData = await server.loadPlayerData();
+    expect(loadedData).toBeTruthy();
+    expect(loadedData.crystals).toBe(450);
+    expect(loadedData.bestWave).toBe(34);
+    expect(loadedData.research.atk).toBe(5);
+
+    // 3. Leaderboard should be automatically synced on savePlayerData
+    const rankings = await server.getTopRankings();
+    const charlieEntry = rankings.find(r => r.account === 'user-c');
+    expect(charlieEntry).toBeTruthy();
+    expect(charlieEntry.nickname).toBe('Charlie');
+    expect(charlieEntry.wave).toBe(34);
   });
 });

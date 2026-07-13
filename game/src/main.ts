@@ -8,6 +8,7 @@ import { UI } from './ui';
 import { Menu } from './menu';
 import { preloadAll } from './assets';
 import { audio } from './audio';
+import { syncWithServer } from './meta';
 import { t, getLang, setLang } from './i18n';
 import { maybeStartTutorial, endTutorial } from './tutorial';
 
@@ -72,6 +73,10 @@ let renderer: Renderer | null = null;
 let ui: UI | null = null;
 
 const menu = new Menu(startGame);
+
+syncWithServer().then(() => {
+  menu.refresh();
+});
 
 function startGame(): void {
   game = new Game();

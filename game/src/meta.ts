@@ -4,7 +4,11 @@
 // ============================================================
 import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS, GACHA, collectionKey } from './config';
 import { getPlatform } from './platform';
+import { GameServer } from '@agent8/gameserver';
 import type { MetaData, ResearchKey, QuestStat, AchievementDef, Job, GradeKey } from './types';
+
+const NICKNAME_KEY = 'randomdefense.nickname';
+const getNick = () => localStorage.getItem(NICKNAME_KEY) || 'Player';
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -53,6 +57,80 @@ function load(): MetaData {
 
 export function saveMeta(): void {
   getPlatform().saveMeta(meta);
+
+  // Background auto-save to cloud
+  const server = GameServer.getInstance();
+  if (server.connected) {
+    server.remoteFunction('savePlayerData', [meta, getNick()]).catch((err) => {
+      console.warn('Failed to background auto-save player progress:', err);
+    });
+  }
+}
+
+/**
+ * Cloud Progress Syncing:
+ * Synchronizes local progress with server-side progress (using Max-value Merge).
+ */
+export async function syncWithServer(): Promise<void> {
+  const server = GameServer.getInstance();
+  try {
+    if (!server.connected) {
+      await server.connect();
+    }
+
+    const serverData = await server.remoteFunction('loadPlayerData');
+    if (!serverData) {
+      // If no server-side profile exists yet, save current local profile
+      await server.remoteFunction('savePlayerData', [meta, getNick()]);
+      return;
+    }
+
+    // Merge logic: Max-value Merge (ensures zero progression loss)
+    meta.crystals = Math.max(meta.crystals, Number(serverData.crystals || 0));
+    meta.bestWave = Math.max(meta.bestWave, Number(serverData.bestWave || 0));
+    meta.gachaPity = Math.max(meta.gachaPity, Number(serverData.gachaPity || 0));
+
+    if (serverData.research) {
+      for (const k in meta.research) {
+        meta.research[k as ResearchKey] = Math.max(
+          meta.research[k as ResearchKey] || 0,
+          Number(serverData.research[k] || 0)
+        );
+      }
+    }
+
+    if (serverData.achievements) {
+      for (const k in meta.achievements) {
+        if (serverData.achievements[k]) {
+          meta.achievements[k] = true;
+        }
+      }
+    }
+
+    if (serverData.collection) {
+      for (const k in serverData.collection) {
+        meta.collection[k] = Math.max(
+          meta.collection[k] || 0,
+          Number(serverData.collection[k] || 0)
+        );
+      }
+    }
+
+    if (serverData.collectionLevel) {
+      for (const k in serverData.collectionLevel) {
+        meta.collectionLevel[k] = Math.max(
+          meta.collectionLevel[k] || 0,
+          Number(serverData.collectionLevel[k] || 0)
+        );
+      }
+    }
+
+    // Save the fully merged progress to both Local Storage and Cloud Server
+    getPlatform().saveMeta(meta);
+    await server.remoteFunction('savePlayerData', [meta, getNick()]);
+  } catch (err) {
+    console.error('Failed to sync progress with cloud server:', err);
+  }
 }
 
 // 진행 데이터 초기화 (메인화면 전용). meta 는 다른 모듈이 참조로 들고 있으므로

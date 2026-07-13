@@ -1,5 +1,5 @@
 /**
- * Agent8 GameServer - RandomDefense Rankings
+ * Agent8 GameServer - RandomDefense Rankings & Progress Syncing
  * 
  * Types are automatically available: $global, $sender, $room, $asset
  */
@@ -11,6 +11,58 @@ export class Server {
 
   async getMyAccount(): Promise<string> {
     return $sender.account;
+  }
+
+  /**
+   * Saves the player's full metadata on the server.
+   * Also ensures the leaderboard wave is kept in sync with the saved meta.bestWave.
+   */
+  async savePlayerData(meta: any, nickname: string): Promise<boolean> {
+    if (!meta) return false;
+
+    // 1. Save metadata to player's persistent account state
+    await $global.updateMyState(meta);
+
+    // 2. Synchronize best wave to leaderboard if available
+    const wave = Number(meta.bestWave || 0);
+    if (wave > 0) {
+      const cleanNick = (nickname || '').trim() || `Player_${$sender.account.slice(2, 6)}`;
+
+      // Check current ranking entries
+      const myRankings = await $global.getCollectionItems('rankings', {
+        filters: [{ field: 'account', operator: '==', value: $sender.account }]
+      });
+
+      const sorted = [...myRankings].sort((a, b) => b.wave - a.wave);
+      const currentBest = sorted.length > 0 ? sorted[0] : null;
+
+      if (!currentBest || wave > currentBest.wave) {
+        // Delete old records to enforce exactly 1 record per account
+        for (const entry of myRankings) {
+          if (entry.__id) {
+            await $global.deleteCollectionItem('rankings', entry.__id);
+          }
+        }
+
+        // Insert new best record
+        const entry = {
+          account: $sender.account,
+          wave,
+          nickname: cleanNick,
+          createdAt: Date.now()
+        };
+        await $global.addCollectionItem('rankings', entry);
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Loads the player's metadata from the server.
+   */
+  async loadPlayerData(): Promise<any> {
+    return await $global.getMyState();
   }
 
   /**
@@ -50,6 +102,13 @@ export class Server {
       };
 
       await $global.addCollectionItem('rankings', entry);
+
+      // Also update player state in parallel to keep them in sync
+      const playerState = await $global.getMyState();
+      const stateBestWave = Number(playerState?.bestWave || 0);
+      if (wave > stateBestWave) {
+        await $global.updateMyState({ bestWave: wave });
+      }
 
       return {
         updated: true,
