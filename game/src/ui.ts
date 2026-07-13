@@ -72,6 +72,10 @@ export class UI {
     $('btn-menu').onclick = () => { audio.button(); this.openExitConfirm(); };
     $('btn-settings').onclick = () => { audio.button(); openSettingsPanel(); };
     $('btn-ad-reward').onclick = () => { audio.button(); this.watchRewardedAd(); };
+    // 광고제거 or 미지원 환경이면 광고 버튼 숨김
+    if (!adManager.isRewardAvailable()) {
+      $('btn-ad-reward').style.display = 'none';
+    }
     // 상단바 버튼은 DOM 이 판마다 재사용되므로, 새 게임 시작 시 이전 판의 표시값을 초기화한다.
     this.speedIdx = 0;
     this.game.speed = this.speeds[this.speedIdx];
@@ -86,7 +90,7 @@ export class UI {
     btn.disabled = true;
 
     try {
-      const completed = await adManager.watchRewardedAd();
+      const completed = await adManager.watchRewardedAd('bonus-gold');
       if (completed) {
         this.game.gold += AD_REWARD_GOLD;
         this.toast(`+${AD_REWARD_GOLD} 골드 획득!`);
@@ -95,6 +99,10 @@ export class UI {
       /* ad error - just ignore */
     } finally {
       btn.disabled = false;
+      // 미지원 환경이면 광고 버튼 숨김
+      if (!adManager.isRewardAvailable()) {
+        btn.style.display = 'none';
+      }
     }
   }
 

@@ -97,7 +97,7 @@ function returnToMenu(): void {
   ui = null;
 
   // 전면 광고 표시 후 메인메뉴 복귀
-  adManager.showInterstitial(() => {
+  adManager.showInterstitial().then(() => {
     menu.show();
   });
 }
