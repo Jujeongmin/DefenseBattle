@@ -55,10 +55,12 @@ export function saveMeta(): void {
   getPlatform().saveMeta(meta);
 }
 
-// 진행 데이터 초기화 (설정 패널 전용). VX·광고제거 구매·음향 설정 등 플랫폼/기기 설정은 건드리지 않는다.
-// meta 는 다른 모듈이 참조로 들고 있으므로 재할당 대신 내용만 새 기본값으로 교체한다.
+// 진행 데이터 초기화 (메인화면 전용). meta 는 다른 모듈이 참조로 들고 있으므로
+// 재할당 대신 내용만 새 기본값으로 교체한다. 광고제거(=3배속 해금)도 함께 잠금 상태로
+// 되돌려, 초기화 후에도 3배속이 남아있던 문제를 방지한다. (음향 설정은 유지)
 export function resetProgress(): void {
   Object.assign(meta, freshMeta());
+  getPlatform().resetPurchases();
   saveMeta();
 }
 

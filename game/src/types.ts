@@ -163,6 +163,8 @@ export interface PlatformAdapter {
   isAdRemoved(): boolean;
   /** 광고제거 패키지 소유 등록 (VX 차감 후 호출) */
   purchaseAdRemoval(): Promise<boolean>;
+  /** 진행 데이터 초기화 시 광고제거(3배속 해금)를 잠금 상태로 되돌림 */
+  resetPurchases(): void;
   /** 보유 VX (Verse8 플랫폼 재화) */
   getVX(): number;
   /** VX 차감 (부족하면 false). 실제 결제/충전은 Verse8Platform 에서 */

@@ -18,7 +18,10 @@ export default defineConfig(({ command }) => ({
     // dev(serve)에서만 @agent8/gameserver 를 로컬 스텁으로 대체해 프리뷰를 띄운다.
     // 프로덕션 빌드(command==='build')에는 alias 를 걸지 않으므로 Verse8 의 실제 SDK 를 그대로 쓴다.
     alias: command === 'serve'
-      ? { '@agent8/gameserver': fileURLToPath(new URL('./game/src/devGameServerStub.ts', import.meta.url)) }
+      ? {
+          '@agent8/gameserver': fileURLToPath(new URL('./game/src/devGameServerStub.ts', import.meta.url)),
+          '@verse8/ads': fileURLToPath(new URL('./game/src/devVerse8AdsStub.ts', import.meta.url)),
+        }
       : {},
   },
 }));

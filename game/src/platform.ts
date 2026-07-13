@@ -61,6 +61,12 @@ export class LocalPlatform implements PlatformAdapter {
     return true;
   }
 
+  // 진행 데이터 초기화 시 함께 호출: 광고제거(=3배속 해금)를 잠금 상태로 되돌린다.
+  // (초기화는 프로토타입의 전체 데이터 리셋이므로 데모 결제도 원상복구)
+  resetPurchases(): void {
+    this.kv.set(AD_KEY, '0');
+  }
+
   getVX(): number {
     const v = this.kv.get(VX_KEY);
     return v === null ? VX_DEFAULT : Number(v);
