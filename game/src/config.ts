@@ -52,7 +52,7 @@ export const ECONOMY = {
   bossGold: 100,
   upgradeBase: 20,
   upgradeStep: 20,
-  upgradePerLevel: 0.10,
+  upgradePerLevel: 0.05, // 레벨당 해당 직업 공격력 +5% (기존 +10% 는 과도해 하향)
 } as const;
 
 // ---------- 웨이브 ----------

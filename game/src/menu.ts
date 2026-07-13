@@ -52,7 +52,9 @@ export class Menu {
   private openLab(): void {
     const panel = $('lab-panel');
     let tab: 'collection' | 'quest' = 'collection';
-    const render = () => {
+    // keepScroll: 스타업/보상수령 후 재렌더 시 스크롤 위치 유지 (탭 전환은 맨 위로)
+    const render = (keepScroll = false) => {
+      const prevScroll = keepScroll ? (panel.querySelector<HTMLElement>('.dialog')?.scrollTop ?? 0) : 0;
       const body = tab === 'collection' ? this.collectionHtml() : this.questHtml();
       panel.innerHTML = `
         <div class="dialog drag-scroll">
@@ -74,6 +76,8 @@ export class Menu {
         panel.classList.add('hidden');
         this.refresh();
       };
+      const dlg = panel.querySelector<HTMLElement>('.dialog');
+      if (dlg && prevScroll) dlg.scrollTop = prevScroll;
     };
     render();
     panel.classList.remove('hidden');
@@ -106,7 +110,7 @@ export class Menu {
     return html;
   }
 
-  private bindCollectionButtons(panel: HTMLElement, render: () => void): void {
+  private bindCollectionButtons(panel: HTMLElement, render: (keepScroll?: boolean) => void): void {
     panel.querySelectorAll<HTMLButtonElement>('[data-star]').forEach((b) => {
       b.onclick = () => {
         const [job, grade] = (b.dataset.star as string).split('_') as [Job, GradeKey];
@@ -118,7 +122,7 @@ export class Menu {
           meta.collectionLevel[key] = lv + 1;
           saveMeta();
           audio.button();
-          render();
+          render(true); // 스크롤 위치 유지
         }
       };
     });
@@ -143,7 +147,7 @@ export class Menu {
             <div style="font-weight:700;margin:10px 0 6px">${t('quest.achievements')}</div>${ach}`;
   }
 
-  private bindQuestButtons(panel: HTMLElement, render: () => void): void {
+  private bindQuestButtons(panel: HTMLElement, render: (keepScroll?: boolean) => void): void {
     panel.querySelectorAll<HTMLButtonElement>('[data-daily]').forEach((b) => {
       b.onclick = () => {
         const key = b.dataset.daily as string;
@@ -153,7 +157,7 @@ export class Menu {
           meta.daily.claimed[key] = true;
           meta.crystals += q.reward;
           saveMeta();
-          render();
+          render(true); // 스크롤 위치 유지
         }
       };
     });

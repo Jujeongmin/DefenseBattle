@@ -20,14 +20,25 @@ html, body {
   width: 100%;
   height: 100%;
   display: flex;
+  align-items: center;
   justify-content: center;
+  overflow: hidden;
   background: #000;
 }
-#game-frame {
+/* 고정 설계 해상도. JS(main.ts fitStage)가 viewport 에 맞춰 transform:scale 로 축소/확대.
+   내부 레이아웃은 항상 480x801 기준이라 어떤 화면에서도 잘리지 않고 레터박스로 맞춰진다. */
+#stage {
   position: relative;
-  width: min(100vw, 480px);
+  flex: 0 0 auto;
+  width: 480px;
+  height: 801px;
+  transform-origin: center center;
+}
+#game-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
   height: 100%;
-  max-height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--bg);
@@ -35,8 +46,9 @@ html, body {
 
 /* ---------- 메인 화면 ---------- */
 #main-menu {
-  position: relative;
-  width: min(100vw, 480px);
+  position: absolute;
+  inset: 0;
+  width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
@@ -113,6 +125,7 @@ html, body {
 .top-center { text-align: center; width: 34%; }
 #wave-label { font-size: 20px; font-weight: 700; }
 #boss-timer { color: #ff5252; font-weight: 700; font-size: 16px; }
+#boss-timer.rest { color: #7ee87e; }
 .top-right { display: flex; gap: 6px; justify-content: flex-end; width: 40%; }
 /* 나무 버튼 공통 스킨 (UI/Freebuttons ClassicalButtons) */
 .wood-btn {
@@ -458,15 +471,11 @@ html, body {
 .job-tabs button.active { background: var(--gold); color: #3a2f00; }
 
 /* ---------- 오버레이 패널 ---------- */
-/* #game-frame/#main-menu 와 동일하게 모바일 폭(min(100vw,480px))으로 제한.
-   inset:0 을 쓰면 #app(브라우저 전체 폭) 기준으로 퍼져서 넓은 화면에서
-   패널이 게임 프레임보다 커 보이는 문제가 있었음. */
+/* 스테이지(480x801) 를 꽉 채운다. 스테이지가 통째로 스케일되므로 패널도 함께 맞춰진다. */
 .overlay {
   position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(100vw, 480px);
+  inset: 0;
+  width: 100%;
   height: 100%;
   background: rgba(0,0,0,0.7);
   display: flex;

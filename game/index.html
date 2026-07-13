@@ -38,6 +38,8 @@
   </head>
   <body>
     <div id="app">
+      <!-- 고정 설계 해상도(480x801) 스테이지: viewport 에 맞춰 통째로 스케일(레터박스) -->
+      <div id="stage">
       <!-- 메인 화면 -->
       <div id="main-menu">
         <div class="lang-btns menu-lang">
@@ -119,6 +121,7 @@
       <div id="confirm-panel" class="overlay hidden"></div>
       <div id="settings-panel" class="overlay hidden"></div>
       <div id="rank-panel" class="overlay hidden"></div>
+      </div>
     </div>
 
     <script type="module" src="./src/main.ts"></script>

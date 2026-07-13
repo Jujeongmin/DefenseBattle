@@ -46,6 +46,20 @@ function applyStaticI18n(): void {
 
 applyStaticI18n();
 setupLangButtons();
+
+// 고정 설계 해상도(480x801)를 현재 viewport 에 맞춰 통째로 스케일(레터박스).
+// 화면 크기와 무관하게 UI 가 잘리지 않고, 데스크톱에서도 비율을 유지한다.
+const STAGE_W = 480, STAGE_H = 801;
+function fitStage(): void {
+  const stage = document.getElementById('stage');
+  if (!stage) return;
+  const s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+  stage.style.transform = `scale(${s})`;
+}
+fitStage();
+window.addEventListener('resize', fitStage);
+window.addEventListener('orientationchange', fitStage);
+
 preloadAll();
 audio.installUnlock();
 
@@ -67,8 +81,9 @@ function startGame(): void {
   document.getElementById('gameover-panel')!.classList.add('hidden');
   gameFrame.classList.remove('hidden');
   audio.startBgm();
-  // 첫 플레이 온보딩 (레이아웃이 잡힌 뒤 위치 계산해야 하므로 다음 프레임에)
-  requestAnimationFrame(() => maybeStartTutorial(game!));
+  // 첫 플레이 온보딩. setTimeout 사용(레이아웃 반영 후 실행 + 탭이 백그라운드여도 실행됨.
+  // requestAnimationFrame 은 비활성 탭에서 발화하지 않아 온보딩이 안 뜨는 문제가 있었음).
+  setTimeout(() => maybeStartTutorial(game!), 0);
 }
 
 function returnToMenu(): void {

@@ -91,20 +91,26 @@ export class UI {
     };
     const stop = () => {
       if (this.summonHoldTimer !== null) {
-        window.clearInterval(this.summonHoldTimer);
+        window.clearTimeout(this.summonHoldTimer);
         this.summonHoldTimer = null;
       }
       btn.classList.remove('holding');
     };
+    // 꾹 누르고 있을수록 소환 간격이 점점 짧아진다(가속): 340ms → 최소 60ms
+    const HOLD_START_MS = 340, HOLD_MIN_MS = 60, HOLD_ACCEL_MS = 28;
     const start = (ev: PointerEvent) => {
       if (btn.disabled || this.summonHoldTimer !== null) return;
       ev.preventDefault();
       btn.setPointerCapture(ev.pointerId);
       btn.classList.add('holding');
       if (!summonOnce()) { stop(); return; }
-      this.summonHoldTimer = window.setInterval(() => {
-        if (btn.disabled || !summonOnce()) stop();
-      }, 170);
+      let delay = HOLD_START_MS;
+      const tick = () => {
+        if (btn.disabled || !summonOnce()) { stop(); return; }
+        delay = Math.max(HOLD_MIN_MS, delay - HOLD_ACCEL_MS);
+        this.summonHoldTimer = window.setTimeout(tick, delay);
+      };
+      this.summonHoldTimer = window.setTimeout(tick, delay);
     };
     btn.onpointerdown = start;
     btn.onpointerup = stop;
@@ -151,8 +157,14 @@ export class UI {
 
     const bt = $('boss-timer');
     if (g.waveState === 'waiting_boss' || (g.isBossWave && g.waveState === 'spawning')) {
-      bt.classList.remove('hidden');
+      // 보스 웨이브: 제한 시간(초과 시 게임오버) 표시
+      bt.classList.remove('hidden', 'rest');
       bt.textContent = `⏱ ${g.bossTimer.toFixed(1)}s`;
+    } else if (g.waveState === 'rest') {
+      // 웨이브 사이 휴식: 다음 웨이브 시작까지 남은 시간 표시
+      bt.classList.remove('hidden');
+      bt.classList.add('rest');
+      bt.textContent = t('hud.nextWave', { s: Math.max(0, Math.ceil(g.restTimer)) });
     } else {
       bt.classList.add('hidden');
     }

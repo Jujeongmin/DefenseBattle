@@ -67,6 +67,7 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'hud.home':        { en: 'Home', ko: '메인' },
   'hud.probInfo':    { en: 'Odds ⓘ', ko: '확률 정보 ⓘ' },
   'hud.upgrade':     { en: 'Upgrade', ko: '강화' },
+  'hud.nextWave':    { en: 'Next wave {s}s', ko: '다음 웨이브 {s}s' },
 
   // 소환 로그 / 배너 (엔진)
   'log.summon':      { en: '{rate}% {job} {grade} summoned', ko: '{rate}% {job} {grade}등급 소환' },
