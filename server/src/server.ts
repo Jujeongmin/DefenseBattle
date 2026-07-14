@@ -67,8 +67,10 @@ export class Server {
 
   /**
    * Submits a wave record, keeping only one highest score per account.
+   * Returns structured data only (no localized text) so the client can
+   * compose the message in the player's chosen language.
    */
-  async submitWave(wave: number, nickname: string): Promise<{ updated: boolean; bestWave: number; message: string }> {
+  async submitWave(wave: number, nickname: string): Promise<{ updated: boolean; bestWave: number; isFirst: boolean; previousWave: number }> {
     if (typeof wave !== 'number' || wave < 0) {
       throw new Error('Invalid wave.');
     }
@@ -113,15 +115,15 @@ export class Server {
       return {
         updated: true,
         bestWave: wave,
-        message: currentBest
-          ? `새로운 최고 기록 달성! (이전 기록: ${currentBest.wave}웨이브)`
-          : `첫 기록 등록 완료! (${wave}웨이브)`
+        isFirst: !currentBest,
+        previousWave: currentBest ? currentBest.wave : 0
       };
     } else {
       return {
         updated: false,
         bestWave: currentBest.wave,
-        message: `이미 더 높은 최고 기록이 있습니다. (${currentBest.wave}웨이브)`
+        isFirst: false,
+        previousWave: currentBest.wave
       };
     }
   }

@@ -16,14 +16,19 @@ class StubGameServer {
   }
 
   async connect() {
-    // dev 모드에서는 실제 서버가 없으므로 연결하지 않음
-    return false;
+    // dev 모드에서도 랭킹 UI 흐름을 시험할 수 있도록 연결된 것처럼 처리
+    this.connected = true;
+    return true;
   }
 
   async remoteFunction(_fn: string, _args?: any[]) {
     if (_fn === 'getTopRankings') return [];
     if (_fn === 'getMyBestRank') return { bestEntry: null, rank: -1 };
-    if (_fn === 'submitWave') return { updated: false, bestWave: 0, message: 'Dev mode: no server' };
+    // 실제 서버(server/src/server.ts)의 구조값 반환 형태를 모사 (첫 기록 성공)
+    if (_fn === 'submitWave') {
+      const w = Number(_args?.[0] ?? 0);
+      return { updated: true, bestWave: w, isFirst: true, previousWave: 0 };
+    }
     if (_fn === 'loadPlayerData') return null;
     if (_fn === 'savePlayerData') return true;
     return null;

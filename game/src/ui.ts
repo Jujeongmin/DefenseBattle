@@ -446,8 +446,13 @@ export class UI {
           server.remoteFunction('submitWave', [d.wave, nick]),
           timeout(5000)
         ]);
-        statusDiv.textContent = `✅ ${res.message}`;
-        statusDiv.style.color = '#4caf50';
+        // 서버는 구조값만 반환 → 플레이어 언어로 문구를 조립
+        statusDiv.textContent = !res.updated
+          ? t('rank.resNotBeaten', { n: res.bestWave })
+          : res.isFirst
+            ? t('rank.resFirst', { n: res.bestWave })
+            : t('rank.resNewBest', { prev: res.previousWave });
+        statusDiv.style.color = res.updated ? '#4caf50' : '#8892b0';
       } catch (e: any) {
         console.error(e);
         statusDiv.textContent = t('over.rankSubmitFailed', { msg: e.message || t('over.networkError') });

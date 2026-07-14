@@ -218,6 +218,10 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'over.rankRegistering': { en: '⏳ Submitting to server...', ko: '⏳ 서버에 등록하는 중...' },
   'over.rankSubmitFailed': { en: '❌ Submit failed: {msg}', ko: '❌ 등록 실패: {msg}' },
   'over.networkError':   { en: 'Network error', ko: '네트워크 오류' },
+  // 랭킹 등록 결과 (서버는 구조값만 반환, 문구는 여기서 조립)
+  'rank.resFirst':       { en: '✅ First record registered! (Wave {n})', ko: '✅ 첫 기록 등록 완료! ({n}웨이브)' },
+  'rank.resNewBest':     { en: '✅ New best record! (previous: Wave {prev})', ko: '✅ 새로운 최고 기록 달성! (이전 기록: {prev}웨이브)' },
+  'rank.resNotBeaten':   { en: 'ℹ️ You already have a higher record. (Wave {n})', ko: 'ℹ️ 이미 더 높은 최고 기록이 있습니다. ({n}웨이브)' },
 
   // 랭킹 패널
   'rank.title':         { en: '🏆 Live Rankings', ko: '🏆 실시간 랭킹' },
