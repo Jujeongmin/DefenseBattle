@@ -29,8 +29,8 @@ export const GRADES: Grade[] = [
   { key: 'rare',      kr: '고급',   spriteIndex: 1, atk: [20, 30],   summonRate: 33,  sellGold: 25,   color: '#4caf50' },
   { key: 'elite',     kr: '정예',   spriteIndex: 2, atk: [40, 60],   summonRate: 10,  sellGold: 60,   color: '#2196f3' },
   { key: 'legendary', kr: '전설',   spriteIndex: 3, atk: [60, 90],   summonRate: 6.5, sellGold: 150,  color: '#9c27b0' },
-  { key: 'mythic',    kr: '신화',   spriteIndex: 4, atk: [90, 135],  summonRate: 0.4, sellGold: 400,  color: '#ff9800' },
-  { key: 'eternal',   kr: '태초',   spriteIndex: 5, atk: [180, 270], summonRate: 0.1, sellGold: 1000, color: '#f44336' },
+  { key: 'mythic',    kr: '신화',   spriteIndex: 4, atk: [120, 180], summonRate: 0.4, sellGold: 400,  color: '#ff9800' },
+  { key: 'eternal',   kr: '태초',   spriteIndex: 5, atk: [240, 360], summonRate: 0.1, sellGold: 1000, color: '#f44336' },
 ];
 export const GRADE_BY_KEY: Record<GradeKey, Grade> =
   Object.fromEntries(GRADES.map((g) => [g.key, g])) as Record<GradeKey, Grade>;
