@@ -7,6 +7,11 @@ export default defineConfig(({ command }) => ({
   root: 'game',
   base: './',
   publicDir: 'public',
+  // root 가 game/ 이라 Vite 는 기본적으로 game/.env 를 찾지만, Verse8 이 관리하는
+  // .env(VITE_AGENT8_VERSE 등)는 프로젝트 루트에 있다. 루트에서 .env 를 읽도록 지정하지
+  // 않으면 VITE_AGENT8_VERSE 가 클라 번들에 안 박혀 서버 연결이 "default" verse 로
+  // 폴백 → 연결 timeout 이 발생한다.
+  envDir: fileURLToPath(new URL('.', import.meta.url)),
   build: {
     outDir: '../dist',
     emptyOutDir: true,
