@@ -42,10 +42,29 @@ const DIRT_SRC = { sx: 0, sy: 0 };    // dirt.png 의 채움 흙 타일
 const PATH_INSET = 70;                // 경로 중심선 여백 (PATH.corners 와 동일)
 const BAND_HALF = 30;                 // 흙길 밴드 반폭
 
+// grass.png 시트에 원래부터 있던 잔디 덤불/들꽃 장식 변형(미사용) - 맵 바깥 테두리에 흩뿌려 재활용
+const GRASS_DECOR_SRC = [
+  { sx: 96, sy: 80 },  { sx: 112, sy: 80 },
+  { sx: 96, sy: 96 },  { sx: 112, sy: 96 },
+  { sx: 128, sy: 80 }, { sx: 144, sy: 80 },
+];
+
+// 좌표 기반 결정론적 해시(0~1) - 프레임마다 흔들리지 않는 고정 장식 배치용
+function hash2(a: number, b: number): number {
+  let h = (a * 374761393 + b * 668265263) ^ (a << 13);
+  h = Math.imul(h ^ (h >>> 15), 1274126177);
+  h = h ^ (h >>> 16);
+  return (h >>> 0) / 4294967295;
+}
+
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private game: Game;
   private t = 0; // 애니메이션 시계(초)
+  private lastT = 0;
+  // 구역별 룬 연출 상태: 직업이 바뀐(스왑된) 순간 잠깐 링이 확 번지는 플레어 연출용
+  private zonePrevJob: (Job | null)[] = [null, null, null, null];
+  private zoneFlare = [0, 0, 0, 0];
 
   constructor(canvas: HTMLCanvasElement, game: Game) {
     this.ctx = canvas.getContext('2d')!;
@@ -57,14 +76,19 @@ export class Renderer {
   draw(): void {
     const ctx = this.ctx;
     this.t = performance.now() / 1000;
+    const dt = this.lastT ? Math.min(0.1, this.t - this.lastT) : 0;
+    this.lastT = this.t;
     ctx.imageSmoothingEnabled = false; // 픽셀 아트 선명하게
     ctx.clearRect(0, 0, MAP.size, MAP.size);
     this.drawTiles();
+    this.drawArenaFrame();
+    this.drawZoneRunes(dt);
     this.drawZones();
     this.drawMobs();
     this.drawUnits();
     this.drawEffects();
     this.drawDrag(); // 드래그 화살표는 최상단
+    this.drawVignette();
   }
 
   // 시트에서 (col,row) 프레임을 (dx,dy) 에 size 크기로 그린다
@@ -106,8 +130,110 @@ export class Renderer {
           ctx.fillStyle = isPath ? '#d3b183' : '#8bb04a';
           ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE);
         }
+        // 맵 맨 바깥 테두리 줄(경로/구역과 절대 겹치지 않는 순수 잔디)에만 덤불·들꽃 장식을 흩뿌린다.
+        // 매 프레임 새로 뽑지 않고 타일 좌표로 고정 해시를 써서 장식이 흔들리지 않게 한다.
+        const isBorder = gx === 0 || gx === n - 1 || gy === 0 || gy === n - 1;
+        if (isBorder && !isPath && grass.ready) {
+          const r = hash2(gx, gy);
+          if (r < 0.42) {
+            const idx = Math.floor(hash2(gx + 91, gy + 17) * GRASS_DECOR_SRC.length);
+            const d = GRASS_DECOR_SRC[idx];
+            ctx.drawImage(grass.img, d.sx, d.sy, 16, 16, gx * TILE, gy * TILE, TILE, TILE);
+          }
+        }
       }
     }
+  }
+
+  // 구역 사각 아레나의 외곽을 은은한 이중선 + 모서리 장식으로 둘러 "전장"임을 시각적으로 구획한다.
+  private drawArenaFrame(): void {
+    const z = this.game.zones;
+    if (z.length < 4) return;
+    // 4개 구역 삼각형이 공유하는 정사각 아레나의 네 꼭짓점 (엔진 상수를 하드코딩하지 않고 실제 기하에서 추출)
+    const A = z[0].tri[0], B = z[1].tri[0], C = z[2].tri[0], D = z[3].tri[0];
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(120,98,70,0.55)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(A.x, A.y, B.x - A.x, D.y - A.y);
+    ctx.strokeStyle = 'rgba(230,196,120,0.30)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(A.x + 4, A.y + 4, (B.x - A.x) - 8, (D.y - A.y) - 8);
+    // 네 모서리 다이아몬드 장식
+    ctx.fillStyle = 'rgba(230,196,120,0.55)';
+    for (const p of [A, B, C, D]) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillRect(-4, -4, 8, 8);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // 구역별 마법진 룬: 비어있으면 은은한 돌 링, 직업이 배치되면 그 직업 색으로 점등 + 회전 점선 + 숨쉬는 펄스.
+  // 드래그로 구역을 맞바꾸면 색이 즉시 갱신되고, 변경된 순간엔 잠깐 링이 확 번지는 플레어를 더한다.
+  private drawZoneRunes(dt: number): void {
+    const ctx = this.ctx;
+    this.game.zones.forEach((zone, i) => {
+      if (this.zonePrevJob[i] !== zone.job) {
+        this.zonePrevJob[i] = zone.job;
+        this.zoneFlare[i] = 1;
+      }
+      if (this.zoneFlare[i] > 0) this.zoneFlare[i] = Math.max(0, this.zoneFlare[i] - dt / 0.5);
+
+      const cx = zone.cx, cy = zone.cy;
+      const breathe = 0.5 + 0.5 * Math.sin(this.t * (zone.job ? 1.2 : 0.5));
+      ctx.save();
+
+      if (!zone.job) {
+        // 빈 구역: 은은하게 숨쉬는 돌 링
+        ctx.strokeStyle = `rgba(150,138,120,${0.18 + breathe * 0.14})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.stroke();
+      } else {
+        const tint = JOB_TINT[zone.job];
+        // 은은한 지면 글로우
+        const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 30);
+        glow.addColorStop(0, this.hexA(tint, 0.16 + breathe * 0.08));
+        glow.addColorStop(1, this.hexA(tint, 0));
+        ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI * 2); ctx.fill();
+        // 메인 링
+        ctx.strokeStyle = this.hexA(tint, 0.55 + breathe * 0.2);
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(cx, cy, 21, 0, Math.PI * 2); ctx.stroke();
+        // 회전하는 점선 링 (드래그 강조와 동일한 기법 재사용)
+        ctx.setLineDash([5, 5]);
+        ctx.lineDashOffset = -this.t * 22;
+        ctx.strokeStyle = this.hexA(tint, 0.5);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(cx, cy, 27, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // 구역 교환 직후: 확장하며 사라지는 플레어 링
+      if (this.zoneFlare[i] > 0) {
+        const p = 1 - this.zoneFlare[i];
+        const tint = zone.job ? JOB_TINT[zone.job] : '#ffffff';
+        ctx.strokeStyle = this.hexA(tint, this.zoneFlare[i] * 0.8);
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(cx, cy, 20 + p * 24, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.restore();
+    });
+  }
+
+  // 캔버스 네 모서리를 살짝 어둡게 눌러 시선을 전장 중심으로 모은다 (아주 은은하게).
+  private drawVignette(): void {
+    const ctx = this.ctx;
+    const g = ctx.createRadialGradient(MAP.size / 2, MAP.size / 2, MAP.size * 0.42, MAP.size / 2, MAP.size / 2, MAP.size * 0.72);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.22)');
+    ctx.save();
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, MAP.size, MAP.size);
+    ctx.restore();
   }
 
   private zonePath(i: number): void {
