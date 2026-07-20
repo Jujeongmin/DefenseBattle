@@ -130,6 +130,15 @@ export class Renderer {
           ctx.fillStyle = isPath ? '#d3b183' : '#8bb04a';
           ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE);
         }
+        // 타일마다 아주 살짝 명도를 다르게 얹어 동일 타일 반복이 도드라지지 않게 한다(고정 해시라 안 흔들림).
+        const variance = (hash2(gx * 7 + 3, gy * 13 + 5) - 0.5) * 0.12;
+        if (variance > 0.002) {
+          ctx.fillStyle = `rgba(255,255,255,${variance})`;
+          ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE);
+        } else if (variance < -0.002) {
+          ctx.fillStyle = `rgba(0,0,0,${-variance})`;
+          ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE);
+        }
         // 맵 맨 바깥 테두리 줄(경로/구역과 절대 겹치지 않는 순수 잔디)에만 덤불·들꽃 장식을 흩뿌린다.
         // 매 프레임 새로 뽑지 않고 타일 좌표로 고정 해시를 써서 장식이 흔들리지 않게 한다.
         const isBorder = gx === 0 || gx === n - 1 || gy === 0 || gy === n - 1;
@@ -276,10 +285,17 @@ export class Renderer {
         ctx.lineWidth = 4;
       } else {
         ctx.setLineDash([]);
-        ctx.strokeStyle = 'rgba(20,20,20,0.18)';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(90,68,42,0.4)';
+        ctx.lineWidth = 2.5;
       }
       ctx.stroke();
+      if (!isFrom && !isTo && !drag) {
+        // 은은한 밝은 하이라이트 선을 살짝 어긋나게 겹쳐 그어 돌바닥에 새겨진 듯한 입체감을 준다.
+        ctx.setLineDash([]);
+        ctx.strokeStyle = 'rgba(255,235,190,0.12)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
       ctx.setLineDash([]);
     });
     ctx.restore();
@@ -327,11 +343,59 @@ export class Renderer {
     return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
   }
 
+  // 스프라이트 발밑에 깔리는 타원 그림자 - 바닥에 떠 보이지 않도록 무게감을 준다.
+  private drawShadow(x: number, y: number, s: number): void {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + s * 0.4, s * 0.36, s * 0.14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // 모서리가 둥근 사각형 경로 (구형 브라우저 호환용으로 ctx.roundRect 대신 수동 구현)
+  private roundedRectPath(x: number, y: number, w: number, h: number, r: number): void {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // 체력바: 어두운 배경 + 테두리 + 둥근 모서리 + 위쪽 하이라이트로 입체감을 준다.
+  private drawHpBar(cx: number, top: number, w: number, ratio: number, fillColor: string): void {
+    const ctx = this.ctx;
+    const h = 5, r = 2.5;
+    ctx.save();
+    this.roundedRectPath(cx - w / 2 - 1, top - 1, w + 2, h + 2, r + 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fill();
+    this.roundedRectPath(cx - w / 2, top, Math.max(h, w * ratio), h, r);
+    ctx.save();
+    this.roundedRectPath(cx - w / 2, top, w, h, r);
+    ctx.clip();
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(cx - w / 2, top, w * ratio, h);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillRect(cx - w / 2, top, w * ratio, h * 0.45);
+    ctx.restore();
+    this.roundedRectPath(cx - w / 2, top, w, h, r);
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   private drawMobs(): void {
     const ctx = this.ctx;
     for (const m of this.game.mobs) {
       const s = m.size;
       const spr = mobSprite(m.race);
+      this.drawShadow(m.x, m.y, s);
       if (spr.ready) {
         const col = m.pause > 0 ? 1 : this.walkCol(m.id * 0.07, 0.16); // 코너 정지 시 대기 프레임
         if (m.hitFlash > 0) { ctx.save(); ctx.globalAlpha = 0.6; }
@@ -341,17 +405,19 @@ export class Renderer {
         ctx.fillStyle = m.boss ? '#b23' : '#357';
         ctx.beginPath(); ctx.arc(m.x, m.y, s / 2, 0, Math.PI * 2); ctx.fill();
       }
-      const w = s, h = 4;
       const ratio = Math.max(0, m.hp / m.maxHp);
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillRect(m.x - w / 2, m.y - s / 2 - 8, w, h);
-      ctx.fillStyle = m.boss ? '#ff5252' : '#7ee87e';
-      ctx.fillRect(m.x - w / 2, m.y - s / 2 - 8, w * ratio, h);
+      this.drawHpBar(m.x, m.y - s / 2 - 9, s, ratio, m.boss ? '#ff5252' : '#7ee87e');
       if (m.boss) {
-        ctx.fillStyle = '#ffd54f';
-        ctx.font = 'bold 14px sans-serif';
+        ctx.save();
+        ctx.font = '900 15px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('BOSS', m.x, m.y - s / 2 - 12);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(50,0,0,0.85)';
+        ctx.fillStyle = '#ffd54f';
+        const ty = m.y - s / 2 - 16;
+        ctx.strokeText('BOSS', m.x, ty);
+        ctx.fillText('BOSS', m.x, ty);
+        ctx.restore();
       }
     }
   }
@@ -361,6 +427,7 @@ export class Renderer {
     for (const u of this.game.units) {
       const spr = unitSprite(u.job, u.grade);
       const s = 45; // 30 → 1.5배
+      this.drawShadow(u.x, u.y, s);
       if (spr.ready) {
         if (u.moveTo) {
           // 구역 교환 등으로 이동 중: 이동 방향 행 + 걷기 사이클 재생
