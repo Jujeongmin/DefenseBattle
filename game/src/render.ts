@@ -390,6 +390,10 @@ export class Renderer {
     ctx.restore();
   }
 
+  // 2-패스로 그린다: ① 그림자+스프라이트를 몹 전부 먼저, ② HP바+보스 라벨을 몹 전부 나중에.
+  // 한 몹씩 [스프라이트→HP바]를 통째로 그리면, 붙어서 이동하는 뒤 몹의 몸통이 앞 몹의 HP바를
+  // 덮어버리는 문제가 있어(그리기 순서=배열 순서일 뿐 화면상 앞뒤와 무관), HP바 레이어를 통째로
+  // 스프라이트 레이어 위로 분리해 항상 모든 몹 몸통보다 위(레이어 순서 상 위)에 오도록 한다.
   private drawMobs(): void {
     const ctx = this.ctx;
     for (const m of this.game.mobs) {
@@ -405,6 +409,9 @@ export class Renderer {
         ctx.fillStyle = m.boss ? '#b23' : '#357';
         ctx.beginPath(); ctx.arc(m.x, m.y, s / 2, 0, Math.PI * 2); ctx.fill();
       }
+    }
+    for (const m of this.game.mobs) {
+      const s = m.size;
       const ratio = Math.max(0, m.hp / m.maxHp);
       this.drawHpBar(m.x, m.y - s / 2 - 16, s, ratio, m.boss ? '#ff5252' : '#7ee87e');
       if (m.boss) {
