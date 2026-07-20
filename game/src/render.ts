@@ -406,7 +406,7 @@ export class Renderer {
         ctx.beginPath(); ctx.arc(m.x, m.y, s / 2, 0, Math.PI * 2); ctx.fill();
       }
       const ratio = Math.max(0, m.hp / m.maxHp);
-      this.drawHpBar(m.x, m.y - s / 2 - 9, s, ratio, m.boss ? '#ff5252' : '#7ee87e');
+      this.drawHpBar(m.x, m.y - s / 2 - 16, s, ratio, m.boss ? '#ff5252' : '#7ee87e');
       if (m.boss) {
         ctx.save();
         ctx.font = '900 15px sans-serif';
@@ -414,7 +414,7 @@ export class Renderer {
         ctx.lineWidth = 3;
         ctx.strokeStyle = 'rgba(50,0,0,0.85)';
         ctx.fillStyle = '#ffd54f';
-        const ty = m.y - s / 2 - 16;
+        const ty = m.y - s / 2 - 23;
         ctx.strokeText('BOSS', m.x, ty);
         ctx.fillText('BOSS', m.x, ty);
         ctx.restore();
