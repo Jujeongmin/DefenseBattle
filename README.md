@@ -81,18 +81,22 @@ npm run preview    # 빌드 결과 미리보기
 
 밸런스 재측정: `npx tsx tools/simulate.ts 40` (기본), `... search`(그리드 탐색), `... army`(군대 크기).
 
-## Verse8 연동 준비
+## Verse8 연동 현황
 
-저장/상점/계정은 `platform.ts` 의 `PlatformAdapter` 인터페이스로 추상화되어 있다.
-현재는 `LocalPlatform`(localStorage, Node 에선 메모리 폴백)만 구현. 추후 Verse8 SDK 로
-`Verse8Platform` 을 만들어 `setPlatform(new Verse8Platform(...))` 한 줄로 교체하면 된다.
-- `loadMeta()/saveMeta()` — 크리스탈·연구·퀘스트 서버/계정 저장
-- `getVX()/spendVX()` — Verse8 플랫폼 재화(VX) 잔액/차감. 상점에서 **VX 로 보석(💎) 구매**
-- `isAdRemoved()/purchaseAdRemoval()` — 광고제거 패키지(3배속 해금, VX ${300})
-- `accountId()` — 로그인 계정 식별
-
-상점 상품은 `config.ts` `CRYSTAL_PACKAGES`(보석 패키지)·`AD_REMOVE_VX` 로 정의.
-로컬에서는 데모용 기본 VX(500)가 주어지며, 실제 VX 충전(결제)은 Verse8 연동 시 활성화된다.
+- **GameServer** (`server/src/server.ts`) — 랭킹(`submitWave`/`getTopRankings`/`getMyBestRank`),
+  계정 저장(`savePlayerData`/`loadPlayerData`), VX Shop 구매 지급(`$onItemPurchased`) 모두 구현됨.
+- **VX Shop 실결제** (`vxshop.ts`) — `@verse8/platform/vanilla` 의 `VXShop.buyItem(productId)` 로
+  결제창을 띄운다. 상품(가격·재고)은 Verse8 대시보드의 VX Shop 탭에서 등록하며, `productId` 는
+  `config.ts` 의 `CRYSTAL_PACKAGES[].id`/`AD_REMOVAL_PRODUCT_ID` 와 정확히 일치해야 한다.
+  지급은 클라가 아니라 서버의 `$onItemPurchased` 가 계정 상태에 기록하고, 결제창이 닫히면
+  클라가 `syncWithServer()` 로 다시 받아와 반영한다.
+- **광고** (`ad.ts`) — `@verse8/ads` 의 `showRewarded`/`showInterstitial`.
+- 저장/계정은 `platform.ts` 의 `PlatformAdapter` 로 추상화. 현재는 `LocalPlatform`
+  (localStorage, Node 에선 메모리 폴백)만 구현하며, `loadMeta()/saveMeta()/isAdRemoved()/accountId()`
+  를 제공한다.
+- 로컬 프리뷰(`vite dev`)에는 `@agent8/gameserver`/`@verse8/ads`/`@verse8/platform/vanilla` 가
+  없으므로 `vite.config.js` 가 dev 전용 스텁(`devGameServerStub.ts` 등)으로 alias 한다.
+  프로덕션 빌드에는 이 alias 가 걸리지 않아 Verse8 의 실제 SDK 를 그대로 쓴다.
 
 ## 참고
 

@@ -161,4 +161,35 @@ export class Server {
       rank: higherCount + 1
     };
   }
+
+  /**
+   * VX Shop purchase webhook. Verse8 calls this after a payment is confirmed,
+   * so all crediting must happen here (never trust the client). productId
+   * must exactly match what's registered in the VX Shop dashboard tab AND
+   * game/src/config.ts (CRYSTAL_PACKAGES[].id / AD_REMOVAL_PRODUCT_ID).
+   */
+  async $onItemPurchased({ account, productId, quantity }: {
+    account: string;
+    purchaseId: string;
+    productId: string;
+    quantity: number;
+    metadata?: any;
+  }): Promise<{ success: boolean }> {
+    const qty = Math.max(1, Number(quantity) || 1);
+    const CRYSTAL_GRANTS: Record<string, number> = {
+      'gems-100': 100,
+      'gems-550': 550,
+      'gems-1200': 1200,
+    };
+
+    if (productId in CRYSTAL_GRANTS) {
+      const state = await $global.getUserState(account);
+      const current = Number(state?.crystals || 0);
+      await $global.updateUserState(account, { crystals: current + CRYSTAL_GRANTS[productId] * qty });
+    } else if (productId === 'ad-removal') {
+      await $global.updateUserState(account, { adRemoved: true });
+    }
+
+    return { success: true };
+  }
 }

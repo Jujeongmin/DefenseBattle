@@ -162,17 +162,21 @@ export function researchCost(level: number): number {
 export const RESEARCH_PER: Record<ResearchKey, number> =
   Object.fromEntries(RESEARCH.map((r) => [r.key, r.per])) as Record<ResearchKey, number>;
 
-// ---------- 상점 (VX 로 구매) ----------
-export const AD_REMOVE_VX = 300; // 광고제거 패키지 가격(VX)
+// ---------- 상점 (VX Shop 실결제) ----------
+// productId 는 Verse8 대시보드의 VX Shop 탭에 "정확히 이 문자열"로 상품을 등록해야
+// 서버의 $onItemPurchased(server/src/server.ts) 가 올바른 상품으로 인식해 지급한다.
+// 대시보드 등록 가격도 아래 vx 값과 일치시킬 것 (표시용 가격은 여기서 관리).
+export const AD_REMOVAL_PRODUCT_ID = 'ad-removal';
+export const AD_REMOVE_VX = 300; // 광고제거 패키지 가격(VX, 대시보드 등록 가격과 일치)
 export const AD_INTERSTITIAL_COOLDOWN = 90; // 전면광고 최소 간격(초)
 export const AD_REWARD_GOLD = 50;             // 보상형 광고 시청 보상 골드
 export const AD_SHOP_REWARD_GEMS = 50;        // 상점 보상형 광고 보상 보석
 export const AD_SHOP_COOLDOWN_MINUTES = 30;   // 상점 보상형 광고 쿨다운(분)
-export interface CrystalPackage { crystals: number; vx: number; bonus?: number }
+export interface CrystalPackage { id: string; crystals: number; vx: number; bonus?: number }
 export const CRYSTAL_PACKAGES: CrystalPackage[] = [
-  { crystals: 100,  vx: 10 },
-  { crystals: 550,  vx: 50,  bonus: 10 },
-  { crystals: 1200, vx: 100, bonus: 20 },
+  { id: 'gems-100',  crystals: 100,  vx: 10 },
+  { id: 'gems-550',  crystals: 550,  vx: 50,  bonus: 10 },
+  { id: 'gems-1200', crystals: 1200, vx: 100, bonus: 20 },
 ];
 
 // ---------- 유닛 가챠 / 컬렉션 (크리스탈로 뽑기 → 스타업) ----------

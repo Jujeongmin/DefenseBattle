@@ -160,16 +160,11 @@ export interface PlatformAdapter {
   loadMeta(): Partial<MetaData> | null;
   /** 메타 영구 저장 */
   saveMeta(m: MetaData): void;
-  /** 광고제거 패키지 보유 여부 (3배속 해금 조건) */
+  /** 광고제거 패키지 보유 여부 (3배속 해금 조건). 지급은 VX Shop 결제 후
+   *  서버가 계정 상태에 기록하고, syncWithServer() 가 이 값을 반영한다. */
   isAdRemoved(): boolean;
-  /** 광고제거 패키지 소유 등록 (VX 차감 후 호출) */
-  purchaseAdRemoval(): Promise<boolean>;
   /** 진행 데이터 초기화 시 광고제거(3배속 해금)를 잠금 상태로 되돌림 */
   resetPurchases(): void;
-  /** 보유 VX (Verse8 플랫폼 재화) */
-  getVX(): number;
-  /** VX 차감 (부족하면 false). 실제 결제/충전은 Verse8Platform 에서 */
-  spendVX(amount: number): Promise<boolean>;
   /** 계정 식별자 (로컬은 null) */
   accountId(): string | null;
 }

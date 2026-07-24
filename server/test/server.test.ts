@@ -45,6 +45,40 @@ describe('Server Rankings & Cloud Save', () => {
     expect(myBestAlice.bestEntry.wave).toBe(20);
   });
 
+  test('$onItemPurchased grants crystals and ad-removal correctly', async (server) => {
+    server.connect({ account: 'user-d' });
+
+    // 1. 100 크리스탈 패키지 1개 구매
+    const res1 = await server.$onItemPurchased({
+      account: 'user-d', purchaseId: 'p1', productId: 'gems-100', quantity: 1
+    });
+    expect(res1.success).toBe(true);
+    let state = await server.loadPlayerData();
+    expect(state.crystals).toBe(100);
+
+    // 2. 550 크리스탈 패키지 2개 구매 -> 누적 지급(기존 100 + 1100 = 1200)
+    await server.$onItemPurchased({
+      account: 'user-d', purchaseId: 'p2', productId: 'gems-550', quantity: 2
+    });
+    state = await server.loadPlayerData();
+    expect(state.crystals).toBe(1200);
+
+    // 3. 광고제거 구매 -> adRemoved 플래그
+    await server.$onItemPurchased({
+      account: 'user-d', purchaseId: 'p3', productId: 'ad-removal', quantity: 1
+    });
+    state = await server.loadPlayerData();
+    expect(state.adRemoved).toBe(true);
+    expect(state.crystals).toBe(1200); // 다른 필드는 그대로 유지
+
+    // 4. 미등록 productId -> 성공 응답은 하되 크리스탈/adRemoved 변경 없음(안전한 no-op)
+    await server.$onItemPurchased({
+      account: 'user-d', purchaseId: 'p4', productId: 'unknown-item', quantity: 1
+    });
+    state = await server.loadPlayerData();
+    expect(state.crystals).toBe(1200);
+  });
+
   test('savePlayerData and loadPlayerData work correctly', async (server) => {
     server.connect({ account: 'user-c' });
 

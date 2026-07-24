@@ -143,7 +143,7 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'shop.adTitle':    { en: 'Ad Removal Pack', ko: '광고 제거 패키지' },
   'shop.adDesc':     { en: 'Remove ads + unlock 3x speed · VX {n}', ko: '광고 제거 + 3배속 해금 · VX {n}' },
   'shop.owned':      { en: 'Owned ✓', ko: '보유 중 ✓' },
-  'shop.vxNote':     { en: '* VX top-up (real payment) will be enabled with Verse8 integration. Demo balance for now.', ko: '* VX 충전(실제 결제)은 Verse8 연동 시 활성화됩니다. 현재는 데모 잔액입니다.' },
+  'shop.vxNote':     { en: '* Tapping a VX price opens Verse8’s secure payment window. If you don’t have enough VX, you can top up there.', ko: '* VX 가격 버튼을 누르면 Verse8 결제창이 열립니다. VX가 부족하면 결제창에서 바로 충전할 수 있어요.' },
 
   // 가챠 결과
   'gacha.got':       { en: 'Units acquired!', ko: '유닛 획득!' },

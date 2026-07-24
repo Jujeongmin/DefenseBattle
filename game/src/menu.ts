@@ -3,7 +3,7 @@
 // ============================================================
 import {
   DAILY_QUESTS, ACHIEVEMENTS,
-  CRYSTAL_PACKAGES, AD_REMOVE_VX, AD_SHOP_REWARD_GEMS,
+  CRYSTAL_PACKAGES, AD_REMOVE_VX, AD_REMOVAL_PRODUCT_ID, AD_SHOP_REWARD_GEMS,
   GACHA, GRADES, GRADE_BY_KEY, GRADE_INDEX, JOBS, JOB_SPRITE, starUpCost,
   rollJob, rollGachaGrade, rollGachaMythicPlus,
 } from './config';
@@ -17,6 +17,7 @@ import { t, jobName, gradeName } from './i18n';
 import { openProbabilityPanel } from './probabilityPanel';
 import { openRankPanel } from './rankPanel';
 import { adManager } from './ad';
+import { buyItem, setOnPurchaseSettled } from './vxshop';
 import type { AchievementDef, Job, GradeKey } from './types';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
@@ -279,22 +280,20 @@ export class Menu {
     const panel = $('shop-panel');
     const plat = getPlatform();
     const render = () => {
-      const vx = plat.getVX();
       const owned = plat.isAdRemoved();
-      const pkgs = CRYSTAL_PACKAGES.map((p, i) => `
+      const pkgs = CRYSTAL_PACKAGES.map((p) => `
         <div class="row">
           <div class="info">
             <div class="t"><span class="gem"></span> ${t('shop.gemPack', { n: p.crystals.toLocaleString() })}${p.bonus ? ` <span style="color:#7ee87e">+${p.bonus}%</span>` : ''}</div>
             <div class="d">VX ${p.vx}</div>
           </div>
-          <button data-pkg="${i}" ${vx < p.vx ? 'disabled' : ''}>VX ${p.vx}</button>
+          <button data-pkg-id="${p.id}">VX ${p.vx}</button>
         </div>`).join('');
       panel.innerHTML = `
         <div class="dialog drag-scroll">
           <h2>${t('shop.title')}</h2>
           <div class="shop-balance">
             <span class="crystal"><span class="gem"></span> ${meta.crystals.toLocaleString()}</span>
-            <span class="vx-badge">VX ${vx.toLocaleString()}</span>
           </div>
           <div class="gacha-hero">
             <div class="gacha-hero-top">
@@ -325,7 +324,7 @@ export class Menu {
               <div class="t">${t('shop.adTitle')}</div>
               <div class="d">${t('shop.adDesc', { n: AD_REMOVE_VX })}</div>
             </div>
-            <button id="buy-adremove" ${owned || vx < AD_REMOVE_VX ? 'disabled' : ''}>${owned ? t('shop.owned') : `VX ${AD_REMOVE_VX}`}</button>
+            <button id="buy-adremove" ${owned ? 'disabled' : ''}>${owned ? t('shop.owned') : `VX ${AD_REMOVE_VX}`}</button>
           </div>
           <div class="d" style="color:#888;font-size:12px;margin-top:8px">
             ${t('shop.vxNote')}
@@ -334,17 +333,11 @@ export class Menu {
           <button class="close">${t('common.close')}</button>
         </div>`;
 
-      // 보석 패키지 구매 (VX 차감 → 크리스탈 지급)
-      panel.querySelectorAll<HTMLButtonElement>('[data-pkg]').forEach((b) => {
-        b.onclick = async () => {
-          const p = CRYSTAL_PACKAGES[Number(b.dataset.pkg)];
-          if (await plat.spendVX(p.vx)) {
-            meta.crystals += p.crystals;
-            saveMeta();
-            this.refresh();
-            render();
-          }
-        };
+      // 보석 패키지 구매: Verse8 결제창을 띄운다. 지급은 서버(server/src/server.ts 의
+      // $onItemPurchased)가 담당하고, 결제창이 닫히면 vxshop.ts 가 서버 상태를 다시 받아와
+      // meta 에 반영한 뒤 setOnPurchaseSettled 로 등록해둔 render() 가 호출된다.
+      panel.querySelectorAll<HTMLButtonElement>('[data-pkg-id]').forEach((b) => {
+        b.onclick = () => { audio.button(); buyItem(b.dataset.pkgId as string); };
       });
 
       // 유닛 가챠 (크리스탈 차감 → 컬렉션 적립)
@@ -355,16 +348,9 @@ export class Menu {
       const probBtn = panel.querySelector('#btn-prob-info-shop') as HTMLButtonElement | null;
       if (probBtn) probBtn.onclick = () => openProbabilityPanel('gacha');
 
-      // 광고제거 패키지 (VX 차감 → 소유 등록)
+      // 광고제거 패키지: 결제창을 띄운다 (지급/소유 등록은 서버가 처리)
       const buy = panel.querySelector('#buy-adremove') as HTMLButtonElement | null;
-      if (buy && !owned) buy.onclick = async () => {
-        if (await plat.spendVX(AD_REMOVE_VX)) {
-          await plat.purchaseAdRemoval();
-          meta.adRemoved = true;
-          saveMeta();
-          render();
-        }
-      };
+      if (buy && !owned) buy.onclick = () => { audio.button(); buyItem(AD_REMOVAL_PRODUCT_ID); };
 
       this.bindDragScroll(panel.querySelector<HTMLElement>('.dialog'));
 
@@ -391,9 +377,12 @@ export class Menu {
 
       (panel.querySelector('.close') as HTMLElement).onclick = () => {
         panel.classList.add('hidden');
+        setOnPurchaseSettled(null);
         this.refresh();
       };
     };
+    // 결제창이 닫혀 서버 지급이 반영된 뒤(vxshop.ts) 상점이 아직 열려있으면 다시 그린다.
+    setOnPurchaseSettled(() => { this.refresh(); render(); });
     render();
     panel.classList.remove('hidden');
   }

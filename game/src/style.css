@@ -564,14 +564,6 @@ html, body {
   margin-bottom: 12px;
   font-size: 16px;
 }
-.vx-badge {
-  color: #ffd54f;
-  font-weight: 800;
-  background: rgba(255, 213, 79, 0.12);
-  border: 1px solid rgba(255, 213, 79, 0.4);
-  border-radius: 8px;
-  padding: 2px 10px;
-}
 .shop-section { font-weight: 700; margin: 12px 0 6px; color: #ddd; }
 
 /* ---------- 가챠 (상점 히어로 카드) ---------- */

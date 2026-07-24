@@ -26,6 +26,7 @@ export default defineConfig(({ command }) => ({
       ? {
           '@agent8/gameserver': fileURLToPath(new URL('./game/src/devGameServerStub.ts', import.meta.url)),
           '@verse8/ads': fileURLToPath(new URL('./game/src/devVerse8AdsStub.ts', import.meta.url)),
+          '@verse8/platform/vanilla': fileURLToPath(new URL('./game/src/devVerse8PlatformStub.ts', import.meta.url)),
         }
       : {},
   },

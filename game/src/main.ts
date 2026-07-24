@@ -11,6 +11,7 @@ import { audio } from './audio';
 import { syncWithServer } from './meta';
 import { t, getLang, setLang } from './i18n';
 import { maybeStartTutorial, endTutorial } from './tutorial';
+import { initVXShop } from './vxshop';
 
 // 메인 화면 언어 버튼: 현재 언어 표시 + 클릭 시 전환 후 새로고침(패널 재렌더)
 function setupLangButtons(): void {
@@ -64,6 +65,7 @@ window.addEventListener('orientationchange', fitStage);
 
 preloadAll();
 audio.installUnlock();
+initVXShop();
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const gameFrame = document.getElementById('game-frame') as HTMLElement;
