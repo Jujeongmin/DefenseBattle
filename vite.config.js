@@ -16,7 +16,7 @@ export default defineConfig(({ command }) => ({
     outDir: '../dist',
     emptyOutDir: true,
     rollupOptions: {
-      external: ['@verse8/platform/vanilla'],
+      external: ['@agent8/gameserver', '@verse8/ads', '@verse8/platform/vanilla'],
     },
   },
   server: {

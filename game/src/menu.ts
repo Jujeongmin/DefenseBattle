@@ -309,55 +309,61 @@ export class Menu {
           <button data-pkg-id="${p.id}">VX ${p.vx}</button>
         </div>`).join('');
       panel.innerHTML = `
-        <div class="dialog drag-scroll">
-          <h2>${t('shop.title')}</h2>
-          <div class="shop-balance">
-            <span class="crystal"><span class="gem"></span> ${meta.crystals.toLocaleString()}</span>
-          </div>
-          <div class="gacha-hero">
-            <div class="gacha-hero-top">
-              <div class="chest big"></div>
-              <div class="gacha-hero-info">
-                <div class="gh-title">${t('shop.gachaTitle')}</div>
-                <div class="gh-desc">${t('shop.gachaDesc')}</div>
+        <div class="dialog shop-dialog">
+          <div class="shop-head">
+            <div>
+              <h2>${t('shop.title')}</h2>
+              <div class="shop-balance">
+                <span class="crystal"><span class="gem"></span> ${meta.crystals.toLocaleString()}</span>
               </div>
             </div>
-            <div class="gacha-hero-btns">
-              <button id="gacha-1" ${meta.crystals < GACHA.singleCost ? 'disabled' : ''}>
-                ${t('shop.pull1')}<br><span class="gh-cost"><span class="gem"></span> ${GACHA.singleCost}</span>
-              </button>
-              <button id="gacha-10" class="best" ${meta.crystals < GACHA.tenCost ? 'disabled' : ''}>
-                ${t('shop.pull10')} <span class="gh-sale">10%↓</span><br><span class="gh-cost"><span class="gem"></span> ${GACHA.tenCost}</span>
-              </button>
-            </div>
-            <div class="gacha-pity">${
-              gachaPityRemaining() <= 0 ? t('shop.pityReady') : t('shop.pityHint', { rem: gachaPityRemaining() })
-            }</div>
-            <button id="btn-prob-info-shop" class="prob-info-link">${t('hud.probInfo')}</button>
+            <button class="close-x" aria-label="${t('common.close')}">×</button>
           </div>
-          <div class="shop-section">${t('shop.buyGems')}</div>
-          ${pkgs}
-          <div class="shop-section">${t('shop.packages')}</div>
-          <div class="row">
-            <div class="info">
-              <div class="t">${t('shop.adTitle')}</div>
-              <div class="d">${t('shop.adDesc', { n: AD_REMOVE_VX })}</div>
+          <div class="shop-scroll drag-scroll">
+            <div class="gacha-hero">
+              <div class="gacha-hero-top">
+                <div class="chest big"></div>
+                <div class="gacha-hero-info">
+                  <div class="gh-title">${t('shop.gachaTitle')}</div>
+                  <div class="gh-desc">${t('shop.gachaDesc')}</div>
+                </div>
+              </div>
+              <div class="gacha-hero-btns">
+                <button id="gacha-1" ${meta.crystals < GACHA.singleCost ? 'disabled' : ''}>
+                  ${t('shop.pull1')}<br><span class="gh-cost"><span class="gem"></span> ${GACHA.singleCost}</span>
+                </button>
+                <button id="gacha-10" class="best" ${meta.crystals < GACHA.tenCost ? 'disabled' : ''}>
+                  ${t('shop.pull10')} <span class="gh-sale">10%↓</span><br><span class="gh-cost"><span class="gem"></span> ${GACHA.tenCost}</span>
+                </button>
+              </div>
+              <div class="gacha-pity">${
+                gachaPityRemaining() <= 0 ? t('shop.pityReady') : t('shop.pityHint', { rem: gachaPityRemaining() })
+              }</div>
+              <button id="btn-prob-info-shop" class="prob-info-link">${t('hud.probInfo')}</button>
             </div>
-            <button id="buy-adremove" ${owned ? 'disabled' : ''}>${owned ? t('shop.owned') : `VX ${AD_REMOVE_VX}`}</button>
-          </div>
-          ${isTestProductVisible() ? `
-          <div class="row">
-            <div class="info">
-              <div class="t">${t('shop.testTitle')}</div>
-              <div class="d">${t('shop.testDesc', { n: TEST_PRODUCT_CRYSTALS })}</div>
+            <div class="shop-section">${t('shop.buyGems')}</div>
+            ${pkgs}
+            <div class="shop-section">${t('shop.packages')}</div>
+            <div class="row">
+              <div class="info">
+                <div class="t">${t('shop.adTitle')}</div>
+                <div class="d">${t('shop.adDesc', { n: AD_REMOVE_VX })}</div>
+              </div>
+              <button id="buy-adremove" ${owned ? 'disabled' : ''}>${owned ? t('shop.owned') : `VX ${AD_REMOVE_VX}`}</button>
             </div>
-            <button id="buy-test-free">VX 0</button>
-          </div>` : ''}
-          <div class="d" style="color:#888;font-size:12px;margin-top:8px">
-            ${t('shop.vxNote')}
+            ${isTestProductVisible() ? `
+            <div class="row test-product-row">
+              <div class="info">
+                <div class="t">${t('shop.testTitle')}</div>
+                <div class="d">${t('shop.testDesc', { n: TEST_PRODUCT_CRYSTALS })}</div>
+              </div>
+              <button id="buy-test-free">VX 0</button>
+            </div>` : ''}
+            <div class="d shop-vx-note">
+              ${t('shop.vxNote')}
+            </div>
+            ${this.shopAdHtml()}
           </div>
-          ${this.shopAdHtml()}
-          <button class="close">${t('common.close')}</button>
         </div>`;
 
       // 보석 패키지 구매: Verse8 결제창을 띄운다. 지급은 서버(server/src/server.ts 의
@@ -379,11 +385,11 @@ export class Menu {
       const buy = panel.querySelector('#buy-adremove') as HTMLButtonElement | null;
       if (buy && !owned) buy.onclick = () => { audio.button(); recordPrePurchase(); buyItem(AD_REMOVAL_PRODUCT_ID); };
 
-      // QA 검증용 0 VX 상품 (?vxtest=1 일 때만 렌더됨)
+      // QA 검증용 0 VX 상품
       const buyTest = panel.querySelector('#buy-test-free') as HTMLButtonElement | null;
       if (buyTest) buyTest.onclick = () => { audio.button(); recordPrePurchase(); buyItem(TEST_PRODUCT_ID); };
 
-      this.bindDragScroll(panel.querySelector<HTMLElement>('.dialog'));
+      this.bindDragScroll(panel.querySelector<HTMLElement>('.shop-scroll'));
 
       // 상점 보상형 광고 버튼
       const shopAdBtn = panel.querySelector('#btn-shop-ad') as HTMLButtonElement | null;
@@ -406,7 +412,7 @@ export class Menu {
         };
       }
 
-      (panel.querySelector('.close') as HTMLElement).onclick = () => {
+      (panel.querySelector('.close-x') as HTMLElement).onclick = () => {
         panel.classList.add('hidden');
         setOnPurchaseSettled(null);
         this.refresh();
