@@ -180,6 +180,7 @@ export class Server {
       'gems-100': 100,
       'gems-550': 550,
       'gems-1200': 1200,
+      'test-free': 1, // QA 검증용 0 VX 상품 (config.ts TEST_PRODUCT_ID / TEST_PRODUCT_CRYSTALS)
     };
 
     if (productId in CRYSTAL_GRANTS) {

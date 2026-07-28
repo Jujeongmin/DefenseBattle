@@ -168,6 +168,19 @@ export const RESEARCH_PER: Record<ResearchKey, number> =
 // 대시보드 등록 가격도 아래 vx 값과 일치시킬 것 (표시용 가격은 여기서 관리).
 export const AD_REMOVAL_PRODUCT_ID = 'ad-removal';
 export const AD_REMOVE_VX = 300; // 광고제거 패키지 가격(VX, 대시보드 등록 가격과 일치)
+// QA 검증용 0 VX 상품. 실결제 없이 결제창→서버 지급(crystals +1)→클라 반영까지
+// 전체 흐름을 확인하기 위한 것.
+// 실제 결제창은 Verse8 배포본에서만 뜨므로 개발 모드로는 가릴 수 없다. 대신 URL 에
+// ?vxtest=1 이 있을 때만 상점에 노출해, 일반 플레이어에게는 보이지 않게 한다.
+export const TEST_PRODUCT_ID = 'test-free';
+export const TEST_PRODUCT_CRYSTALS = 1;
+export function isTestProductVisible(): boolean {
+  try {
+    return new URLSearchParams(location.search).get('vxtest') === '1';
+  } catch {
+    return false; // Node(시뮬) 등 location 없는 환경
+  }
+}
 export const AD_INTERSTITIAL_COOLDOWN = 90; // 전면광고 최소 간격(초)
 export const AD_REWARD_GOLD = 50;             // 보상형 광고 시청 보상 골드
 export const AD_SHOP_REWARD_GEMS = 50;        // 상점 보상형 광고 보상 보석

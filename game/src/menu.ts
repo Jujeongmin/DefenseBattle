@@ -4,6 +4,7 @@
 import {
   DAILY_QUESTS, ACHIEVEMENTS,
   CRYSTAL_PACKAGES, AD_REMOVE_VX, AD_REMOVAL_PRODUCT_ID, AD_SHOP_REWARD_GEMS,
+  TEST_PRODUCT_ID, TEST_PRODUCT_CRYSTALS, isTestProductVisible,
   GACHA, GRADES, GRADE_BY_KEY, GRADE_INDEX, JOBS, JOB_SPRITE, starUpCost,
   rollJob, rollGachaGrade, rollGachaMythicPlus,
 } from './config';
@@ -326,6 +327,14 @@ export class Menu {
             </div>
             <button id="buy-adremove" ${owned ? 'disabled' : ''}>${owned ? t('shop.owned') : `VX ${AD_REMOVE_VX}`}</button>
           </div>
+          ${isTestProductVisible() ? `
+          <div class="row">
+            <div class="info">
+              <div class="t">${t('shop.testTitle')}</div>
+              <div class="d">${t('shop.testDesc', { n: TEST_PRODUCT_CRYSTALS })}</div>
+            </div>
+            <button id="buy-test-free">VX 0</button>
+          </div>` : ''}
           <div class="d" style="color:#888;font-size:12px;margin-top:8px">
             ${t('shop.vxNote')}
           </div>
@@ -351,6 +360,10 @@ export class Menu {
       // 광고제거 패키지: 결제창을 띄운다 (지급/소유 등록은 서버가 처리)
       const buy = panel.querySelector('#buy-adremove') as HTMLButtonElement | null;
       if (buy && !owned) buy.onclick = () => { audio.button(); buyItem(AD_REMOVAL_PRODUCT_ID); };
+
+      // QA 검증용 0 VX 상품 (?vxtest=1 일 때만 렌더됨)
+      const buyTest = panel.querySelector('#buy-test-free') as HTMLButtonElement | null;
+      if (buyTest) buyTest.onclick = () => { audio.button(); buyItem(TEST_PRODUCT_ID); };
 
       this.bindDragScroll(panel.querySelector<HTMLElement>('.dialog'));
 

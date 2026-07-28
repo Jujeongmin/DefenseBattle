@@ -71,12 +71,19 @@ describe('Server Rankings & Cloud Save', () => {
     expect(state.adRemoved).toBe(true);
     expect(state.crystals).toBe(1200); // 다른 필드는 그대로 유지
 
-    // 4. 미등록 productId -> 성공 응답은 하되 크리스탈/adRemoved 변경 없음(안전한 no-op)
+    // 4. QA 검증용 0 VX 상품 -> 크리스탈 1개만 지급
     await server.$onItemPurchased({
-      account: 'user-d', purchaseId: 'p4', productId: 'unknown-item', quantity: 1
+      account: 'user-d', purchaseId: 'p4', productId: 'test-free', quantity: 1
     });
     state = await server.loadPlayerData();
-    expect(state.crystals).toBe(1200);
+    expect(state.crystals).toBe(1201);
+
+    // 5. 미등록 productId -> 성공 응답은 하되 크리스탈/adRemoved 변경 없음(안전한 no-op)
+    await server.$onItemPurchased({
+      account: 'user-d', purchaseId: 'p5', productId: 'unknown-item', quantity: 1
+    });
+    state = await server.loadPlayerData();
+    expect(state.crystals).toBe(1201);
   });
 
   test('savePlayerData and loadPlayerData work correctly', async (server) => {
