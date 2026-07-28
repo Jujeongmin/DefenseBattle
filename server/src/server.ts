@@ -167,30 +167,67 @@ export class Server {
    * so all crediting must happen here (never trust the client). productId
    * must exactly match what's registered in the VX Shop dashboard tab AND
    * game/src/config.ts (CRYSTAL_PACKAGES[].id / AD_REMOVAL_PRODUCT_ID).
+   *
+   * Security guarantees:
+   *  - purchaseId deduplication: same purchaseId replayed → no-op (idempotent)
+   *  - Quantity validation: must be a positive integer ≤ 99
+   *  - ad-removal: only grants once per account (already-owned check)
+   *  - Unknown productId: no credits granted, but purchaseId still recorded
+   *    to prevent future replay if the productId later becomes known
+   *  - All crediting is server-side only; the client cannot trigger grants
    */
-  async $onItemPurchased({ account, productId, quantity }: {
+  async $onItemPurchased({ account, purchaseId, productId, quantity }: {
     account: string;
     purchaseId: string;
     productId: string;
     quantity: number;
     metadata?: any;
   }): Promise<{ success: boolean }> {
-    const qty = Math.max(1, Number(quantity) || 1);
+    const MAX_QUANTITY = 99;
+
     const CRYSTAL_GRANTS: Record<string, number> = {
       'gems-100': 100,
       'gems-550': 550,
       'gems-1200': 1200,
       'test-free': 1, // QA 검증용 0 VX 상품 (config.ts TEST_PRODUCT_ID / TEST_PRODUCT_CRYSTALS)
     };
+    const ALLOWED_IDS = new Set([...Object.keys(CRYSTAL_GRANTS), 'ad-removal']);
 
-    if (productId in CRYSTAL_GRANTS) {
-      const state = await $global.getUserState(account);
-      const current = Number(state?.crystals || 0);
-      await $global.updateUserState(account, { crystals: current + CRYSTAL_GRANTS[productId] * qty });
-    } else if (productId === 'ad-removal') {
-      await $global.updateUserState(account, { adRemoved: true });
+    if (!account || typeof account !== 'string') return { success: false };
+    if (!purchaseId || typeof purchaseId !== 'string') return { success: false };
+    if (!productId || typeof productId !== 'string') return { success: false };
+
+    const qty = Number(quantity);
+    if (!Number.isFinite(qty) || !Number.isInteger(qty) || qty < 1 || qty > MAX_QUANTITY) {
+      return { success: false };
     }
 
+    const state = await $global.getUserState(account);
+    const processedIds: Record<string, true> = state?.purchaseIds || {};
+
+    if (processedIds[purchaseId]) {
+      return { success: true };
+    }
+
+    const updates: Record<string, any> = {
+      purchaseIds: { ...processedIds, [purchaseId]: true },
+    };
+
+    if (!ALLOWED_IDS.has(productId)) {
+      await $global.updateUserState(account, updates);
+      return { success: true };
+    }
+
+    if (CRYSTAL_GRANTS[productId] !== undefined) {
+      const current = Number(state?.crystals || 0);
+      updates.crystals = current + CRYSTAL_GRANTS[productId] * qty;
+    } else if (productId === 'ad-removal') {
+      if (!state?.adRemoved) {
+        updates.adRemoved = true;
+      }
+    }
+
+    await $global.updateUserState(account, updates);
     return { success: true };
   }
 }

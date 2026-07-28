@@ -282,10 +282,12 @@ export class Menu {
     const plat = getPlatform();
     let prePurchaseCrystals = meta.crystals;
     let prePurchaseAdRemoved = meta.adRemoved || false;
+    let isPurchasing = false;
 
     const recordPrePurchase = () => {
       prePurchaseCrystals = meta.crystals;
       prePurchaseAdRemoved = meta.adRemoved || false;
+      isPurchasing = true;
     };
 
     const showPurchaseToast = () => {
@@ -370,7 +372,7 @@ export class Menu {
       // $onItemPurchased)가 담당하고, 결제창이 닫히면 vxshop.ts 가 서버 상태를 다시 받아와
       // meta 에 반영한 뒤 setOnPurchaseSettled 로 등록해둔 render() 가 호출된다.
       panel.querySelectorAll<HTMLButtonElement>('[data-pkg-id]').forEach((b) => {
-        b.onclick = () => { audio.button(); recordPrePurchase(); buyItem(b.dataset.pkgId as string); };
+        b.onclick = () => { audio.button(); if (!isPurchasing) { recordPrePurchase(); buyItem(b.dataset.pkgId as string); } };
       });
 
       // 유닛 가챠 (크리스탈 차감 → 컬렉션 적립)
@@ -383,11 +385,11 @@ export class Menu {
 
       // 광고제거 패키지: 결제창을 띄운다 (지급/소유 등록은 서버가 처리)
       const buy = panel.querySelector('#buy-adremove') as HTMLButtonElement | null;
-      if (buy && !owned) buy.onclick = () => { audio.button(); recordPrePurchase(); buyItem(AD_REMOVAL_PRODUCT_ID); };
+      if (buy && !owned) buy.onclick = () => { audio.button(); if (!isPurchasing) { recordPrePurchase(); buyItem(AD_REMOVAL_PRODUCT_ID); } };
 
       // QA 검증용 0 VX 상품
       const buyTest = panel.querySelector('#buy-test-free') as HTMLButtonElement | null;
-      if (buyTest) buyTest.onclick = () => { audio.button(); recordPrePurchase(); buyItem(TEST_PRODUCT_ID); };
+      if (buyTest) buyTest.onclick = () => { audio.button(); if (!isPurchasing) { recordPrePurchase(); buyItem(TEST_PRODUCT_ID); } };
 
       this.bindDragScroll(panel.querySelector<HTMLElement>('.shop-scroll'));
 
@@ -414,12 +416,14 @@ export class Menu {
 
       (panel.querySelector('.close-x') as HTMLElement).onclick = () => {
         panel.classList.add('hidden');
+        isPurchasing = false;
         setOnPurchaseSettled(null);
         this.refresh();
       };
     };
     // 결제창이 닫혀 서버 지급이 반영된 뒤(vxshop.ts) 상점이 아직 열려있으면 다시 그린다.
     setOnPurchaseSettled(() => {
+      isPurchasing = false;
       this.refresh();
       render();
       if (meta.crystals > prePurchaseCrystals || ((meta.adRemoved || false) && !prePurchaseAdRemoved)) {
