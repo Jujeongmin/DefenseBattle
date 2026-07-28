@@ -16,7 +16,10 @@ export default defineConfig(({ command }) => ({
     outDir: '../dist',
     emptyOutDir: true,
     rollupOptions: {
-      external: ['@agent8/gameserver', '@verse8/ads', '@verse8/platform/vanilla'],
+      // VXShop is injected by the Verse8 runtime. GameServer and Ads are
+      // regular dependencies and must stay bundled, otherwise the browser
+      // aborts main.ts before any button handlers are registered.
+      external: ['@verse8/platform/vanilla'],
     },
   },
   server: {

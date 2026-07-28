@@ -19,6 +19,7 @@
     "esbuild@0.28.1": true
   },
   "dependencies": {
+    "@agent8/gameserver": "^1.10.2",
     "@verse8/ads": "^0.4.0"
   }
 }

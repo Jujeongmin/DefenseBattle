@@ -56,12 +56,22 @@ const STAGE_W = 480, STAGE_H = 801;
 function fitStage(): void {
   const stage = document.getElementById('stage');
   if (!stage) return;
-  const s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
-  stage.style.transform = `scale(${s})`;
+  const viewport = window.visualViewport;
+  const width = viewport?.width ?? window.innerWidth;
+  const height = viewport?.height ?? window.innerHeight;
+  const offsetLeft = viewport?.offsetLeft ?? 0;
+  const offsetTop = viewport?.offsetTop ?? 0;
+  const s = Math.min(width / STAGE_W, height / STAGE_H);
+
+  stage.style.left = `${offsetLeft + width / 2}px`;
+  stage.style.top = `${offsetTop + height / 2}px`;
+  stage.style.transform = `translate(-50%, -50%) scale(${s})`;
 }
 fitStage();
 window.addEventListener('resize', fitStage);
 window.addEventListener('orientationchange', fitStage);
+window.visualViewport?.addEventListener('resize', fitStage);
+window.visualViewport?.addEventListener('scroll', fitStage);
 
 preloadAll();
 audio.installUnlock();
