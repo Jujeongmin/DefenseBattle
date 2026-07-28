@@ -170,15 +170,25 @@ export const AD_REMOVAL_PRODUCT_ID = 'ad-removal';
 export const AD_REMOVE_VX = 300; // 광고제거 패키지 가격(VX, 대시보드 등록 가격과 일치)
 // QA 검증용 0 VX 상품. 실결제 없이 결제창→서버 지급(crystals +1)→클라 반영까지
 // 전체 흐름을 확인하기 위한 것.
-// 실제 결제창은 Verse8 배포본에서만 뜨므로 개발 모드로는 가릴 수 없다. 대신 URL 에
-// ?vxtest=1 이 있을 때만 상점에 노출해, 일반 플레이어에게는 보이지 않게 한다.
+// 실제 결제창은 Verse8 배포본에서만 뜨므로 개발 모드로는 가릴 수 없다. 대신 아래 조건일 때만
+// 상점에 노출해 일반 플레이어에게는 보이지 않게 한다.
+//  - URL 에 ?vxtest=1 (로컬 프리뷰용)
+//  - 또는 localStorage 플래그 (Verse8 은 게임을 iframe 으로 임베드해서 주소창의 쿼리가
+//    iframe 내부 location 에는 안 들어온다. 그래서 배포본에서는 개발자도구 콘솔에서
+//    localStorage.setItem('randomdefense.vxtest','1') 로 켜고 새로고침한다.)
+const VXTEST_KEY = 'randomdefense.vxtest';
 export const TEST_PRODUCT_ID = 'test-free';
 export const TEST_PRODUCT_CRYSTALS = 1;
 export function isTestProductVisible(): boolean {
   try {
-    return new URLSearchParams(location.search).get('vxtest') === '1';
+    if (localStorage.getItem(VXTEST_KEY) === '1') return true;
+    if (new URLSearchParams(location.search).get('vxtest') === '1') {
+      localStorage.setItem(VXTEST_KEY, '1'); // 한 번 켜면 유지 (쿼리 없이 재접속해도 보임)
+      return true;
+    }
+    return false;
   } catch {
-    return false; // Node(시뮬) 등 location 없는 환경
+    return false; // Node(시뮬) 등 location/localStorage 없는 환경
   }
 }
 export const AD_INTERSTITIAL_COOLDOWN = 90; // 전면광고 최소 간격(초)
