@@ -8,9 +8,7 @@
   --text: #f2f2f2;
 }
 html, body {
-  width: 100%;
   height: 100%;
-  min-height: 100%;
   background: #111;
   color: var(--text);
   font-family: 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
@@ -18,24 +16,23 @@ html, body {
   user-select: none;
 }
 #app {
-  position: fixed;
-  inset: 0;
+  position: relative;
   width: 100%;
   height: 100%;
-  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   background: #000;
 }
 /* 고정 설계 해상도. JS(main.ts fitStage)가 viewport 에 맞춰 transform:scale 로 축소/확대.
    내부 레이아웃은 항상 480x801 기준이라 어떤 화면에서도 잘리지 않고 레터박스로 맞춰진다. */
 #stage {
-  position: absolute;
-  left: 50%;
-  top: 50%;
+  position: relative;
+  flex: 0 0 auto;
   width: 480px;
   height: 801px;
   transform-origin: center center;
-  will-change: transform;
 }
 #game-frame {
   position: absolute;
