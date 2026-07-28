@@ -13,9 +13,20 @@ let onSettled: (() => void) | null = null;
 
 // 결제창이 닫힐 때마다(구매 성공/취소 모두) 서버 상태를 다시 받아와 반영한다.
 // 지급은 이미 서버에서 끝난 뒤이므로, 여기서는 "내 계정 상태를 새로고침"만 하면 된다.
-function handleClose(): void {
+// 웹훅 반영 지연을 고려해 짧은 간격으로 최대 3회 재동기화한 뒤 settled 콜백을 호출한다.
+async function handleClose(): Promise<void> {
   VXShop.refresh();
-  syncWithServer().finally(() => onSettled?.());
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await syncWithServer();
+    } catch {
+      /* 일시적 네트워크 오류는 무시하고 다음 시도 */
+    }
+    if (attempt < 2) {
+      await new Promise<void>((r) => setTimeout(r, 800));
+    }
+  }
+  onSettled?.();
 }
 
 export function initVXShop(): void {
