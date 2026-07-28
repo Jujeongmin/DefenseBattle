@@ -15,6 +15,9 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
+    rollupOptions: {
+      external: ['@verse8/platform/vanilla'],
+    },
   },
   server: {
     host: true,
