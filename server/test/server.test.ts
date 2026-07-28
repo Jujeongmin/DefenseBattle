@@ -76,21 +76,14 @@ describe('Server Rankings & Cloud Save', () => {
     expect(state.purchaseIds.p2).toBe(true);
     expect(state.purchaseIds.p3).toBe(true);
 
-    // 4. QA 검증용 0 VX 상품 -> 크리스탈 1개만 지급
+    // 4. 미등록 productId -> 성공 응답은 하되 크리스탈/adRemoved 변경 없음(안전한 no-op)
     await server.$onItemPurchased({
-      account: 'user-d', purchaseId: 'p4', productId: 'test-free', quantity: 1
+      account: 'user-d', purchaseId: 'p4', productId: 'unknown-item', quantity: 1
     });
     state = await server.loadPlayerData();
-    expect(state.crystals).toBe(1201);
-
-    // 5. 미등록 productId -> 성공 응답은 하되 크리스탈/adRemoved 변경 없음(안전한 no-op)
-    await server.$onItemPurchased({
-      account: 'user-d', purchaseId: 'p5', productId: 'unknown-item', quantity: 1
-    });
-    state = await server.loadPlayerData();
-    expect(state.crystals).toBe(1201);
+    expect(state.crystals).toBe(1200);
     // purchaseId는 기록되어 재생 방어됨
-    expect(state.purchaseIds.p5).toBe(true);
+    expect(state.purchaseIds.p4).toBe(true);
   });
 
   test('$onItemPurchased deduplicates same purchaseId', async (server) => {

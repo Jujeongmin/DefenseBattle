@@ -619,9 +619,6 @@ html, body {
   line-height: 1.4;
   margin-top: 8px;
 }
-.test-product-row {
-  border: 1px dashed rgba(255, 207, 63, 0.35);
-}
 #shop-panel .gacha-hero {
   padding: 10px;
   margin-bottom: 2px;

@@ -168,16 +168,6 @@ export const RESEARCH_PER: Record<ResearchKey, number> =
 // 대시보드 등록 가격도 아래 vx 값과 일치시킬 것 (표시용 가격은 여기서 관리).
 export const AD_REMOVAL_PRODUCT_ID = 'ad-removal';
 export const AD_REMOVE_VX = 300; // 광고제거 패키지 가격(VX, 대시보드 등록 가격과 일치)
-// QA 검증용 0 VX 상품. 실결제 없이 결제창→서버 지급(crystals +1)→클라 반영까지
-// 전체 흐름을 확인하기 위한 것.
-// 실제 결제창은 Verse8 배포본에서만 뜬다. QA 검증을 위해 상점에 항상 노출한다.
-export const TEST_PRODUCT_ID = 'test-free';
-export const TEST_PRODUCT_CRYSTALS = 1;
-export function isTestProductVisible(): boolean {
-  // QA 결제 검증이 V8 에디터 iframe 안에서도 바로 보이도록 항상 노출한다.
-  // 서버 지급은 $onItemPurchased 에서 productId allowlist 로 검증한다.
-  return true;
-}
 export const AD_INTERSTITIAL_COOLDOWN = 90; // 전면광고 최소 간격(초)
 export const AD_REWARD_GOLD = 50;             // 보상형 광고 시청 보상 골드
 export const AD_SHOP_REWARD_GEMS = 50;        // 상점 보상형 광고 보상 보석
