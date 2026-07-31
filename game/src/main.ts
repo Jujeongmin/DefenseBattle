@@ -56,12 +56,23 @@ const STAGE_W = 480, STAGE_H = 801;
 function fitStage(): void {
   const stage = document.getElementById('stage');
   if (!stage) return;
-  const s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const s = Math.min(vw / STAGE_W, vh / STAGE_H);
+  // 뷰포트가 아직 0 인 순간(부모가 크기를 잡아주기 전의 임베드 iframe, 모바일 회전 전환 중
+  // 등)에 계산하면 scale(0) 이 되어 게임이 통째로 사라진다. 그 뒤 resize 가 안 오면 영영
+  // 복구되지 않으므로, 유효한 값일 때만 적용한다.
+  if (!Number.isFinite(s) || s <= 0) return;
   stage.style.transform = `scale(${s})`;
 }
 fitStage();
 window.addEventListener('resize', fitStage);
 window.addEventListener('orientationchange', fitStage);
+window.addEventListener('load', fitStage);
+// iframe 크기가 바뀔 때는 window resize 가 안 뜨는 경우가 있어(부모가 iframe 엘리먼트만
+// 리사이즈) 문서 자체의 크기 변화도 관찰한다.
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(() => fitStage()).observe(document.documentElement);
+}
 
 preloadAll();
 audio.installUnlock();
