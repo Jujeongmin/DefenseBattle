@@ -149,6 +149,7 @@ html, body {
 }
 .wood-btn:active { border-image-source: url("/ui/btn_wood_dark.png"); transform: translateY(1px); }
 .icon-btn {
+  position: relative;
   border: 6px solid transparent;
   border-image: url("/ui/btn_wood.png") 5 fill stretch;
   image-rendering: pixelated;
@@ -156,11 +157,23 @@ html, body {
   color: #fff;
   text-shadow: 0 1px 2px rgba(0,0,0,0.7);
   border-radius: 0;
-  padding: 3px 5px;
+  /* 모바일 터치 타깃 확보: 상단바 가로 여유분(약 42px)을 써서 좌우로 넓힘.
+     세로는 스테이지 높이 예산(801px)에 여유가 0이라 키울 수 없어, 아래 ::after 로
+     보이는 크기는 그대로 둔 채 히트 영역만 상단바 패딩(8px) 안쪽까지 확장한다. */
+  padding: 3px 10px;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   flex: 0 0 auto;
+}
+.icon-btn::after {
+  content: '';
+  position: absolute;
+  /* 기준이 되는 컨테이닝 블록이 "패딩 박스"라, 투명 테두리 6px 만큼 이미 안쪽에서 시작한다.
+     실제로 테두리 박스 밖으로 N px 넓히려면 -(6+N) 이 필요.
+     세로: 상단바 패딩 8px 안쪽까지 → -(6+8).
+     가로: 버튼 간격이 6px 뿐이라 이웃과 겹치지 않게 3px 까지만 → -(6+3). */
+  inset: -14px -9px;
 }
 .icon-btn:active { border-image-source: url("/ui/btn_wood_dark.png"); }
 .icon-btn:active { transform: scale(0.94); }
@@ -292,6 +305,7 @@ html, body {
 .side-btn:active { border-image-source: url("/ui/btn_wood_dark.png"); transform: scale(0.97); }
 .summon-wrap { flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 3px; }
 .prob-info-link {
+  position: relative;
   background: none;
   border: none;
   color: #9fb0c8;
@@ -299,6 +313,13 @@ html, body {
   text-decoration: underline;
   cursor: pointer;
   padding: 2px;
+}
+/* 히트 영역만 확장. 위로는 소환 버튼과 3px 밖에 안 떨어져 있어 늘리지 않는다
+   (늘리면 소환 버튼 하단 탭을 이 링크가 가로챈다). 아래쪽으로만 넓힌다. */
+.prob-info-link::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 -8px 0;
 }
 .summon-btn {
   flex: 0 0 auto;
@@ -352,6 +373,7 @@ html, body {
 .stack .frame-sprite { width: 42px; height: 42px; margin: 0 auto; }
 .stack .name { font-size: 12px; font-weight: 700; margin-top: 2px; }
 .stack .up-btn {
+  position: relative;
   margin-top: 4px;
   width: 100%;
   background: #3d6b3d;
@@ -362,6 +384,13 @@ html, body {
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+}
+/* 세로 예산이 없어 버튼 자체는 못 키우므로 히트 영역만 카드 안쪽으로 넓힌다.
+   위쪽은 유닛 이름/스프라이트라 눌러도 무해하고, 아래는 카드 끝이라 이웃과 겹치지 않는다. */
+.stack .up-btn::after {
+  content: '';
+  position: absolute;
+  inset: -7px -4px;
 }
 .stack .up-btn:disabled { background: #555; opacity: 0.6; }
 /* 골드 코인 아이콘 - 🪙 이모지 대체 (UI/CoinImg.png → ui/coin.png) */
