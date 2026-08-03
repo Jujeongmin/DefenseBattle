@@ -43,8 +43,8 @@ function applyStaticI18n(): void {
   set('menu-record-suf', t('menu.recordSuf'));
   set('summon-title', t('hud.summon'));
   set('btn-prob-info-game', t('hud.probInfo'));
-  html('btn-sell-panel', `🛒<br />${t('hud.sell')}`);
-  html('btn-menu', `🏠<br />${t('hud.home')}`);
+  html('btn-sell-panel', `<span class="ui-icon icon-shop"></span><br />${t('hud.sell')}`);
+  html('btn-menu', `<span class="ui-icon icon-home"></span><br />${t('hud.home')}`);
 }
 
 applyStaticI18n();

@@ -56,10 +56,10 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   // 메인 화면 / 상단바 / 하단
   'app.title':       { en: 'Random Defense', ko: '랜덤 디펜스' },
   'menu.start':      { en: 'Start Game', ko: '게임 시작' },
-  'menu.shop':       { en: '🛒 Shop', ko: '🛒 상점' },
-  'menu.lab':        { en: '🔬 Lab', ko: '🔬 연구소' },
-  'menu.rank':       { en: '🏆 Rankings', ko: '🏆 랭킹' },
-  'menu.reset':      { en: '🗑️ Reset Progress', ko: '🗑️ 데이터 초기화' },
+  'menu.shop':       { en: 'Shop', ko: '상점' },
+  'menu.lab':        { en: 'Lab', ko: '연구소' },
+  'menu.rank':       { en: 'Rankings', ko: '랭킹' },
+  'menu.reset':      { en: 'Reset Progress', ko: '데이터 초기화' },
   'menu.recordPre':  { en: 'Best:', ko: '최고 기록:' },
   'menu.recordSuf':  { en: 'waves', ko: '웨이브' },
   'hud.wave':        { en: 'Wave {n}', ko: '웨이브 {n}' },
@@ -75,7 +75,7 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'banner.mythic':   { en: '✨ {grade} {job} Summoned! ✨', ko: '✨ {job} {grade} 등급 소환! ✨' },
 
   // 게임 오버
-  'over.clear':      { en: '🎉 Clear!', ko: '🎉 클리어!' },
+  'over.clear':      { en: 'Clear!', ko: '클리어!' },
   'over.gameover':   { en: 'Game Over', ko: '게임 오버' },
   'over.reward':     { en: 'Crystals earned', ko: '획득 크리스탈' },
   'over.owned':      { en: 'Owned', ko: '보유' },
@@ -133,8 +133,8 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'shop.title':      { en: 'Shop', ko: '상점' },
   'shop.gachaTitle': { en: 'Unit Gacha', ko: '유닛 가챠' },
   'shop.gachaDesc':  { en: 'Get random job × grade units!<br>Star them up in the Lab for permanent power.', ko: '랜덤 직업×등급 유닛 획득!<br>연구소에서 스타업 → 영구 강화' },
-  'shop.pityHint':   { en: '🎯 {rem} more pull(s) → guaranteed Mythic+ (Mythic 80% / Eternal 20%)', ko: '🎯 {rem}번 더 뽑으면 신화 이상 확정 (신화 80% / 태초 20%)' },
-  'shop.pityReady':  { en: '🎯 Next pull is a guaranteed Mythic+! (Mythic 80% / Eternal 20%)', ko: '🎯 다음 뽑기는 신화 이상 확정! (신화 80% / 태초 20%)' },
+  'shop.pityHint':   { en: '{rem} more pull(s) → guaranteed Mythic+ (Mythic 80% / Eternal 20%)', ko: '{rem}번 더 뽑으면 신화 이상 확정 (신화 80% / 태초 20%)' },
+  'shop.pityReady':  { en: 'Next pull is a guaranteed Mythic+! (Mythic 80% / Eternal 20%)', ko: '다음 뽑기는 신화 이상 확정! (신화 80% / 태초 20%)' },
   'shop.pull1':      { en: '1 Pull', ko: '1회 뽑기' },
   'shop.pull10':     { en: '10 Pull', ko: '10연 뽑기' },
   'shop.buyGems':    { en: 'Buy Gems', ko: '보석 구매' },
@@ -166,7 +166,7 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'set.muteAll':     { en: 'Mute all', ko: '전체 음소거' },
   'set.muteOn':      { en: '🔇 On', ko: '🔇 켜짐' },
   'set.muteOff':     { en: '🔊 Off', ko: '🔊 꺼짐' },
-  'set.bgm':         { en: '🎵 Music', ko: '🎵 배경음악' },
+  'set.bgm':         { en: 'Music', ko: '배경음악' },
   'set.sfx':         { en: '🔊 SFX', ko: '🔊 효과음' },
   'set.dataSection': { en: 'Data', ko: '데이터' },
   'set.reset':       { en: 'Reset progress', ko: '진행 데이터 초기화' },
@@ -194,8 +194,8 @@ const STRINGS: Record<string, Record<Lang, string>> = {
 
   // 상점 보상형 광고
   'shop.adSection':  { en: 'Rewarded Ad', ko: '보상형 광고' },
-  'shop.adCooldownBtn': { en: '⏳ Available again in {time}', ko: '⏳ {time} 후 다시 시청 가능' },
-  'shop.adFreeBtn':  { en: '🎁 Claim free', ko: '🎁 광고 없이 받기' },
+  'shop.adCooldownBtn': { en: 'Available again in {time}', ko: '{time} 후 다시 시청 가능' },
+  'shop.adFreeBtn':  { en: 'Claim free', ko: '광고 없이 받기' },
   'shop.adWatchBtn': { en: '📺 Watch ad to claim', ko: '📺 광고 시청하고 받기' },
   'shop.adRemovedInfo': { en: 'Ad-free: get free gems once every 30 minutes, no ad needed!', ko: '광고제거 상태: 30분마다 한 번, 광고 없이 무료 보석을 받으세요!' },
   'shop.adInfo':     { en: 'Watch an ad once every 30 minutes for free gems.', ko: '30분마다 한 번, 광고를 보고 무료 보석을 받으세요!' },
@@ -207,17 +207,17 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'over.doubleBtn':     { en: '📺 Get 2x', ko: '📺 2배 받기' },
   'over.skipBtn':       { en: 'Take as-is', ko: '그냥 받기' },
   'over.adRemovedAutoDouble': { en: '✅ Ad-free bonus: 2x gems granted automatically!', ko: '✅ 광고제거 혜택: 2배 보석 자동 지급!' },
-  'over.adLoading':     { en: '⏳ Loading ad...', ko: '⏳ 광고 로딩 중...' },
+  'over.adLoading':     { en: 'Loading ad...', ko: '광고 로딩 중...' },
   'over.doubleGranted': { en: '✅ 2x reward granted! (+{n} gems)', ko: '✅ 2배 보상 지급 완료! (+{n} 보석)' },
   'over.adIncomplete':  { en: '⚠️ Watch the full ad to get the 2x reward.', ko: '⚠️ 광고를 끝까지 시청해야 2배 보상이 지급됩니다.' },
   'over.adLoadFailed':  { en: '⚠️ Failed to load ad. Please try again.', ko: '⚠️ 광고 로딩 실패. 다시 시도해 주세요.' },
   'over.baseGranted':   { en: '✅ Base reward granted (+{n} gems)', ko: '✅ 기본 보상 지급 완료 (+{n} 보석)' },
 
   // 게임오버 - 랭킹 등록
-  'over.rankTitle':     { en: '🏆 Live Rankings', ko: '🏆 실시간 랭킹 등록' },
+  'over.rankTitle':     { en: 'Live Rankings', ko: '실시간 랭킹 등록' },
   'over.rankDesc':      { en: "Submit this run's record (Wave {n}) to the leaderboard!", ko: '이번 판 기록({n}웨이브)을 랭킹에 올리세요!' },
   'over.rankSubmitBtn': { en: 'Submit', ko: '기록 등록' },
-  'over.rankRegistering': { en: '⏳ Submitting to server...', ko: '⏳ 서버에 등록하는 중...' },
+  'over.rankRegistering': { en: 'Submitting to server...', ko: '서버에 등록하는 중...' },
   'over.rankSubmitFailed': { en: '❌ Submit failed: {msg}', ko: '❌ 등록 실패: {msg}' },
   'over.networkError':   { en: 'Network error', ko: '네트워크 오류' },
   // 랭킹 등록 결과 (서버는 구조값만 반환, 문구는 여기서 조립)
@@ -226,7 +226,7 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'rank.resNotBeaten':   { en: 'ℹ️ You already have a higher record. (Wave {n})', ko: 'ℹ️ 이미 더 높은 최고 기록이 있습니다. ({n}웨이브)' },
 
   // 랭킹 패널
-  'rank.title':         { en: '🏆 Live Rankings', ko: '🏆 실시간 랭킹' },
+  'rank.title':         { en: 'Live Rankings', ko: '실시간 랭킹' },
   'rank.loading':        { en: 'Loading rankings...', ko: '랭킹 데이터를 불러오는 중...' },
   'rank.connectError':   { en: '❌ Failed to connect to the server.', ko: '❌ 서버 연결에 실패했습니다.' },
   'rank.checkNetwork':   { en: 'Please check your network connection.', ko: '네트워크 상태를 확인해 주세요.' },
@@ -239,7 +239,7 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'rank.changeNickname': { en: 'Change', ko: '닉네임 변경' },
   'rank.nicknameEmpty':  { en: '⚠️ Please enter a nickname.', ko: '⚠️ 닉네임을 입력해 주세요.' },
   'rank.nicknameTooLong':{ en: '⚠️ Nickname must be 15 characters or fewer.', ko: '⚠️ 닉네임은 최대 15자까지 가능합니다.' },
-  'rank.saving':         { en: '⏳ Saving...', ko: '⏳ 변경 완료 처리 중...' },
+  'rank.saving':         { en: 'Saving...', ko: '변경 완료 처리 중...' },
   'rank.nicknameChangedRegistered': { en: '✅ Nickname changed and best record ({n} waves) registered!', ko: '✅ 닉네임이 변경되고 최고 기록({n}웨이브)이 랭킹에 등록되었습니다!' },
   'rank.deviceNicknameSet': { en: '✅ Device nickname set successfully!', ko: '✅ 기기 닉네임이 성공적으로 설정되었습니다!' },
   'rank.serverTimeout':  { en: 'Server connection timed out', ko: '서버 연결 시간 초과' },

@@ -99,7 +99,7 @@ function startTutorial(game: Game): void {
     bubble.className = 'tut-bubble';
     const stepText = last ? '' : `<div class="tut-step">${idx + 1} / ${steps.length - 1}</div>`;
     const titleHtml = step.title ? `<h3>${step.title}</h3>` : '';
-    const bodyHtml = last ? `<p class="tut-final">🎉</p>` : `<p>${step.body}</p>`;
+    const bodyHtml = last ? `<p class="tut-final"><span class="ui-icon icon-party"></span></p>` : `<p>${step.body}</p>`;
     const buttons = last
       ? `<button class="tut-primary tut-go">${t('tut.start')}</button>`
       : step.waitSummon

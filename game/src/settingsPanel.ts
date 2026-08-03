@@ -23,7 +23,7 @@ export function openSettingsPanel(): void {
           <button id="btn-mute-toggle">${muted ? t('set.muteOn') : t('set.muteOff')}</button>
         </div>
         <div class="settings-row">
-          <div class="settings-label">${t('set.bgm')}</div>
+          <div class="settings-label"><span class="ui-icon icon-music"></span> ${t('set.bgm')}</div>
           <input type="range" class="vol-slider" id="bgm-vol" min="0" max="100" value="${audio.getBgmVolume()}">
           <span class="vol-val" id="bgm-vol-val">${audio.getBgmVolume()}</span>
         </div>

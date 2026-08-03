@@ -50,11 +50,11 @@
           <h1 class="game-title" id="game-title">랜덤 디펜스</h1>
           <div class="menu-crystals"><span class="gem"></span> <span id="menu-crystal-amount">0</span></div>
           <button id="menu-start" class="menu-btn primary">게임 시작</button>
-          <button id="menu-shop" class="menu-btn">🛒 상점</button>
-          <button id="menu-lab" class="menu-btn">🔬 연구소</button>
-          <button id="menu-rank" class="menu-btn">🏆 랭킹</button>
+          <button id="menu-shop" class="menu-btn">상점</button>
+          <button id="menu-lab" class="menu-btn">연구소</button>
+          <button id="menu-rank" class="menu-btn">랭킹</button>
           <div class="menu-record"><span id="menu-record-pre">최고 기록:</span> <span id="menu-best">0</span> <span id="menu-record-suf">웨이브</span></div>
-          <button id="menu-reset" class="menu-btn muted-btn">🗑️ 데이터 초기화</button>
+          <button id="menu-reset" class="menu-btn muted-btn">데이터 초기화</button>
         </div>
       </div>
 
@@ -70,8 +70,8 @@
             <div id="boss-timer" class="hidden">120.0</div>
           </div>
           <div class="top-right">
-            <button id="btn-settings" class="icon-btn">⚙️</button>
-            <button id="btn-pause" class="icon-btn">❚❚</button>
+            <button id="btn-settings" class="icon-btn" aria-label="Settings"><span class="ui-icon icon-settings"></span></button>
+            <button id="btn-pause" class="icon-btn" aria-label="Pause"><span class="ui-icon icon-pause"></span></button>
             <button id="btn-speed" class="icon-btn">1x</button>
           </div>
         </header>
@@ -93,7 +93,7 @@
         <!-- 하단 조작부 -->
         <section id="controls">
           <div class="control-buttons">
-            <button id="btn-sell-panel" class="side-btn">🛒<br />판매</button>
+            <button id="btn-sell-panel" class="side-btn"><span class="ui-icon icon-shop"></span><br />판매</button>
             <div class="summon-wrap">
               <button id="btn-summon" class="summon-btn">
                 <span class="summon-title" id="summon-title">소환</span>
@@ -101,7 +101,7 @@
               </button>
               <button id="btn-prob-info-game" class="prob-info-link">확률 정보 ⓘ</button>
             </div>
-            <button id="btn-menu" class="side-btn">🏠<br />메인</button>
+            <button id="btn-menu" class="side-btn"><span class="ui-icon icon-home"></span><br />메인</button>
           </div>
           <div id="unit-stacks"></div>
         </section>

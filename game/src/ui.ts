@@ -59,7 +59,9 @@ export class UI {
     $('btn-pause').onclick = () => {
       audio.button();
       this.game.paused = !this.game.paused;
-      $('btn-pause').textContent = this.game.paused ? '▶' : '❚❚';
+      $('btn-pause').innerHTML = this.game.paused
+        ? '<span class="ui-icon icon-play"></span>'
+        : '<span class="ui-icon icon-pause"></span>';
     };
     $('btn-speed').onclick = () => {
       audio.button();
@@ -74,7 +76,7 @@ export class UI {
     this.speedIdx = 0;
     this.game.speed = this.speeds[this.speedIdx];
     $('btn-speed').textContent = this.game.speed + 'x';
-    $('btn-pause').textContent = '❚❚';
+    $('btn-pause').innerHTML = '<span class="ui-icon icon-pause"></span>';
     this.setupDrag();
   }
 
@@ -145,7 +147,7 @@ export class UI {
     if (g.waveState === 'waiting_boss' || (g.isBossWave && g.waveState === 'spawning')) {
       // 보스 웨이브: 제한 시간(초과 시 게임오버) 표시
       bt.classList.remove('hidden', 'rest');
-      bt.textContent = `⏱ ${g.bossTimer.toFixed(1)}s`;
+      bt.innerHTML = `<span class="ui-icon icon-timer"></span> ${g.bossTimer.toFixed(1)}s`;
     } else if (g.waveState === 'spawning' || g.waveState === 'rest') {
       // 일반 웨이브: 다음 웨이브 시작까지 남은 시간을 몹 생성 중에도 끊김 없이 계속 표시.
       // (생성 중 = 남은 생성 시간 + 휴식 시간, 휴식 중 = 남은 휴식 시간)

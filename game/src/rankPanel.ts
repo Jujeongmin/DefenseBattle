@@ -25,7 +25,7 @@ export function openRankPanel(): void {
       <div class="dialog">
         <h2>${t('rank.title')}</h2>
         <div style="text-align:center; padding: 30px 0; color: #8892b0;">
-          <span style="display:inline-block; animation: spin 1s linear infinite; margin-right: 8px;">⏳</span>
+          <span class="ui-icon icon-loading" style="animation: spin 1s linear infinite; margin-right: 8px;"></span>
           ${t('rank.loading')}
         </div>
         <button class="close">${t('common.close')}</button>

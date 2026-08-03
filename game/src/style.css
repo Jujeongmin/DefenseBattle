@@ -87,17 +87,18 @@ html, body {
 .menu-btn {
   width: 100%;
   padding: 10px;
-  border: none;
+  border: 10px solid transparent;
+  border-image: url("/ui/btn_wood.png") 5 fill stretch;
   image-rendering: pixelated;
   border-radius: 0;
   font-size: 20px;
   font-weight: 800;
   cursor: pointer;
-  background: url("/ui/btn_blue.png") center/100% 100% no-repeat;
+  background: none;
   color: #fff;
   text-shadow: 0 1px 2px rgba(0,0,0,0.7);
 }
-.menu-btn.primary { border: none; border-radius: 0; padding: 15px; background: url("/ui/btn_red.png") center/100% 100% no-repeat; box-shadow: none; }
+.menu-btn.primary { border-image: none; border: none; border-radius: 14px; padding: 15px; background: var(--accent); box-shadow: 0 4px 0 #8a1f1f; }
 .menu-btn.muted-btn {
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 10px;
@@ -108,8 +109,7 @@ html, body {
   margin-top: 6px;
   border-image: none;
 }
-.menu-btn:active { background-image: url("/ui/btn_blue_pressed.png"); transform: translateY(2px); }
-.menu-btn.primary:active { background-image: url("/ui/btn_red_pressed.png"); }
+.menu-btn:active { border-image-source: url("/ui/btn_wood_dark.png"); transform: translateY(2px); }
 .menu-record { margin-top: 16px; color: #aaa; font-size: 14px; }
 
 /* ---------- 상단 바 ---------- */
@@ -139,19 +139,21 @@ html, body {
 .top-right { display: flex; gap: 6px; justify-content: flex-end; width: 40%; }
 /* 나무 버튼 공통 스킨 (UI/Freebuttons ClassicalButtons) */
 .wood-btn {
-  border: none;
+  border: 6px solid transparent;
+  border-image: url("/ui/btn_wood.png") 5 fill stretch;
   image-rendering: pixelated;
   color: #fff;
   text-shadow: 0 1px 2px rgba(0,0,0,0.7);
-  background: url("/ui/btn_blue.png") center/100% 100% no-repeat;
+  background: none;
   cursor: pointer;
 }
-.wood-btn:active { background-image: url("/ui/btn_blue_pressed.png"); transform: translateY(1px); }
+.wood-btn:active { border-image-source: url("/ui/btn_wood_dark.png"); transform: translateY(1px); }
 .icon-btn {
   position: relative;
-  border: none;
+  border: 6px solid transparent;
+  border-image: url("/ui/btn_wood.png") 5 fill stretch;
   image-rendering: pixelated;
-  background: url("/ui/btn_blue.png") center/100% 100% no-repeat;
+  background: none;
   color: #fff;
   text-shadow: 0 1px 2px rgba(0,0,0,0.7);
   border-radius: 0;
@@ -173,7 +175,7 @@ html, body {
      가로: 버튼 간격이 6px 뿐이라 이웃과 겹치지 않게 3px 까지만 → -(6+3). */
   inset: -14px -9px;
 }
-.icon-btn:active { background-image: url("/ui/btn_blue_pressed.png"); }
+.icon-btn:active { border-image-source: url("/ui/btn_wood_dark.png"); }
 .icon-btn:active { transform: scale(0.94); }
 
 /* ---------- 전장 ---------- */
@@ -285,9 +287,10 @@ html, body {
   gap: 10px;
 }
 .side-btn {
-  border: none;
+  border: 8px solid transparent;
+  border-image: url("/ui/btn_wood.png") 5 fill stretch;
   image-rendering: pixelated;
-  background: url("/ui/btn_blue.png") center/100% 100% no-repeat;
+  background: none;
   color: #fff;
   text-shadow: 0 1px 2px rgba(0,0,0,0.7);
   border-radius: 0;
@@ -299,7 +302,7 @@ html, body {
   line-height: 1.3;
   cursor: pointer;
 }
-.side-btn:active { background-image: url("/ui/btn_blue_pressed.png"); transform: scale(0.97); }
+.side-btn:active { border-image-source: url("/ui/btn_wood_dark.png"); transform: scale(0.97); }
 .summon-wrap { flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 3px; }
 .prob-info-link {
   position: relative;
@@ -321,21 +324,20 @@ html, body {
 .summon-btn {
   flex: 0 0 auto;
   width: 100%;
-  background: url("/ui/btn_red.png") center/100% 100% no-repeat;
+  background: var(--accent);
   color: #fff;
   border: none;
-  border-radius: 0;
+  border-radius: 14px;
   height: 66px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: none;
-  image-rendering: pixelated;
+  box-shadow: 0 4px 0 #8a1f1f;
 }
-.summon-btn:active { transform: translateY(3px); background-image: url("/ui/btn_red_pressed.png"); }
-.summon-btn.holding { transform: translateY(3px); background-image: url("/ui/btn_red_pressed.png"); filter: brightness(1.08); }
+.summon-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #8a1f1f; }
+.summon-btn.holding { transform: translateY(3px); box-shadow: 0 1px 0 #8a1f1f; filter: brightness(1.08); }
 .summon-btn:disabled { opacity: 0.5; }
 .summon-title { font-size: 22px; font-weight: 800; }
 .summon-cost { font-size: 16px; font-weight: 700; display: flex; gap: 3px; align-items: center; }
@@ -399,6 +401,65 @@ html, body {
   vertical-align: -0.2em;
   background: url("/ui/coin.png") center/contain no-repeat;
 }
+
+/* CC0 1-bit UI icons. Keep them as image assets instead of platform-dependent emoji. */
+.ui-icon {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  flex: 0 0 auto;
+}
+.icon-shop { background-image: url("/ui/icons/shop.png"); }
+.icon-lab { background-image: url("/ui/icons/lab.png"); }
+.icon-rank { background-image: url("/ui/icons/rank.png"); }
+.icon-trash { background-image: url("/ui/icons/trash.png"); }
+.icon-settings { background-image: url("/ui/icons/settings.png"); }
+.icon-home { background-image: url("/ui/icons/home.png"); }
+.icon-pause { background-image: url("/ui/icons/pause.png"); }
+.icon-play { background-image: url("/ui/icons/play.png"); }
+.icon-timer { background-image: url("/ui/icons/timer.png"); }
+.icon-loading { background-image: url("/ui/icons/loading.png"); }
+.icon-target { background-image: url("/ui/icons/target.png"); }
+.icon-gift { background-image: url("/ui/icons/gift.png"); }
+.icon-music { background-image: url("/ui/icons/music.png"); }
+.icon-party { background-image: url("/ui/icons/party.png"); }
+
+.menu-btn:not(.primary)::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  vertical-align: -3px;
+  background: center/contain no-repeat;
+  image-rendering: pixelated;
+}
+#menu-shop::before { background-image: url("/ui/icons/shop.png"); }
+#menu-lab::before { background-image: url("/ui/icons/lab.png"); }
+#menu-rank::before { background-image: url("/ui/icons/rank.png"); }
+#menu-reset::before { background-image: url("/ui/icons/trash.png"); }
+
+#btn-settings .ui-icon,
+#btn-pause .ui-icon { width: 18px; height: 18px; vertical-align: middle; }
+
+.gacha-pity::before,
+#rank-panel h2::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-right: 7px;
+  vertical-align: -3px;
+  background: center/contain no-repeat;
+  image-rendering: pixelated;
+}
+.gacha-pity::before { background-image: url("/ui/icons/target.png"); }
+#rank-panel h2::before { background-image: url("/ui/icons/rank.png"); }
 
 /* 유닛 카드 상성 % */
 .stack .dmg-pct {
@@ -961,15 +1022,16 @@ html, body {
 .ad-reward-btn {
   flex: 0 0 auto;
   padding: 6px 10px;
-  border: none;
+  border: 6px solid transparent;
+  border-image: url("/ui/btn_wood.png") 5 fill stretch;
   image-rendering: pixelated;
-  background: url("/ui/btn_blue.png") center/100% 100% no-repeat;
+  background: none;
   color: #ffd700;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
 }
-.ad-reward-btn:active { background-image: url("/ui/btn_blue_pressed.png"); transform: translateY(1px); }
+.ad-reward-btn:active { border-image-source: url("/ui/btn_wood_dark.png"); transform: translateY(1px); }
 .ad-reward-btn:disabled { opacity: 0.45; }
 
 /* 상점 보상형 광고 */
