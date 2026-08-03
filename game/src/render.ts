@@ -35,10 +35,11 @@ const WALK_SEQ = [1, 0, 1, 2]; // 걷기 컬럼 순서 (1=정지 기준)
 const ATTACK_SEQ = [1, 2, 0, 1]; // 공격 스윙 프레임 순서 (1=정지 기준)
 const ATTACK_ANIM_DUR = 0.1;     // engine.ts 의 u.flash 초기값과 동일해야 함
 
-// 타일 맵 설정 (16px 원본 타일 → TILE 크기로 스케일)
+// Tiny Swords 타일 맵 설정 (64px 원본 타일 → TILE 크기로 스케일)
 const TILE = 45; // 720 / 16
-const GRASS_SRC = { sx: 16, sy: 80 }; // grass.png 의 채움 잔디 타일
-const DIRT_SRC = { sx: 0, sy: 0 };    // dirt.png 의 채움 흙 타일
+const TERRAIN_SOURCE_SIZE = 64;
+const GRASS_SRC = { sx: 64, sy: 64 }; // Tiny Swords 플랫폼의 반복 가능한 중앙 타일
+const DIRT_SRC = { sx: 64, sy: 64 };
 const PATH_INSET = 70;                // 경로 중심선 여백 (PATH.corners 와 동일)
 const BAND_HALF = 30;                 // 흙길 밴드 반폭
 
@@ -125,7 +126,7 @@ export class Renderer {
         const spr = isPath ? dirt : grass;
         const src = isPath ? DIRT_SRC : GRASS_SRC;
         if (spr.ready) {
-          ctx.drawImage(spr.img, src.sx, src.sy, 16, 16, gx * TILE, gy * TILE, TILE, TILE);
+          ctx.drawImage(spr.img, src.sx, src.sy, TERRAIN_SOURCE_SIZE, TERRAIN_SOURCE_SIZE, gx * TILE, gy * TILE, TILE, TILE);
         } else {
           ctx.fillStyle = isPath ? '#d3b183' : '#8bb04a';
           ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE);
