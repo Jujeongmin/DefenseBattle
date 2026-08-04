@@ -35,20 +35,27 @@ const WALK_SEQ = [1, 0, 1, 2]; // 걷기 컬럼 순서 (1=정지 기준)
 const ATTACK_SEQ = [1, 2, 0, 1]; // 공격 스윙 프레임 순서 (1=정지 기준)
 const ATTACK_ANIM_DUR = 0.1;     // engine.ts 의 u.flash 초기값과 동일해야 함
 
-// Tiny Swords 타일 맵 설정 (64px 원본 타일 → TILE 크기로 스케일)
+// ---- Tiny Swords 지형 타일 ----
+// tiles/terrain.png = Tilemap_Flat 원본(640x256, 64px 셀).
+//   잔디 4x4 오토타일 = 열 0~3, 모래 4x4 오토타일 = 열 5~8.
+//   각 4x4 안의 배치: 열/행 0~2 가 3x3(모서리·변·중앙), 열 3 은 세로 1칸 폭 변형,
+//   행 3 은 가로 1칸 높이 변형, (3,3) 은 단독 타일.
 const TILE = 45; // 720 / 16
-const TERRAIN_SOURCE_SIZE = 64;
-const GRASS_SRC = { sx: 64, sy: 64 }; // Tiny Swords 플랫폼의 반복 가능한 중앙 타일
-const DIRT_SRC = { sx: 64, sy: 64 };
+const SRC = 64;  // 원본 타일 한 칸 크기
+const GRASS_COL0 = 0; // 잔디 블록 시작 열 (모래 블록은 dirtpath.png 로 따로 톤 변환해 사용)
 const PATH_INSET = 70;                // 경로 중심선 여백 (PATH.corners 와 동일)
-const BAND_HALF = 30;                 // 흙길 밴드 반폭
+const BAND_HALF = 30;                 // 길 밴드 반폭
 
-// grass.png 시트에 원래부터 있던 잔디 덤불/들꽃 장식 변형(미사용) - 맵 바깥 테두리에 흩뿌려 재활용
-const GRASS_DECOR_SRC = [
-  { sx: 96, sy: 80 },  { sx: 112, sy: 80 },
-  { sx: 96, sy: 96 },  { sx: 112, sy: 96 },
-  { sx: 128, sy: 80 }, { sx: 144, sy: 80 },
-];
+// 3x3 오토타일에서 이웃 유무(위/아래/좌/우)에 따라 쓸 셀의 (col,row) 오프셋을 고른다.
+// 이웃이 있으면 그쪽은 "안쪽"이므로 가운데(1)를, 없으면 가장자리(0 또는 2)를 쓴다.
+function autoTile(up: boolean, down: boolean, left: boolean, right: boolean): { cx: number; cy: number } {
+  const cx = left && right ? 1 : left ? 2 : right ? 0 : 3; // 양쪽 다 없으면 세로 변형 열(3)
+  const cy = up && down ? 1 : up ? 2 : down ? 0 : 3;       // 위아래 다 없으면 가로 변형 행(3)
+  return { cx, cy };
+}
+
+// 장식 스프라이트(덤불/돌) - tiles/deco.png 가로 시트, 64px 셀 6개
+const DECO_COUNT = 6;
 
 // 좌표 기반 결정론적 해시(0~1) - 프레임마다 흔들리지 않는 고정 장식 배치용
 function hash2(a: number, b: number): number {
@@ -108,75 +115,92 @@ export class Renderer {
     return ATTACK_SEQ[idx];
   }
 
-  // 잔디 필드 + 흙길 링을 타일로 그린다
+  // 지형: 잔디 벌판 위에 모래 길(몹 이동 링)을 얹는다.
+  // 모래는 4x4 오토타일이라 이웃한 모래 방향을 보고 가장자리 셀을 골라, 길 경계가 잔디와
+  // 자연스럽게 마감된다.
+  // (바다 테두리는 넣지 않는다: 경로 바깥 여백이 40px 뿐이라 타일 한 칸(45px)도 안 들어가고,
+  //  넣으려면 경로를 안쪽으로 옮겨야 하는데 그건 몹 이동 거리 = 밸런스를 바꾼다.)
   private drawTiles(): void {
     const ctx = this.ctx;
-    const grass = tileSprite('grass');
-    const dirt = tileSprite('dirt');
+    const terrain = tileSprite('terrain');
     const n = Math.ceil(MAP.size / TILE);
-    const o1 = PATH_INSET - BAND_HALF;         // 흙길 바깥 경계
-    const i1 = PATH_INSET + BAND_HALF;          // 흙길 안쪽 경계
+    const o1 = PATH_INSET - BAND_HALF;   // 길 바깥 경계
+    const i1 = PATH_INSET + BAND_HALF;   // 길 안쪽 경계
     const oFar = MAP.size - o1, iFar = MAP.size - i1;
+
+    const isPath = (gx: number, gy: number) => {
+      const cx = gx * TILE + TILE / 2, cy = gy * TILE + TILE / 2;
+      const inOuter = cx >= o1 && cx <= oFar && cy >= o1 && cy <= oFar;
+      const inInner = cx > i1 && cx < iFar && cy > i1 && cy < iFar;
+      return inOuter && !inInner;
+    };
+
+    // 1) 잔디 벌판: 안쪽 채움 타일만 반복 (가장자리 처리 불필요)
     for (let gy = 0; gy < n; gy++) {
       for (let gx = 0; gx < n; gx++) {
-        const cx = gx * TILE + TILE / 2, cy = gy * TILE + TILE / 2;
-        const inOuter = cx >= o1 && cx <= oFar && cy >= o1 && cy <= oFar;
-        const inInner = cx > i1 && cx < iFar && cy > i1 && cy < iFar;
-        const isPath = inOuter && !inInner;    // 사각 링(흙길)
-        const spr = isPath ? dirt : grass;
-        const src = isPath ? DIRT_SRC : GRASS_SRC;
-        if (spr.ready) {
-          ctx.drawImage(spr.img, src.sx, src.sy, TERRAIN_SOURCE_SIZE, TERRAIN_SOURCE_SIZE, gx * TILE, gy * TILE, TILE, TILE);
+        if (terrain.ready) {
+          ctx.drawImage(terrain.img, (GRASS_COL0 + 1) * SRC, 1 * SRC, SRC, SRC,
+            gx * TILE, gy * TILE, TILE, TILE);
         } else {
-          ctx.fillStyle = isPath ? '#d3b183' : '#8bb04a';
+          ctx.fillStyle = '#8bb04a';
           ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE);
         }
-        // 타일마다 아주 살짝 명도를 다르게 얹어 동일 타일 반복이 도드라지지 않게 한다(고정 해시라 안 흔들림).
-        const variance = (hash2(gx * 7 + 3, gy * 13 + 5) - 0.5) * 0.12;
-        if (variance > 0.002) {
-          ctx.fillStyle = `rgba(255,255,255,${variance})`;
+      }
+    }
+
+    // 2) 흙길: 오토타일로 가장자리를 골라 그린다.
+    //    dirtpath.png 는 Tiny Swords 모래 4x4 블록을 갈색으로 톤 변환한 별도 시트(자체 4x4).
+    const dirt = tileSprite('dirtpath');
+    for (let gy = 0; gy < n; gy++) {
+      for (let gx = 0; gx < n; gx++) {
+        if (!isPath(gx, gy)) continue;
+        if (!dirt.ready) {
+          ctx.fillStyle = '#a9843f';
           ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE);
-        } else if (variance < -0.002) {
-          ctx.fillStyle = `rgba(0,0,0,${-variance})`;
-          ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE);
+          continue;
         }
-        // 맵 맨 바깥 테두리 줄(경로/구역과 절대 겹치지 않는 순수 잔디)에만 덤불·들꽃 장식을 흩뿌린다.
-        // 매 프레임 새로 뽑지 않고 타일 좌표로 고정 해시를 써서 장식이 흔들리지 않게 한다.
-        const isBorder = gx === 0 || gx === n - 1 || gy === 0 || gy === n - 1;
-        if (isBorder && !isPath && grass.ready) {
-          const r = hash2(gx, gy);
-          if (r < 0.42) {
-            const idx = Math.floor(hash2(gx + 91, gy + 17) * GRASS_DECOR_SRC.length);
-            const d = GRASS_DECOR_SRC[idx];
-            ctx.drawImage(grass.img, d.sx, d.sy, 16, 16, gx * TILE, gy * TILE, TILE, TILE);
-          }
+        const { cx, cy } = autoTile(
+          isPath(gx, gy - 1), isPath(gx, gy + 1),
+          isPath(gx - 1, gy), isPath(gx + 1, gy),
+        );
+        ctx.drawImage(dirt.img, cx * SRC, cy * SRC, SRC, SRC,
+          gx * TILE, gy * TILE, TILE, TILE);
+      }
+    }
+
+    // 3) 길 바깥 잔디 테두리에만 덤불/돌을 고정 해시로 흩뿌린다.
+    //    (길 안쪽은 유닛 배치 구역이라 비워둔다)
+    const deco = tileSprite('deco');
+    if (deco.ready) {
+      for (let gy = 0; gy < n; gy++) {
+        for (let gx = 0; gx < n; gx++) {
+          if (isPath(gx, gy)) continue;
+          const cx = gx * TILE + TILE / 2, cy = gy * TILE + TILE / 2;
+          if (cx > o1 && cx < oFar && cy > o1 && cy < oFar) continue;
+          if (hash2(gx, gy) > 0.4) continue;
+          const idx = Math.floor(hash2(gx + 91, gy + 17) * DECO_COUNT);
+          ctx.drawImage(deco.img, idx * SRC, 0, SRC, SRC, gx * TILE, gy * TILE, TILE, TILE);
         }
       }
     }
   }
 
-  // 구역 사각 아레나의 외곽을 은은한 이중선 + 모서리 장식으로 둘러 "전장"임을 시각적으로 구획한다.
+  // 배치 구역의 네 모서리에만 작은 돌 표식을 찍어 전장 범위를 알린다.
+  // (예전엔 사각형 외곽선을 통째로 그렸는데, 얇은 선이 맵 위에 떠 있어 디버그 오버레이처럼
+  //  보였다. 범위는 모서리 표식과 구역 룬만으로 충분히 읽힌다.)
   private drawArenaFrame(): void {
     const z = this.game.zones;
     if (z.length < 4) return;
-    // 4개 구역 삼각형이 공유하는 정사각 아레나의 네 꼭짓점 (엔진 상수를 하드코딩하지 않고 실제 기하에서 추출)
-    const A = z[0].tri[0], B = z[1].tri[0], C = z[2].tri[0], D = z[3].tri[0];
+    const corners = [z[0].tri[0], z[1].tri[0], z[2].tri[0], z[3].tri[0]];
     const ctx = this.ctx;
     ctx.save();
-    ctx.strokeStyle = 'rgba(120,98,70,0.55)';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(A.x, A.y, B.x - A.x, D.y - A.y);
-    ctx.strokeStyle = 'rgba(230,196,120,0.30)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(A.x + 4, A.y + 4, (B.x - A.x) - 8, (D.y - A.y) - 8);
-    // 네 모서리 다이아몬드 장식
-    ctx.fillStyle = 'rgba(230,196,120,0.55)';
-    for (const p of [A, B, C, D]) {
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(Math.PI / 4);
-      ctx.fillRect(-4, -4, 8, 8);
-      ctx.restore();
+    for (const p of corners) {
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.beginPath(); ctx.ellipse(p.x, p.y + 3, 7, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#8d8b84';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 5.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#b9b7ae';
+      ctx.beginPath(); ctx.arc(p.x - 1.2, p.y - 1.4, 3.2, 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();
   }
@@ -279,22 +303,20 @@ export class Renderer {
           : 'rgba(255,255,255,0.02)';
       }
       ctx.fill();
+      // 구역 경계선은 드래그(구역 교환) 중에만 그린다.
+      // 평소에도 삼각형 3변을 다 그으면 맵 한가운데에 커다란 X 자가 늘 떠 있어
+      // 디버그 와이어프레임처럼 보인다. 배치 상태는 구역별 룬(drawZoneRunes)이 이미 알려준다.
       if (isFrom || isTo) {
         ctx.setLineDash([10, 6]);
         ctx.lineDashOffset = -this.t * 40; // 개미행렬 점선
         ctx.strokeStyle = isTo ? '#ffcf3f' : 'rgba(255,255,255,0.85)';
         ctx.lineWidth = 4;
-      } else {
+        ctx.stroke();
+      } else if (drag) {
+        // 드래그 중에는 나머지 구역도 후보로 보이도록 아주 옅게만
         ctx.setLineDash([]);
-        ctx.strokeStyle = 'rgba(90,68,42,0.4)';
-        ctx.lineWidth = 2.5;
-      }
-      ctx.stroke();
-      if (!isFrom && !isTo && !drag) {
-        // 은은한 밝은 하이라이트 선을 살짝 어긋나게 겹쳐 그어 돌바닥에 새겨진 듯한 입체감을 준다.
-        ctx.setLineDash([]);
-        ctx.strokeStyle = 'rgba(255,235,190,0.12)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+        ctx.lineWidth = 1.5;
         ctx.stroke();
       }
       ctx.setLineDash([]);

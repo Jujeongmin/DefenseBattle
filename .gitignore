@@ -25,3 +25,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# 원본 에셋 팩(Tiny Swords 등) - 가공본만 game/public 에 커밋한다
+Asset/

@@ -72,7 +72,10 @@ export function preloadAll(): void {
     for (const g of GRADES) loadImage(`${JOB_SPRITE[job]}_${g.spriteIndex}`);
   }
   for (const race of Object.keys(RACE_SPRITE) as Race[]) loadImage(`${RACE_SPRITE[race]}_0`);
-  tileSprite('grass');
-  tileSprite('dirt');
+  tileSprite('terrain');
+  tileSprite('dirtpath');
+  tileSprite('water');
+  tileSprite('deco');
+  tileSprite('tree');
   uiSprite('bullets');
 }
