@@ -45,6 +45,9 @@ html, body {
 }
 
 /* ---------- 메인 화면 ---------- */
+/* 시작 화면 배경은 전장과 같은 Tiny Swords 잔디 타일을 깔아 톤을 통일한다.
+   (terrain.png 의 잔디 중앙 타일 = 64px 셀 기준 (1,1) 위치를 반복)
+   그 위에 어두운 비네트를 얹어 메뉴 텍스트 가독성을 확보. */
 #main-menu {
   position: absolute;
   inset: 0;
@@ -53,7 +56,11 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 50% 28%, #2c3d4d, #14181f 70%);
+  background:
+    radial-gradient(circle at 50% 32%, rgba(20, 30, 16, 0.42), rgba(8, 12, 8, 0.86) 72%),
+    url("/tiles/grass_bg.png") repeat;
+  background-size: auto, 96px 96px;
+  image-rendering: pixelated;
   padding: 24px;
 }
 /* 메인 화면 우상단 언어 전환 버튼 */
