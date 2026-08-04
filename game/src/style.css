@@ -1,3 +1,19 @@
+/* 픽셀 아트에 맞춘 비트맵 폰트. 이 게임은 영어/한국어를 모두 쓰므로 라틴 전용 픽셀 폰트를
+   쓰면 한글만 일반 고딕으로 튄다. Galmuri 는 한글+라틴을 모두 픽셀로 커버한다.
+   (SIL Open Font License, public/fonts/LICENSE-Galmuri.md) */
+@font-face {
+  font-family: 'Galmuri11';
+  src: url('/fonts/Galmuri11.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Galmuri11';
+  src: url('/fonts/Galmuri11-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 :root {
   --bg: #1c1c22;
@@ -11,7 +27,7 @@ html, body {
   height: 100%;
   background: #111;
   color: var(--text);
-  font-family: 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+  font-family: 'Galmuri11', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
   overflow: hidden;
   user-select: none;
 }
@@ -337,12 +353,26 @@ html, body {
   border-radius: 14px;
   height: 66px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  gap: 10px;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   box-shadow: 0 4px 0 #8a1f1f;
 }
+/* 소환 마법진 아이콘 - 버튼 높이에 맞춰 크게, 누르는 동안 살짝 빛난다.
+   .ui-icon 이 1.15em 을 지정하므로 같은 특이도로는 정의 순서에 밀린다. 선택자를 겹쳐 이긴다. */
+.summon-btn .summon-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  vertical-align: middle;
+  filter: drop-shadow(0 0 4px rgba(181, 105, 255, 0.65));
+}
+.summon-btn.holding .summon-icon {
+  filter: drop-shadow(0 0 9px rgba(230, 201, 255, 0.95)) brightness(1.15);
+}
+.summon-label { display: flex; flex-direction: column; align-items: center; }
 .summon-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #8a1f1f; }
 .summon-btn.holding { transform: translateY(3px); box-shadow: 0 1px 0 #8a1f1f; filter: brightness(1.08); }
 .summon-btn:disabled { opacity: 0.5; }
@@ -422,6 +452,7 @@ html, body {
   flex: 0 0 auto;
 }
 .icon-shop { background-image: url("/ui/icons/shop.png"); }
+.icon-summon { background-image: url("/ui/icons/summon.png"); }
 .icon-lab { background-image: url("/ui/icons/lab.png"); }
 .icon-rank { background-image: url("/ui/icons/rank.png"); }
 .icon-trash { background-image: url("/ui/icons/trash.png"); }

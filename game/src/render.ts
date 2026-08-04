@@ -353,7 +353,7 @@ export class Renderer {
     // 교환 아이콘 (대상 구역 위)
     if (drag.to !== null) {
       const to = this.game.zones[drag.to];
-      ctx.font = 'bold 30px sans-serif';
+      ctx.font = 'bold 30px Galmuri11, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('⇄', to.cx, to.cy);
@@ -439,7 +439,7 @@ export class Renderer {
       this.drawHpBar(m.x, m.y - s / 2 - 16, s, ratio, m.boss ? '#ff5252' : '#7ee87e');
       if (m.boss) {
         ctx.save();
-        ctx.font = '900 15px sans-serif';
+        ctx.font = '700 15px Galmuri11, sans-serif';
         ctx.textAlign = 'center';
         ctx.lineWidth = 3;
         ctx.strokeStyle = 'rgba(50,0,0,0.85)';
@@ -538,7 +538,7 @@ export class Renderer {
         const p = 1 - e.ttl / 0.6;            // 0→1 진행
         const alpha = Math.max(0, Math.min(1, e.ttl / 0.6 * 1.5));
         ctx.globalAlpha = alpha;
-        ctx.font = 'bold 18px sans-serif';
+        ctx.font = 'bold 18px Galmuri11, sans-serif';
         ctx.textAlign = 'center';
         ctx.lineWidth = 3;
         ctx.strokeStyle = 'rgba(0,0,0,0.7)';
