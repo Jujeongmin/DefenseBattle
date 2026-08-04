@@ -174,19 +174,17 @@ html, body {
   cursor: pointer;
 }
 .wood-btn:active { border-image-source: url("/ui/btn_wood_dark.png"); transform: translateY(1px); }
+/* 나무 텍스처 스킨을 빼고 어두운 반투명 칩 형태로. 아이콘 자체는 그대로 둔다. */
 .icon-btn {
   position: relative;
-  border: 6px solid transparent;
-  border-image: url("/ui/btn_wood.png") 5 fill stretch;
-  image-rendering: pixelated;
-  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.32);
   color: #fff;
   text-shadow: 0 1px 2px rgba(0,0,0,0.7);
-  border-radius: 0;
-  /* 모바일 터치 타깃 확보: 상단바 가로 여유분(약 42px)을 써서 좌우로 넓힘.
-     세로는 스테이지 높이 예산(801px)에 여유가 0이라 키울 수 없어, 아래 ::after 로
-     보이는 크기는 그대로 둔 채 히트 영역만 상단바 패딩(8px) 안쪽까지 확장한다. */
-  padding: 3px 10px;
+  border-radius: 8px;
+  /* 나무 테두리(6px)를 뺀 만큼 패딩으로 메워 버튼 크기를 그대로 유지한다.
+     모바일 터치 타깃은 아래 ::after 로 히트 영역만 상단바 패딩(8px) 안쪽까지 넓힌다. */
+  padding: 8px 15px;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
@@ -195,14 +193,13 @@ html, body {
 .icon-btn::after {
   content: '';
   position: absolute;
-  /* 기준이 되는 컨테이닝 블록이 "패딩 박스"라, 투명 테두리 6px 만큼 이미 안쪽에서 시작한다.
-     실제로 테두리 박스 밖으로 N px 넓히려면 -(6+N) 이 필요.
-     세로: 상단바 패딩 8px 안쪽까지 → -(6+8).
-     가로: 버튼 간격이 6px 뿐이라 이웃과 겹치지 않게 3px 까지만 → -(6+3). */
-  inset: -14px -9px;
+  /* 기준 컨테이닝 블록이 "패딩 박스"라 테두리(1px) 만큼 이미 안쪽에서 시작한다.
+     테두리 박스 밖으로 N px 넓히려면 -(1+N).
+     세로: 상단바 패딩 8px 안쪽까지 → -(1+8).
+     가로: 버튼 간격이 6px 뿐이라 이웃과 겹치지 않게 3px 까지만 → -(1+3). */
+  inset: -9px -4px;
 }
-.icon-btn:active { border-image-source: url("/ui/btn_wood_dark.png"); }
-.icon-btn:active { transform: scale(0.94); }
+.icon-btn:active { transform: scale(0.94); background: rgba(0, 0, 0, 0.5); }
 
 /* ---------- 전장 ---------- */
 #battlefield {
@@ -223,10 +220,12 @@ html, body {
   image-rendering: pixelated;
   touch-action: none;
 }
+/* 전장 하단(= 몹 카운트 바 바로 위)에 붙인다. bottom 기준이라 새 줄이 쌓이면 위로 자란다.
+   골드 뱃지는 같은 높이의 오른쪽이라 서로 겹치지 않는다. */
 #summon-log {
   position: absolute;
   left: 6px;
-  top: 40%;
+  bottom: 6px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -312,14 +311,13 @@ html, body {
   justify-content: space-between;
   gap: 10px;
 }
+/* 나무 텍스처 스킨을 빼고 어두운 반투명 칩 형태로. 아이콘은 그대로 둔다. */
 .side-btn {
-  border: 8px solid transparent;
-  border-image: url("/ui/btn_wood.png") 5 fill stretch;
-  image-rendering: pixelated;
-  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.32);
   color: #fff;
   text-shadow: 0 1px 2px rgba(0,0,0,0.7);
-  border-radius: 0;
+  border-radius: 10px;
   padding: 2px;
   width: 66px;
   height: 60px;
@@ -328,7 +326,7 @@ html, body {
   line-height: 1.3;
   cursor: pointer;
 }
-.side-btn:active { border-image-source: url("/ui/btn_wood_dark.png"); transform: scale(0.97); }
+.side-btn:active { transform: scale(0.97); background: rgba(0, 0, 0, 0.5); }
 .summon-wrap { flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 3px; }
 .prob-info-link {
   position: relative;
@@ -469,21 +467,6 @@ html, body {
 .icon-gift { background-image: url("/ui/icons/gift.png"); }
 .icon-music { background-image: url("/ui/icons/music.png"); }
 .icon-party { background-image: url("/ui/icons/party.png"); }
-
-.menu-btn:not(.primary)::before {
-  content: '';
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  margin-right: 8px;
-  vertical-align: -3px;
-  background: center/contain no-repeat;
-  image-rendering: pixelated;
-}
-#menu-shop::before { background-image: url("/ui/icons/shop.png"); }
-#menu-lab::before { background-image: url("/ui/icons/lab.png"); }
-#menu-rank::before { background-image: url("/ui/icons/rank.png"); }
-#menu-reset::before { background-image: url("/ui/icons/trash.png"); }
 
 #btn-settings .ui-icon,
 #btn-pause .ui-icon { width: 18px; height: 18px; vertical-align: middle; }
