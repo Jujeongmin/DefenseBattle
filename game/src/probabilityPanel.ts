@@ -51,9 +51,9 @@ export function openProbabilityPanel(source: ProbabilitySource = 'summon'): void
         ${gacha ? t('prob.introGacha') : t('prob.introSummon')}
       </div>
       <div style="font-weight:700;margin:4px 0 6px">${t('prob.gradeHeader')}</div>
-      ${gradeRows}
-      <div style="font-weight:700;margin:12px 0 6px">${t('prob.jobHeader')}</div>
-      ${jobRows}
+      <div class="prob-grid cols-2">${gradeRows}</div>
+      <div style="font-weight:700;margin:10px 0 6px">${t('prob.jobHeader')}</div>
+      <div class="prob-grid cols-3">${jobRows}</div>
       <div class="d" style="color:#888;font-size:11px;margin-top:10px;line-height:1.5">
         ${footer}
       </div>

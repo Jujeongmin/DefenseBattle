@@ -656,6 +656,14 @@ html, body {
 .row button:disabled { background: #555; opacity: 0.6; }
 .crystal { color: #6fd1ff; font-weight: 700; }
 .prob-pct { font-weight: 800; font-size: 15px; color: #ffe28a; }
+/* 확률 정보: 등급 6 + 직업 3 을 한 줄씩 쌓으면 다이얼로그를 넘겨 스크롤이 생긴다.
+   격자로 묶어 세로를 9행 -> 4행으로 줄여 스크롤 없이 한 화면에 담는다. */
+.prob-grid { display: grid; gap: 6px; margin-bottom: 4px; }
+.prob-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+.prob-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.prob-grid .row { margin-bottom: 0; padding: 6px 8px; gap: 4px; }
+.prob-grid .row .info .t { font-size: 13px; }
+.prob-grid .prob-pct { font-size: 14px; }
 
 /* 보석(크리스탈) 아이콘 - 💎 이모지 대체 (UI/rpg_icon4.png, 25x22) */
 .gem {
