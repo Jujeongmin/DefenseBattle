@@ -15,6 +15,9 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* button/input 류는 font-family 를 상속하지 않고 브라우저 기본 UI 폰트(Arial 등)를 쓴다.
+   명시하지 않으면 버튼 글자만 픽셀 폰트에서 빠진다. */
+button, input, select, textarea { font-family: inherit; }
 :root {
   --bg: #1c1c22;
   --panel: #2a2a33;
