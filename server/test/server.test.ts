@@ -45,7 +45,7 @@ describe('Server Rankings & Cloud Save', () => {
     expect(myBestAlice.bestEntry.wave).toBe(20);
   });
 
-  test('$onItemPurchased grants crystals and ad-removal correctly', async (server) => {
+  test('$onItemPurchased grants crystals and speed-3x-unlock correctly', async (server) => {
     server.connect({ account: 'user-d' });
 
     // 1. 100 크리스탈 패키지 1개 구매
@@ -67,7 +67,7 @@ describe('Server Rankings & Cloud Save', () => {
 
     // 3. 광고제거 구매 -> adRemoved 플래그 + 기존 purchaseIds 보존 확인
     await server.$onItemPurchased({
-      account: 'user-d', purchaseId: 'p3', productId: 'ad-removal', quantity: 1
+      account: 'user-d', purchaseId: 'p3', productId: 'speed-3x-unlock', quantity: 1
     });
     state = await server.loadPlayerData();
     expect(state.adRemoved).toBe(true);
@@ -104,15 +104,15 @@ describe('Server Rankings & Cloud Save', () => {
     expect(state.crystals).toBe(100);
     expect(state.purchaseIds['dup-1']).toBe(true);
 
-    // 3. ad-removal 도 동일 purchaseId 로 중복 지급 안 됨
+    // 3. speed-3x-unlock 도 동일 purchaseId 로 중복 지급 안 됨
     await server.$onItemPurchased({
-      account: 'user-e', purchaseId: 'dup-2', productId: 'ad-removal', quantity: 1
+      account: 'user-e', purchaseId: 'dup-2', productId: 'speed-3x-unlock', quantity: 1
     });
     state = await server.loadPlayerData();
     expect(state.adRemoved).toBe(true);
 
     await server.$onItemPurchased({
-      account: 'user-e', purchaseId: 'dup-2', productId: 'ad-removal', quantity: 1
+      account: 'user-e', purchaseId: 'dup-2', productId: 'speed-3x-unlock', quantity: 1
     });
     state = await server.loadPlayerData();
     expect(state.adRemoved).toBe(true);
@@ -156,19 +156,19 @@ describe('Server Rankings & Cloud Save', () => {
     expect(state.crystals).toBe(15000); // 5100 + 99*100
   });
 
-  test('$onItemPurchased ad-removal does not double-grant', async (server) => {
+  test('$onItemPurchased speed-3x-unlock does not double-grant', async (server) => {
     server.connect({ account: 'user-g' });
 
     // 1. 최초 광고제거 구매
     await server.$onItemPurchased({
-      account: 'user-g', purchaseId: 'ad-1', productId: 'ad-removal', quantity: 1
+      account: 'user-g', purchaseId: 'ad-1', productId: 'speed-3x-unlock', quantity: 1
     });
     let state = await server.loadPlayerData();
     expect(state.adRemoved).toBe(true);
 
     // 2. 다른 purchaseId 로 재구매 시도 -> adRemoved 이미 true, 변경 없음
     await server.$onItemPurchased({
-      account: 'user-g', purchaseId: 'ad-2', productId: 'ad-removal', quantity: 1
+      account: 'user-g', purchaseId: 'ad-2', productId: 'speed-3x-unlock', quantity: 1
     });
     state = await server.loadPlayerData();
     expect(state.adRemoved).toBe(true);

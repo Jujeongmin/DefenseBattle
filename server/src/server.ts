@@ -171,7 +171,7 @@ export class Server {
    * Security guarantees:
    *  - purchaseId deduplication: same purchaseId replayed → no-op (idempotent)
    *  - Quantity validation: must be a positive integer ≤ 99
-   *  - ad-removal: only grants once per account (already-owned check)
+   *  - speed-3x-unlock: only grants once per account (already-owned check)
    *  - Unknown productId: no credits granted, but purchaseId still recorded
    *    to prevent future replay if the productId later becomes known
    *  - All crediting is server-side only; the client cannot trigger grants
@@ -190,7 +190,7 @@ export class Server {
       'gems-550': 550,
       'gems-1200': 1200,
     };
-    const ALLOWED_IDS = new Set([...Object.keys(CRYSTAL_GRANTS), 'ad-removal']);
+    const ALLOWED_IDS = new Set([...Object.keys(CRYSTAL_GRANTS), 'speed-3x-unlock']);
 
     if (!account || typeof account !== 'string') return { success: false };
     if (!purchaseId || typeof purchaseId !== 'string') return { success: false };
@@ -220,7 +220,7 @@ export class Server {
     if (CRYSTAL_GRANTS[productId] !== undefined) {
       const current = Number(state?.crystals || 0);
       updates.crystals = current + CRYSTAL_GRANTS[productId] * qty;
-    } else if (productId === 'ad-removal') {
+    } else if (productId === 'speed-3x-unlock') {
       if (!state?.adRemoved) {
         updates.adRemoved = true;
       }
