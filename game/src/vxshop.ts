@@ -57,7 +57,7 @@ export function setOnCatalogUpdated(fn: (() => void) | null): void {
   onCatalogUpdated = fn;
 }
 
-/** productId 는 config.ts 의 CRYSTAL_PACKAGES[].id / AD_REMOVAL_PRODUCT_ID 와 정확히 일치해야 한다. */
+/** productId 는 config.ts 의 CRYSTAL_PACKAGES[].id / SPEED_3X_UNLOCK_PRODUCT_ID 와 정확히 일치해야 한다. */
 export function buyItem(productId: string): void {
   try {
     VXShop.buyItem(productId);

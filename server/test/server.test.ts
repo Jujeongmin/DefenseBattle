@@ -76,14 +76,14 @@ describe('Server Rankings & Cloud Save', () => {
     expect(state.purchaseIds.p2).toBe(true);
     expect(state.purchaseIds.p3).toBe(true);
 
-    // 4. 미등록 productId -> 성공 응답은 하되 크리스탈/adRemoved 변경 없음(안전한 no-op)
-    await server.$onItemPurchased({
+    // 4. 미등록 productId -> 실패 응답, 상태와 purchaseIds 모두 변경 없음
+    const unknownResult = await server.$onItemPurchased({
       account: 'user-d', purchaseId: 'p4', productId: 'unknown-item', quantity: 1
     });
+    expect(unknownResult.success).toBe(false);
     state = await server.loadPlayerData();
     expect(state.crystals).toBe(1200);
-    // purchaseId는 기록되어 재생 방어됨
-    expect(state.purchaseIds.p4).toBe(true);
+    expect(state.purchaseIds.p4).toBeUndefined();
   });
 
   test('$onItemPurchased deduplicates same purchaseId', async (server) => {
@@ -176,6 +176,26 @@ describe('Server Rankings & Cloud Save', () => {
     expect(state.purchaseIds['ad-2']).toBe(true);
     // crystals 필드가 없던 계정이므로 undefined 또는 0 (구매한 적 없음)
     expect(state.crystals || 0).toBe(0);
+  });
+
+  test('savePlayerData never rolls back VX purchase grants', async (server) => {
+    server.connect({ account: 'user-vx-race' });
+
+    await server.$onItemPurchased({
+      account: 'user-vx-race', purchaseId: 'vx-gems', productId: 'gems-550', quantity: 1
+    });
+    await server.$onItemPurchased({
+      account: 'user-vx-race', purchaseId: 'vx-speed', productId: 'speed-3x-unlock', quantity: 1
+    });
+
+    await server.savePlayerData({ crystals: 0, adRemoved: false, bestWave: 3 }, 'RaceTest');
+
+    const state = await server.loadPlayerData();
+    expect(state.crystals).toBe(550);
+    expect(state.adRemoved).toBe(true);
+    expect(state.purchaseIds['vx-gems']).toBe(true);
+    expect(state.purchaseIds['vx-speed']).toBe(true);
+    expect(state.bestWave).toBe(3);
   });
 
   test('$onItemPurchased rejects empty/missing fields', async (server) => {

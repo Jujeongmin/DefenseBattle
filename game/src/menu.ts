@@ -3,7 +3,7 @@
 // ============================================================
 import {
   DAILY_QUESTS, ACHIEVEMENTS,
-  CRYSTAL_PACKAGES, AD_REMOVAL_PRODUCT_ID, AD_SHOP_REWARD_GEMS,
+  CRYSTAL_PACKAGES, SPEED_3X_UNLOCK_PRODUCT_ID, AD_SHOP_REWARD_GEMS,
   GACHA, GRADES, GRADE_BY_KEY, GRADE_INDEX, JOBS, JOB_SPRITE, starUpCost,
   rollJob, rollGachaGrade, rollGachaMythicPlus,
 } from './config';
@@ -352,9 +352,9 @@ export class Menu {
             <div class="row">
               <div class="info">
                 <div class="t">${t('shop.adTitle')}</div>
-                <div class="d">${t('shop.adDesc', { n: vxPrice(AD_REMOVAL_PRODUCT_ID).replace('VX ', '') })}</div>
+                <div class="d">${t('shop.adDesc', { n: vxPrice(SPEED_3X_UNLOCK_PRODUCT_ID).replace('VX ', '') })}</div>
               </div>
-              <button id="buy-adremove" ${owned ? 'disabled' : ''}>${owned ? t('shop.owned') : vxPrice(AD_REMOVAL_PRODUCT_ID)}</button>
+              <button id="buy-adremove" ${owned ? 'disabled' : ''}>${owned ? t('shop.owned') : vxPrice(SPEED_3X_UNLOCK_PRODUCT_ID)}</button>
             </div>
             <div class="d shop-vx-note">
               ${t('shop.vxNote')}
@@ -380,7 +380,7 @@ export class Menu {
 
       // 광고제거 패키지: 결제창을 띄운다 (지급/소유 등록은 서버가 처리)
       const buy = panel.querySelector('#buy-adremove') as HTMLButtonElement | null;
-      if (buy && !owned) buy.onclick = () => { audio.button(); if (!isPurchasing) { recordPrePurchase(); buyItem(AD_REMOVAL_PRODUCT_ID); } };
+      if (buy && !owned) buy.onclick = () => { audio.button(); if (!isPurchasing) { recordPrePurchase(); buyItem(SPEED_3X_UNLOCK_PRODUCT_ID); } };
 
       this.bindDragScroll(panel.querySelector<HTMLElement>('.shop-scroll'));
 

@@ -20,8 +20,18 @@ export class Server {
   async savePlayerData(meta: any, nickname: string): Promise<boolean> {
     if (!meta) return false;
 
+    // Purchase-owned fields are authoritative on the server. A stale client save
+    // must never roll back VX grants that landed immediately before this call.
+    const currentState = await $global.getMyState();
+    const safeMeta = {
+      ...meta,
+      crystals: Math.max(Number(currentState?.crystals || 0), Number(meta.crystals || 0)),
+      adRemoved: Boolean(currentState?.adRemoved || meta.adRemoved),
+      purchaseIds: currentState?.purchaseIds || {},
+    };
+
     // 1. Save metadata to player's persistent account state
-    await $global.updateMyState(meta);
+    await $global.updateMyState(safeMeta);
 
     // 2. Synchronize best wave to leaderboard if available
     const wave = Number(meta.bestWave || 0);
@@ -166,14 +176,13 @@ export class Server {
    * VX Shop purchase webhook. Verse8 calls this after a payment is confirmed,
    * so all crediting must happen here (never trust the client). productId
    * must exactly match what's registered in the VX Shop dashboard tab AND
-   * game/src/config.ts (CRYSTAL_PACKAGES[].id / AD_REMOVAL_PRODUCT_ID).
+   * game/src/config.ts (CRYSTAL_PACKAGES[].id / SPEED_3X_UNLOCK_PRODUCT_ID).
    *
    * Security guarantees:
    *  - purchaseId deduplication: same purchaseId replayed → no-op (idempotent)
    *  - Quantity validation: must be a positive integer ≤ 99
    *  - speed-3x-unlock: only grants once per account (already-owned check)
-   *  - Unknown productId: no credits granted, but purchaseId still recorded
-   *    to prevent future replay if the productId later becomes known
+   *  - Unknown productId: rejected without recording the purchaseId
    *  - All crediting is server-side only; the client cannot trigger grants
    */
   async $onItemPurchased({ account, purchaseId, productId, quantity }: {
@@ -190,11 +199,13 @@ export class Server {
       'gems-550': 550,
       'gems-1200': 1200,
     };
-    const ALLOWED_IDS = new Set([...Object.keys(CRYSTAL_GRANTS), 'speed-3x-unlock']);
+    const SPEED_3X_UNLOCK_PRODUCT_ID = 'speed-3x-unlock';
+    const ALLOWED_IDS = new Set([...Object.keys(CRYSTAL_GRANTS), SPEED_3X_UNLOCK_PRODUCT_ID]);
 
     if (!account || typeof account !== 'string') return { success: false };
     if (!purchaseId || typeof purchaseId !== 'string') return { success: false };
     if (!productId || typeof productId !== 'string') return { success: false };
+    if (!ALLOWED_IDS.has(productId)) return { success: false };
 
     const qty = Number(quantity);
     if (!Number.isFinite(qty) || !Number.isInteger(qty) || qty < 1 || qty > MAX_QUANTITY) {
@@ -212,15 +223,10 @@ export class Server {
       purchaseIds: { ...processedIds, [purchaseId]: true },
     };
 
-    if (!ALLOWED_IDS.has(productId)) {
-      await $global.updateUserState(account, updates);
-      return { success: true };
-    }
-
     if (CRYSTAL_GRANTS[productId] !== undefined) {
       const current = Number(state?.crystals || 0);
       updates.crystals = current + CRYSTAL_GRANTS[productId] * qty;
-    } else if (productId === 'speed-3x-unlock') {
+    } else if (productId === SPEED_3X_UNLOCK_PRODUCT_ID) {
       if (!state?.adRemoved) {
         updates.adRemoved = true;
       }

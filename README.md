@@ -87,7 +87,7 @@ npm run preview    # 빌드 결과 미리보기
   계정 저장(`savePlayerData`/`loadPlayerData`), VX Shop 구매 지급(`$onItemPurchased`) 모두 구현됨.
 - **VX Shop 실결제** (`vxshop.ts`) — `@verse8/platform/vanilla` 의 `VXShop.buyItem(productId)` 로
   결제창을 띄운다. 상품(가격·재고)은 Verse8 대시보드의 VX Shop 탭에서 등록하며, `productId` 는
-  `config.ts` 의 `CRYSTAL_PACKAGES[].id`/`AD_REMOVAL_PRODUCT_ID` 와 정확히 일치해야 한다.
+  `config.ts` 의 `CRYSTAL_PACKAGES[].id`/`SPEED_3X_UNLOCK_PRODUCT_ID` 와 정확히 일치해야 한다.
   지급은 클라가 아니라 서버의 `$onItemPurchased` 가 계정 상태에 기록하고, 결제창이 닫히면
   클라가 `syncWithServer()` 로 다시 받아와 반영한다.
 - **광고** (`ad.ts`) — `@verse8/ads` 의 `showRewarded`/`showInterstitial`.
