@@ -6,7 +6,8 @@
 //  - 서버의 $onItemPurchased(server/src/server.ts)는 구매 감사 로그만 기록한다.
 // ============================================================
 import { VXShop } from '@verse8/platform/vanilla';
-import { syncWithServer } from './meta';
+import { syncWithServer, applySpeedUnlockEntitlement } from './meta';
+import { SPEED_3X_UNLOCK_PRODUCT_ID } from './config';
 
 export interface PurchaseResult {
   purchased: boolean;
@@ -41,7 +42,12 @@ export function initVXShop(): void {
   initialized = true;
   try {
     VXShop.onClose(handleClose);
-    VXShop.subscribe(() => onCatalogUpdated?.());
+    VXShop.subscribe(() => {
+      // 카탈로그가 갱신될 때마다 3배속 보유 여부를 다시 반영한다.
+      // 대시보드에서 환불되면 purchasedCount 가 0 이 되고, 그 시점에 해금이 회수된다.
+      applySpeedUnlockEntitlement(ownsItem(SPEED_3X_UNLOCK_PRODUCT_ID));
+      onCatalogUpdated?.();
+    });
     VXShop.init();
   } catch (err) {
     console.warn('[vxshop] init failed (Verse8 플랫폼 밖에서 실행 중일 수 있음):', err);
@@ -56,6 +62,17 @@ export function setOnPurchaseSettled(fn: ((result: PurchaseResult) => void) | nu
 /** Verse8 대시보드에 등록된 현재 상품 가격을 반환한다. */
 export function getItemPrice(productId: string): number | undefined {
   return VXShop.getItem(productId)?.price;
+}
+
+/**
+ * 이 계정이 해당 상품을 실제로 보유 중인지 (VX Shop 기준).
+ * undefined = 카탈로그를 아직 못 받아서 알 수 없음(오프라인/Verse8 밖).
+ * 환불되면 purchasedCount 가 줄어들므로, 영구 해금 상품의 권한은 이 값을 따라가야 한다.
+ */
+export function ownsItem(productId: string): boolean | undefined {
+  const item = VXShop.getItem(productId);
+  if (!item) return undefined;
+  return (item.purchasedCount ?? 0) > 0;
 }
 
 /** 상품 목록/가격을 새로 받아오면 열린 상점을 다시 그릴 콜백을 등록한다. */

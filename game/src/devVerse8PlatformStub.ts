@@ -7,15 +7,27 @@
 // ============================================================
 type Listener = (payload: { purchased: boolean; productId: string; action: 'purchased' | 'closed' }) => void;
 
+// 실제 @verse8/platform 의 VXShopItem 중 게임이 쓰는 필드만 추린 형태.
+// (타입이 실제 SDK 보다 좁으면 로컬 타입체크만 통과하고 배포 빌드에서 깨진다.)
+export interface VXShopItem {
+  productId: string;
+  name: string;
+  price: number;
+  stock: number;
+  purchasable: boolean;
+  purchasedCount: number;
+  purchaseLimitReached: boolean;
+}
+
 export const VXShop = {
   init(_config?: { verseId?: string; account?: string }): void {},
-  getItem(_id: string): unknown {
+  getItem(_id: string): VXShopItem | undefined {
     return undefined;
   },
-  getItems(): unknown[] {
+  getItems(): VXShopItem[] {
     return [];
   },
-  getState(): { items: unknown[]; isLoading: boolean; error: string | null } {
+  getState(): { items: VXShopItem[]; isLoading: boolean; error: string | null } {
     return { items: [], isLoading: false, error: null };
   },
   buyItem(productId: string): void {
@@ -25,7 +37,7 @@ export const VXShop = {
     return () => {};
   },
   refresh(): void {},
-  subscribe(_cb: (state: { items: unknown[]; isLoading: boolean; error: string | null }) => void): () => void {
+  subscribe(_cb: (state: { items: VXShopItem[]; isLoading: boolean; error: string | null }) => void): () => void {
     return () => {};
   },
 };

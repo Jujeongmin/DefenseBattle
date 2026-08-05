@@ -245,13 +245,17 @@ export class Menu {
 
     const infoText = removed ? t('shop.adRemovedInfo') : t('shop.adInfo');
 
+    // 광고 미지원 환경이면 눌러도 아무 일이 없으므로 버튼을 비활성화하고 이유를 알려준다.
+    // (예전엔 버튼이 멀쩡히 활성화된 채 클릭 핸들러만 안 붙어서 "눌러도 무반응" 이었다.)
+    const supported = adManager.isRewardAvailable();
     return `
       <div class="shop-section" style="margin-top:14px;">${t('shop.adSection')}</div>
       <div class="shop-ad-box">
-        <div class="shop-ad-info">${infoText}</div>
-        <button id="btn-shop-ad" class="wood-btn shop-ad-btn" ${available ? '' : 'disabled'}>
+        <div class="shop-ad-info">${supported ? infoText : t('shop.adUnsupported')}</div>
+        <button id="btn-shop-ad" class="wood-btn shop-ad-btn" ${available && supported ? '' : 'disabled'}>
           ${btnLabel}
         </button>
+        <div id="shop-ad-status" class="shop-ad-status"></div>
       </div>`;
   }
 
@@ -384,20 +388,37 @@ export class Menu {
 
       // 상점 보상형 광고 버튼
       const shopAdBtn = panel.querySelector('#btn-shop-ad') as HTMLButtonElement | null;
+      const shopAdStatus = panel.querySelector('#shop-ad-status') as HTMLElement | null;
       if (shopAdBtn && adManager.isRewardAvailable()) {
         this.refreshShopAdCooldown(shopAdBtn);
+        const say = (msg: string, color: string) => {
+          if (shopAdStatus) { shopAdStatus.textContent = msg; shopAdStatus.style.color = color; }
+        };
         shopAdBtn.onclick = async () => {
           audio.button();
           shopAdBtn.disabled = true;
+          say(t('shop.adLoading'), '#ffd54f');
           try {
-            const ok = await adManager.watchShopRewardedAd();
-            if (ok) {
+            const res = await adManager.watchShopRewardedAd();
+            if (res.ok) {
               meta.crystals += AD_SHOP_REWARD_GEMS;
               saveMeta();
               this.refresh();
               render();
+              // render() 가 패널을 다시 그리므로 새 노드에서 성공 문구를 표시한다.
+              const s = panel.querySelector('#shop-ad-status') as HTMLElement | null;
+              if (s) { s.textContent = t('shop.adGranted', { n: AD_SHOP_REWARD_GEMS }); s.style.color = '#4caf50'; }
+              return;
             }
-          } catch { /* ignore */ }
+            // 실패는 조용히 넘기지 않고 사유를 그대로 알려준다.
+            if (res.reason === 'dismissed') say(t('shop.adDismissed'), '#ff5252');
+            else if (res.reason === 'unsupported') say(t('shop.adUnsupported'), '#8892b0');
+            else if (res.reason === 'cooldown' || res.reason === 'busy') say('', '#8892b0');
+            else say(t('shop.adNoFill'), '#ff5252');
+          } catch (err) {
+            console.warn('[shop] rewarded ad error:', err);
+            say(t('shop.adNoFill'), '#ff5252');
+          }
           shopAdBtn.disabled = false;
           this.refreshShopAdCooldown(shopAdBtn);
         };

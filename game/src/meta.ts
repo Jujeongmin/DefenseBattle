@@ -34,6 +34,22 @@ function freshMeta(): MetaData {
 
 export const meta: MetaData = load();
 
+// VX Shop 카탈로그로 3배속 보유 여부를 확인했는지. 확인 전에는 로컬/서버 값으로 버티고,
+// 확인된 뒤에는 그 결과가 최종이다(환불 회수가 가능해진다).
+let speedUnlockVerified = false;
+
+/**
+ * VX Shop 이 알려준 보유 여부를 권한에 반영한다.
+ * owned=false 면 환불/미보유이므로 해금을 회수하고, 서버에도 정정된 값을 올린다.
+ */
+export function applySpeedUnlockEntitlement(owned: boolean | undefined): void {
+  if (owned === undefined) return; // 카탈로그 미수신 - 기존 상태 유지
+  speedUnlockVerified = true;
+  if (!!meta.adRemoved === owned) return;
+  meta.adRemoved = owned;
+  saveMeta();
+}
+
 function load(): MetaData {
   const data = getPlatform().loadMeta();
   const base = freshMeta();
@@ -60,9 +76,8 @@ function load(): MetaData {
 }
 
 export function saveMeta(): void {
-  if (meta.adRemoved) {
-    localStorage.setItem('randomdefense.adRemoved.v1', '1');
-  }
+  // '1' 만 쓰고 지우지 않으면 환불로 권한이 사라져도 로컬에 영구히 남는다. 항상 현재 값을 기록.
+  localStorage.setItem('randomdefense.adRemoved.v1', meta.adRemoved ? '1' : '0');
   getPlatform().saveMeta(meta);
 
   // Background auto-save to cloud
@@ -104,7 +119,9 @@ export async function syncWithServer(): Promise<void> {
     meta.bestWave = Math.max(meta.bestWave, Number(serverData.bestWave || 0));
     meta.gachaPity = Math.max(meta.gachaPity, Number(serverData.gachaPity || 0));
 
-    if (serverData.adRemoved || meta.adRemoved) {
+    // 3배속 해금은 VX Shop 보유 여부가 최종 판단 기준이다(환불 시 회수돼야 함).
+    // 카탈로그로 확인된 뒤에는 서버/로컬 값으로 되살리지 않는다.
+    if (!speedUnlockVerified && (serverData.adRemoved || meta.adRemoved)) {
       meta.adRemoved = true;
       localStorage.setItem('randomdefense.adRemoved.v1', '1');
     }

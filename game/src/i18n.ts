@@ -199,6 +199,11 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'shop.adWatchBtn': { en: '📺 Watch ad to claim', ko: '📺 광고 시청하고 받기' },
   'shop.adRemovedInfo': { en: 'Ad-free: get free gems once every 30 minutes, no ad needed!', ko: '광고제거 상태: 30분마다 한 번, 광고 없이 무료 보석을 받으세요!' },
   'shop.adInfo':     { en: 'Watch an ad once every 30 minutes for free gems.', ko: '30분마다 한 번, 광고를 보고 무료 보석을 받으세요!' },
+  'shop.adGranted':  { en: '✅ Reward claimed! (+{n} gems)', ko: '✅ 보상 지급 완료! (보석 +{n})' },
+  'shop.adLoading':  { en: '⏳ Loading ad...', ko: '⏳ 광고 불러오는 중...' },
+  'shop.adDismissed':{ en: '⚠️ Watch the full ad to get the reward.', ko: '⚠️ 광고를 끝까지 봐야 보상이 지급됩니다.' },
+  'shop.adNoFill':   { en: '⚠️ No ad available right now. Please try again later.', ko: '⚠️ 지금은 볼 수 있는 광고가 없어요. 잠시 후 다시 시도해 주세요.' },
+  'shop.adUnsupported': { en: 'ℹ️ Ads are not available in this environment.', ko: 'ℹ️ 이 환경에서는 광고를 볼 수 없습니다.' },
   'shop.minSec':     { en: '{m}m {s}s', ko: '{m}분 {s}초' },
 
   // 게임오버 - 2배 보상 광고

@@ -4,6 +4,16 @@ import { AD_SHOP_COOLDOWN_MINUTES } from './config';
 
 const SHOP_AD_COOLDOWN_KEY = 'randomdefense.shopAdCooldown.v1';
 
+/** 상점 보상형 광고 결과. 실패 시 사용자 안내에 쓸 사유를 함께 돌려준다. */
+export interface ShopAdResult {
+  ok: boolean;
+  /** cooldown=쿨다운 중, busy=이미 재생 중, unsupported=이 환경에서 광고 불가,
+   *  dismissed=중도 이탈, failed=로딩/재생 실패 */
+  reason?: 'cooldown' | 'busy' | 'unsupported' | 'dismissed' | 'failed';
+  code?: string;
+  message?: string;
+}
+
 class AdManager {
   private interstitialActive = false;
   private rewardedActive = false;
@@ -93,18 +103,22 @@ class AdManager {
     return Math.max(0, Math.ceil((nextAvailable - Date.now()) / 1000));
   }
 
-  /** 상점 보상형 광고 시청. 광고제거 상태면 광고 없이 즉시 보상. */
-  async watchShopRewardedAd(): Promise<boolean> {
+  /**
+   * 상점 보상형 광고 시청. 광고제거 상태면 광고 없이 즉시 보상.
+   * 실패 원인을 그대로 돌려줘 호출 측에서 사용자에게 안내할 수 있게 한다.
+   * (예전엔 boolean 만 돌려줘서 광고가 안 뜨면 아무 반응 없이 조용히 끝났다.)
+   */
+  async watchShopRewardedAd(): Promise<ShopAdResult> {
+    if (this.getShopAdCooldownRemaining() > 0) return { ok: false, reason: 'cooldown' };
+
     if (this.isRemoved()) {
-      // 광고제거 상태: 쿨다운만 체크하고 즉시 보상
-      if (this.getShopAdCooldownRemaining() > 0) return false;
-      const nextTime = Date.now() + AD_SHOP_COOLDOWN_MINUTES * 60 * 1000;
-      localStorage.setItem(SHOP_AD_COOLDOWN_KEY, String(nextTime));
-      return true;
+      // 광고제거 상태: 광고 없이 즉시 보상
+      this.startShopAdCooldown();
+      return { ok: true };
     }
 
-    if (this.unsupported || this.rewardedActive) return false;
-    if (this.getShopAdCooldownRemaining() > 0) return false;
+    if (this.rewardedActive) return { ok: false, reason: 'busy' };
+    if (this.unsupported) return { ok: false, reason: 'unsupported' };
 
     this.rewardedActive = true;
 
@@ -112,26 +126,28 @@ class AdManager {
       const result = await Verse8Ads.showRewarded({ placementId: 'shop-gems', timeoutMs: 120_000 });
 
       switch (result.status) {
-        case 'rewarded': {
-          const nextTime = Date.now() + AD_SHOP_COOLDOWN_MINUTES * 60 * 1000;
-          localStorage.setItem(SHOP_AD_COOLDOWN_KEY, String(nextTime));
-          return true;
-        }
+        case 'rewarded':
+          this.startShopAdCooldown();
+          return { ok: true };
         case 'dismissed':
-          return false;
+          return { ok: false, reason: 'dismissed' };
         case 'failed':
-          if (result.error.code === 'unsupported_env') {
-            this.unsupported = true;
-          }
-          return false;
+          if (result.error.code === 'unsupported_env') this.unsupported = true;
+          console.warn('[ads] shop rewarded failed:', result.error);
+          return { ok: false, reason: 'failed', code: result.error.code, message: result.error.message };
         default:
-          return false;
+          return { ok: false, reason: 'failed' };
       }
-    } catch {
-      return false;
+    } catch (err) {
+      console.warn('[ads] shop rewarded threw:', err);
+      return { ok: false, reason: 'failed' };
     } finally {
       this.rewardedActive = false;
     }
+  }
+
+  private startShopAdCooldown(): void {
+    localStorage.setItem(SHOP_AD_COOLDOWN_KEY, String(Date.now() + AD_SHOP_COOLDOWN_MINUTES * 60 * 1000));
   }
 }
 
