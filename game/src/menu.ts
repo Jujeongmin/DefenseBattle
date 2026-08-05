@@ -3,7 +3,7 @@
 // ============================================================
 import {
   DAILY_QUESTS, ACHIEVEMENTS,
-  CRYSTAL_PACKAGES, AD_REMOVE_VX, AD_REMOVAL_PRODUCT_ID, AD_SHOP_REWARD_GEMS,
+  CRYSTAL_PACKAGES, AD_REMOVAL_PRODUCT_ID, AD_SHOP_REWARD_GEMS,
   GACHA, GRADES, GRADE_BY_KEY, GRADE_INDEX, JOBS, JOB_SPRITE, starUpCost,
   rollJob, rollGachaGrade, rollGachaMythicPlus,
 } from './config';
@@ -17,7 +17,7 @@ import { t, jobName, gradeName } from './i18n';
 import { openProbabilityPanel } from './probabilityPanel';
 import { openRankPanel } from './rankPanel';
 import { adManager } from './ad';
-import { buyItem, setOnPurchaseSettled } from './vxshop';
+import { buyItem, getItemPrice, setOnCatalogUpdated, setOnPurchaseSettled } from './vxshop';
 import type { AchievementDef, Job, GradeKey } from './types';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
@@ -301,13 +301,17 @@ export class Menu {
 
     const render = () => {
       const owned = plat.isAdRemoved();
+      const vxPrice = (productId: string): string => {
+        const price = getItemPrice(productId);
+        return price === undefined ? 'VX …' : `VX ${price.toLocaleString()}`;
+      };
       const pkgs = CRYSTAL_PACKAGES.map((p) => `
         <div class="row">
           <div class="info">
             <div class="t"><span class="gem"></span> ${t('shop.gemPack', { n: p.crystals.toLocaleString() })}${p.bonus ? ` <span style="color:#7ee87e">+${p.bonus}%</span>` : ''}</div>
-            <div class="d">VX ${p.vx}</div>
+            <div class="d">${vxPrice(p.id)}</div>
           </div>
-          <button data-pkg-id="${p.id}">VX ${p.vx}</button>
+          <button data-pkg-id="${p.id}">${vxPrice(p.id)}</button>
         </div>`).join('');
       panel.innerHTML = `
         <div class="dialog shop-dialog">
@@ -348,9 +352,9 @@ export class Menu {
             <div class="row">
               <div class="info">
                 <div class="t">${t('shop.adTitle')}</div>
-                <div class="d">${t('shop.adDesc', { n: AD_REMOVE_VX })}</div>
+                <div class="d">${t('shop.adDesc', { n: vxPrice(AD_REMOVAL_PRODUCT_ID).replace('VX ', '') })}</div>
               </div>
-              <button id="buy-adremove" ${owned ? 'disabled' : ''}>${owned ? t('shop.owned') : `VX ${AD_REMOVE_VX}`}</button>
+              <button id="buy-adremove" ${owned ? 'disabled' : ''}>${owned ? t('shop.owned') : vxPrice(AD_REMOVAL_PRODUCT_ID)}</button>
             </div>
             <div class="d shop-vx-note">
               ${t('shop.vxNote')}
@@ -405,6 +409,7 @@ export class Menu {
         panel.classList.add('hidden');
         isPurchasing = false;
         setOnPurchaseSettled(null);
+        setOnCatalogUpdated(null);
         this.refresh();
       };
     };
@@ -416,6 +421,9 @@ export class Menu {
       if (meta.crystals > prePurchaseCrystals || ((meta.adRemoved || false) && !prePurchaseAdRemoved)) {
         showPurchaseToast();
       }
+    });
+    setOnCatalogUpdated(() => {
+      if (!panel.classList.contains('hidden')) render();
     });
     render();
     panel.classList.remove('hidden');

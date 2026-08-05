@@ -10,6 +10,7 @@ import { syncWithServer } from './meta';
 
 let initialized = false;
 let onSettled: (() => void) | null = null;
+let onCatalogUpdated: (() => void) | null = null;
 
 // 결제창이 닫힐 때마다(구매 성공/취소 모두) 서버 상태를 다시 받아와 반영한다.
 // 지급은 이미 서버에서 끝난 뒤이므로, 여기서는 "내 계정 상태를 새로고침"만 하면 된다.
@@ -34,6 +35,7 @@ export function initVXShop(): void {
   initialized = true;
   try {
     VXShop.onClose(handleClose);
+    VXShop.subscribe(() => onCatalogUpdated?.());
     VXShop.init();
   } catch (err) {
     console.warn('[vxshop] init failed (Verse8 플랫폼 밖에서 실행 중일 수 있음):', err);
@@ -43,6 +45,16 @@ export function initVXShop(): void {
 /** 상점 패널이 열려있는 동안, 결제 완료 후 다시 그릴 콜백을 등록/해제한다. */
 export function setOnPurchaseSettled(fn: (() => void) | null): void {
   onSettled = fn;
+}
+
+/** Verse8 대시보드에 등록된 현재 상품 가격을 반환한다. */
+export function getItemPrice(productId: string): number | undefined {
+  return VXShop.getItem(productId)?.price;
+}
+
+/** 상품 목록/가격을 새로 받아오면 열린 상점을 다시 그릴 콜백을 등록한다. */
+export function setOnCatalogUpdated(fn: (() => void) | null): void {
+  onCatalogUpdated = fn;
 }
 
 /** productId 는 config.ts 의 CRYSTAL_PACKAGES[].id / AD_REMOVAL_PRODUCT_ID 와 정확히 일치해야 한다. */
