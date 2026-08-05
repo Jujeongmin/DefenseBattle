@@ -58,7 +58,7 @@ class AdManager {
     this.rewardedActive = true;
 
     try {
-      const result = await Verse8Ads.showRewarded({ placementId });
+      const result = await Verse8Ads.showRewarded({ placementId, timeoutMs: 120_000 });
 
       switch (result.status) {
         case 'rewarded':
@@ -109,7 +109,7 @@ class AdManager {
     this.rewardedActive = true;
 
     try {
-      const result = await Verse8Ads.showRewarded({ placementId: 'shop-gems' });
+      const result = await Verse8Ads.showRewarded({ placementId: 'shop-gems', timeoutMs: 120_000 });
 
       switch (result.status) {
         case 'rewarded': {

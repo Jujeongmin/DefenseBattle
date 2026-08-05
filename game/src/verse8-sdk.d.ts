@@ -16,6 +16,6 @@ declare module '@verse8/ads' {
 
   export const Verse8Ads: {
     showInterstitial(opts?: { placementId?: string }): Promise<void>;
-    showRewarded(opts?: { placementId?: string }): Promise<Verse8AdResult>;
+    showRewarded(opts?: { placementId?: string; timeoutMs?: number }): Promise<Verse8AdResult>;
   };
 }
