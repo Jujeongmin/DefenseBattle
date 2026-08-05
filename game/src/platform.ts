@@ -49,8 +49,7 @@ export class LocalPlatform implements PlatformAdapter {
     }
   }
 
-  // 광고제거(=3배속 해금) 여부. 실제 지급은 VX Shop 결제 후 서버가 계정 상태에 기록하며,
-  // 클라는 syncWithServer() 가 이 키에 반영한다 (meta.ts 참고).
+  // 광고제거(=3배속 해금) 여부. VX Shop onClose.purchased 성공 시 저장된다.
   isAdRemoved(): boolean {
     return this.kv.get(AD_KEY) === '1';
   }

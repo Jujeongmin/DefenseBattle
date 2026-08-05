@@ -164,7 +164,7 @@ export const RESEARCH_PER: Record<ResearchKey, number> =
 
 // ---------- 상점 (VX Shop 실결제) ----------
 // productId 는 Verse8 대시보드의 VX Shop 탭에 "정확히 이 문자열"로 상품을 등록해야
-// 서버의 $onItemPurchased(server/src/server.ts) 가 올바른 상품으로 인식해 지급한다.
+// 클라이언트 onClose(purchased)가 이 ID를 기준으로 보상을 지급한다.
 // 가격은 VX Shop SDK가 대시보드의 실제 값을 조회해 표시한다.
 export const SPEED_3X_UNLOCK_PRODUCT_ID = 'speed-3x-unlock';
 export const AD_INTERSTITIAL_COOLDOWN = 90; // 전면광고 최소 간격(초)

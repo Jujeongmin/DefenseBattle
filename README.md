@@ -84,12 +84,12 @@ npm run preview    # 빌드 결과 미리보기
 ## Verse8 연동 현황
 
 - **GameServer** (`server/src/server.ts`) — 랭킹(`submitWave`/`getTopRankings`/`getMyBestRank`),
-  계정 저장(`savePlayerData`/`loadPlayerData`), VX Shop 구매 지급(`$onItemPurchased`) 모두 구현됨.
+  계정 저장(`savePlayerData`/`loadPlayerData`), VX Shop 구매 감사 로그(`$onItemPurchased`) 구현.
 - **VX Shop 실결제** (`vxshop.ts`) — `@verse8/platform/vanilla` 의 `VXShop.buyItem(productId)` 로
   결제창을 띄운다. 상품(가격·재고)은 Verse8 대시보드의 VX Shop 탭에서 등록하며, `productId` 는
   `config.ts` 의 `CRYSTAL_PACKAGES[].id`/`SPEED_3X_UNLOCK_PRODUCT_ID` 와 정확히 일치해야 한다.
-  지급은 클라가 아니라 서버의 `$onItemPurchased` 가 계정 상태에 기록하고, 결제창이 닫히면
-  클라가 `syncWithServer()` 로 다시 받아와 반영한다.
+  Cat Trio와 동일하게 결제창의 `onClose.purchased` 성공 결과를 확인한 뒤 클라이언트가 상품 ID에
+  해당하는 젬/3배속을 즉시 지급·저장한다. 서버 `$onItemPurchased` 는 감사 로그만 남긴다.
 - **광고** (`ad.ts`) — `@verse8/ads` 의 `showRewarded`/`showInterstitial`.
 - 저장/계정은 `platform.ts` 의 `PlatformAdapter` 로 추상화. 현재는 `LocalPlatform`
   (localStorage, Node 에선 메모리 폴백)만 구현하며, `loadMeta()/saveMeta()/isAdRemoved()/accountId()`

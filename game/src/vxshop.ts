@@ -2,21 +2,28 @@
 //  VX Shop 연동 (실결제) - @verse8/platform 래퍼
 //  - 상품 목록/가격/재고는 Verse8 대시보드(VX Shop 탭)에서 관리한다.
 //  - 결제창은 Verse8 이 직접 띄우고 검증하므로, 클라이언트는 잔액을 들고 있지 않는다.
-//  - 지급(크리스탈 적립/광고제거 등)은 서버의 $onItemPurchased(server/src/server.ts)
-//    에서 계정 상태로 기록하고, 클라는 결제창이 닫힌 뒤 서버 상태를 다시 동기화해서 반영한다.
+//  - Cat Trio와 동일하게 onClose.purchased 성공 결과에서 보상을 즉시 지급·저장한다.
+//  - 서버의 $onItemPurchased(server/src/server.ts)는 구매 감사 로그만 기록한다.
 // ============================================================
 import { VXShop } from '@verse8/platform/vanilla';
 import { syncWithServer } from './meta';
 
+export interface PurchaseResult {
+  purchased: boolean;
+  productId: string;
+  action: 'purchased' | 'closed';
+}
+
 let initialized = false;
-let onSettled: (() => void) | null = null;
+let onSettled: ((result: PurchaseResult) => void) | null = null;
 let onCatalogUpdated: (() => void) | null = null;
 
-// 결제창이 닫힐 때마다(구매 성공/취소 모두) 서버 상태를 다시 받아와 반영한다.
-// 지급은 이미 서버에서 끝난 뒤이므로, 여기서는 "내 계정 상태를 새로고침"만 하면 된다.
-// 웹훅 반영 지연을 고려해 짧은 간격으로 최대 3회 재동기화한 뒤 settled 콜백을 호출한다.
-async function handleClose(): Promise<void> {
-  VXShop.refresh();
+// 결제창이 닫히면 성공 payload를 상점에 전달한 뒤 로컬/클라우드 상태를 동기화한다.
+async function handleClose(result: PurchaseResult): Promise<void> {
+  // Cat Trio와 동일하게 결제 성공 payload를 기준으로 클라이언트 지급을 먼저 확정한다.
+  // onSettled 콜백이 로컬 상태 저장과 서버 savePlayerData 호출을 담당한다.
+  onSettled?.(result);
+  void VXShop.refresh();
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       await syncWithServer();
@@ -27,7 +34,6 @@ async function handleClose(): Promise<void> {
       await new Promise<void>((r) => setTimeout(r, 800));
     }
   }
-  onSettled?.();
 }
 
 export function initVXShop(): void {
@@ -43,7 +49,7 @@ export function initVXShop(): void {
 }
 
 /** 상점 패널이 열려있는 동안, 결제 완료 후 다시 그릴 콜백을 등록/해제한다. */
-export function setOnPurchaseSettled(fn: (() => void) | null): void {
+export function setOnPurchaseSettled(fn: ((result: PurchaseResult) => void) | null): void {
   onSettled = fn;
 }
 

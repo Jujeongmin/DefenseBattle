@@ -5,7 +5,7 @@
 //    빌드(vite build)에는 절대 포함되지 않는다.
 //  - 로컬에서는 실제 결제창을 띄울 수 없으므로 buyItem 은 안내만 하고 끝낸다.
 // ============================================================
-type Listener = () => void;
+type Listener = (payload: { purchased: boolean; productId: string; action: 'purchased' | 'closed' }) => void;
 
 export const VXShop = {
   init(_config?: { verseId?: string; account?: string }): void {},
@@ -21,7 +21,9 @@ export const VXShop = {
   buyItem(productId: string): void {
     console.warn(`[VXShop dev-stub] buyItem("${productId}") - 로컬 프리뷰에서는 결제창을 띄울 수 없습니다.`);
   },
-  onClose(_cb: Listener): void {},
+  onClose(_cb: Listener): () => void {
+    return () => {};
+  },
   refresh(): void {},
   subscribe(_cb: (state: { items: unknown[]; isLoading: boolean; error: string | null }) => void): () => void {
     return () => {};

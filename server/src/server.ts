@@ -20,18 +20,8 @@ export class Server {
   async savePlayerData(meta: any, nickname: string): Promise<boolean> {
     if (!meta) return false;
 
-    // Purchase-owned fields are authoritative on the server. A stale client save
-    // must never roll back VX grants that landed immediately before this call.
-    const currentState = await $global.getMyState();
-    const safeMeta = {
-      ...meta,
-      crystals: Math.max(Number(currentState?.crystals || 0), Number(meta.crystals || 0)),
-      adRemoved: Boolean(currentState?.adRemoved || meta.adRemoved),
-      purchaseIds: currentState?.purchaseIds || {},
-    };
-
-    // 1. Save metadata to player's persistent account state
-    await $global.updateMyState(safeMeta);
+    // Cat Trio와 동일하게 게임 저장 데이터를 별도 필드에 통째로 보관한다.
+    await $global.updateMyState({ gameSave: meta });
 
     // 2. Synchronize best wave to leaderboard if available
     const wave = Number(meta.bestWave || 0);
@@ -72,7 +62,9 @@ export class Server {
    * Loads the player's metadata from the server.
    */
   async loadPlayerData(): Promise<any> {
-    return await $global.getMyState();
+    const state = await $global.getMyState();
+    // 기존 최상위 저장 형식도 한 번 읽어 마이그레이션 전 진행도를 보존한다.
+    return state?.gameSave || state || null;
   }
 
   /**
@@ -173,66 +165,29 @@ export class Server {
   }
 
   /**
-   * VX Shop purchase webhook. Verse8 calls this after a payment is confirmed,
-   * so all crediting must happen here (never trust the client). productId
-   * must exactly match what's registered in the VX Shop dashboard tab AND
-   * game/src/config.ts (CRYSTAL_PACKAGES[].id / SPEED_3X_UNLOCK_PRODUCT_ID).
-   *
-   * Security guarantees:
-   *  - purchaseId deduplication: same purchaseId replayed → no-op (idempotent)
-   *  - Quantity validation: must be a positive integer ≤ 99
-   *  - speed-3x-unlock: only grants once per account (already-owned check)
-   *  - Unknown productId: rejected without recording the purchaseId
-   *  - All crediting is server-side only; the client cannot trigger grants
+   * VX Shop 결제 감사 콜백. Cat Trio의 검증된 구현과 동일하게 지급은
+   * 클라이언트 onClose(purchased)에서 처리하고 서버에는 구매 기록만 남긴다.
    */
-  async $onItemPurchased({ account, purchaseId, productId, quantity }: {
+  async $onItemPurchased({ account, purchaseId, productId, quantity, metadata }: {
     account: string;
     purchaseId: string;
     productId: string;
-    quantity: number;
+    quantity?: number;
     metadata?: any;
-  }): Promise<{ success: boolean }> {
-    const MAX_QUANTITY = 99;
-
-    const CRYSTAL_GRANTS: Record<string, number> = {
-      'gems-100': 100,
-      'gems-550': 550,
-      'gems-1200': 1200,
-    };
-    const SPEED_3X_UNLOCK_PRODUCT_ID = 'speed-3x-unlock';
-    const ALLOWED_IDS = new Set([...Object.keys(CRYSTAL_GRANTS), SPEED_3X_UNLOCK_PRODUCT_ID]);
-
-    if (!account || typeof account !== 'string') return { success: false };
-    if (!purchaseId || typeof purchaseId !== 'string') return { success: false };
-    if (!productId || typeof productId !== 'string') return { success: false };
-    if (!ALLOWED_IDS.has(productId)) return { success: false };
-
-    const qty = Number(quantity);
-    if (!Number.isFinite(qty) || !Number.isInteger(qty) || qty < 1 || qty > MAX_QUANTITY) {
-      return { success: false };
+  }): Promise<void> {
+    if (!account || !productId) return;
+    const qty = Number.isFinite(Number(quantity)) && Number(quantity) > 0 ? Number(quantity) : 1;
+    try {
+      await $global.addCollectionItem('vx_purchases', {
+        account,
+        purchaseId: purchaseId || null,
+        productId,
+        quantity: qty,
+        metadata: metadata ?? null,
+        createdAt: Date.now(),
+      });
+    } catch {
+      // 감사 로그 실패가 결제 완료 흐름을 막지 않게 한다.
     }
-
-    const state = await $global.getUserState(account);
-    const processedIds: Record<string, true> = state?.purchaseIds || {};
-
-    if (processedIds[purchaseId]) {
-      return { success: true };
-    }
-
-    const updates: Record<string, any> = {
-      purchaseIds: { ...processedIds, [purchaseId]: true },
-    };
-
-    if (CRYSTAL_GRANTS[productId] !== undefined) {
-      const current = Number(state?.crystals || 0);
-      updates.crystals = current + CRYSTAL_GRANTS[productId] * qty;
-    } else if (productId === SPEED_3X_UNLOCK_PRODUCT_ID) {
-      if (!state?.adRemoved) {
-        updates.adRemoved = true;
-      }
-    }
-
-    await $global.updateUserState(account, updates);
-    return { success: true };
   }
 }

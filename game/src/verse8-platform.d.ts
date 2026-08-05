@@ -12,7 +12,7 @@ declare module '@verse8/platform/vanilla' {
     getItems(): VXShopItem[];
     getState(): { items: VXShopItem[]; isLoading: boolean; error: string | null };
     buyItem(productId: string): void;
-    onClose(cb: () => void): void;
+    onClose(cb: (payload: { purchased: boolean; productId: string; action: 'purchased' | 'closed' }) => void): () => void;
     refresh(): void;
     subscribe(cb: (state: { items: VXShopItem[]; isLoading: boolean; error: string | null }) => void): () => void;
   };

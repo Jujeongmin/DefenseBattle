@@ -363,9 +363,7 @@ export class Menu {
           </div>
         </div>`;
 
-      // 보석 패키지 구매: Verse8 결제창을 띄운다. 지급은 서버(server/src/server.ts 의
-      // $onItemPurchased)가 담당하고, 결제창이 닫히면 vxshop.ts 가 서버 상태를 다시 받아와
-      // meta 에 반영한 뒤 setOnPurchaseSettled 로 등록해둔 render() 가 호출된다.
+      // 보석 패키지: 결제창을 띄우고 onClose.purchased 성공 시 아래 콜백에서 지급한다.
       panel.querySelectorAll<HTMLButtonElement>('[data-pkg-id]').forEach((b) => {
         b.onclick = () => { audio.button(); if (!isPurchasing) { recordPrePurchase(); buyItem(b.dataset.pkgId as string); } };
       });
@@ -378,7 +376,7 @@ export class Menu {
       const probBtn = panel.querySelector('#btn-prob-info-shop') as HTMLButtonElement | null;
       if (probBtn) probBtn.onclick = () => openProbabilityPanel('gacha');
 
-      // 광고제거 패키지: 결제창을 띄운다 (지급/소유 등록은 서버가 처리)
+      // 3배속 패키지: 결제창을 띄우고 onClose.purchased 성공 시 아래 콜백에서 지급한다.
       const buy = panel.querySelector('#buy-adremove') as HTMLButtonElement | null;
       if (buy && !owned) buy.onclick = () => { audio.button(); if (!isPurchasing) { recordPrePurchase(); buyItem(SPEED_3X_UNLOCK_PRODUCT_ID); } };
 
@@ -413,9 +411,19 @@ export class Menu {
         this.refresh();
       };
     };
-    // 결제창이 닫혀 서버 지급이 반영된 뒤(vxshop.ts) 상점이 아직 열려있으면 다시 그린다.
-    setOnPurchaseSettled(() => {
+    // 결제창이 닫히면 성공한 상품을 즉시 지급·저장하고 상점을 다시 그린다.
+    setOnPurchaseSettled((result) => {
       isPurchasing = false;
+      if (result.purchased) {
+        const purchasedPackage = CRYSTAL_PACKAGES.find((p) => p.id === result.productId);
+        if (purchasedPackage) {
+          meta.crystals += purchasedPackage.crystals;
+          saveMeta();
+        } else if (result.productId === SPEED_3X_UNLOCK_PRODUCT_ID) {
+          meta.adRemoved = true;
+          saveMeta();
+        }
+      }
       this.refresh();
       render();
       if (meta.crystals > prePurchaseCrystals || ((meta.adRemoved || false) && !prePurchaseAdRemoved)) {
