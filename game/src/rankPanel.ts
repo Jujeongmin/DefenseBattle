@@ -112,8 +112,8 @@ export function openRankPanel(): void {
             <span style="font-size:11px; color:#888;">${t('rank.maxChars')}</span>
           </div>
           <div style="display:flex; gap: 8px; align-items:stretch; height: 38px;">
-            <input type="text" id="rank-panel-nickname" value="${currentNick}" style="flex:1; padding: 6px 12px; border: 1px solid #444; background: #222; color: #fff; border-radius: 8px; font-size: 13px;" maxLength="15" />
-            <button id="btn-save-nickname" class="wood-btn" style="padding: 0 16px; font-size: 13px; font-weight:800; border-radius:0;">${t('rank.changeNickname')}</button>
+            <input type="text" id="rank-panel-nickname" value="${currentNick}" size="1" style="flex:1 1 auto; min-width:0; width:100%; padding: 6px 12px; border: 1px solid #444; background: #222; color: #fff; border-radius: 8px; font-size: 13px;" maxLength="15" />
+            <button id="btn-save-nickname" class="wood-btn" style="flex:0 0 auto; white-space:nowrap; padding: 0 16px; font-size: 13px; font-weight:800; border-radius:0;">${t('rank.changeNickname')}</button>
           </div>
           <div id="nickname-save-status" style="font-size:11px; color:#8892b0; margin-top:5px; min-height:16px;"></div>
         </div>
