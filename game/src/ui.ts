@@ -313,13 +313,23 @@ export class UI {
   private showGameOver(d: GameOverData): void {
     const panel = $('gameover-panel');
     const baseReward = crystalReward(d.wave);
-    // 보상은 아직 지급하지 않음 — 광고 선택 후 지급
-    let rewardClaimed = false;
-    const grantReward = (multiplier: number) => {
-      if (rewardClaimed) return;
-      rewardClaimed = true;
-      meta.crystals += baseReward * multiplier;
+    // 기본 보상은 패널이 뜨는 즉시 지급한다. 예전엔 '2배 받기'/'그냥 받기' 를 눌러야
+    // 지급돼서, 안 누르고 메인으로 나가면 그 판 보상이 통째로 사라졌다.
+    // (engine.finish 는 this.over 가드로 판당 한 번만 emit 하므로 중복 지급되지 않는다.)
+    meta.crystals += baseReward;
+    saveMeta();
+
+    // 광고 보상은 이미 받은 기본 보상 위에 1배를 더해 총 2배로 만든다.
+    let bonusClaimed = false;
+    const grantBonus = () => {
+      if (bonusClaimed) return;
+      bonusClaimed = true;
+      meta.crystals += baseReward;
       saveMeta();
+      const earned = panel.querySelector('.reward .crystal');
+      if (earned) earned.innerHTML = `<span class="gem"></span> ${baseReward * 2}`;
+      const owned = panel.querySelector('.owned-count');
+      if (owned) owned.innerHTML = `<span class="gem"></span> ${meta.crystals}`;
     };
 
     const currentNick = getLocalNickname();
@@ -330,7 +340,7 @@ export class UI {
         <div class="d" style="color:#bbb; margin-bottom: 8px;">${d.reason}</div>
         <div class="wave-big" style="font-size: 32px; font-weight: 800; color: #ffcf3f; margin-bottom: 12px;">${t('hud.wave', { n: d.wave })}</div>
         <div class="reward" style="margin-bottom: 4px;">${t('over.reward')} <span class="crystal"><span class="gem"></span> ${baseReward}</span></div>
-        <div class="d" style="color:#bbb; margin-bottom: 16px;">${t('over.owned')} <span class="gem"></span> ${meta.crystals}</div>
+        <div class="d" style="color:#bbb; margin-bottom: 16px;">${t('over.owned')} <span class="owned-count"><span class="gem"></span> ${meta.crystals}</span></div>
 
         <!-- 2배 보상 광고 카드 -->
         <div style="background: rgba(100, 255, 218, 0.05); border: 1px solid rgba(100, 255, 218, 0.2); border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; text-align: center;">
@@ -366,9 +376,13 @@ export class UI {
     const skipBtn = panel.querySelector('#btn-skip-ad') as HTMLButtonElement;
     const doubleStatus = panel.querySelector('#double-reward-status') as HTMLDivElement;
 
+    // 기본 보상은 이미 지급됐다는 사실을 먼저 알린다.
+    doubleStatus.textContent = t('over.baseAutoGranted', { n: baseReward });
+    doubleStatus.style.color = '#8892b0';
+
     if (adManager.isAdRemoved()) {
       // 광고제거 상태: 바로 2배 지급, 버튼 숨김
-      grantReward(2);
+      grantBonus();
       doubleBtn.style.display = 'none';
       skipBtn.style.display = 'none';
       doubleStatus.textContent = t('over.adRemovedAutoDouble');
@@ -385,13 +399,12 @@ export class UI {
       try {
         const ok = await adManager.watchRewardedAd('double-reward');
         if (ok) {
-          grantReward(2);
-          doubleStatus.textContent = t('over.doubleGranted', { n: baseReward * 2 });
+          // grantBonus 가 크리스탈 지급과 화면 숫자 갱신을 함께 처리한다.
+          grantBonus();
+          doubleStatus.textContent = t('over.doubleGranted', { n: baseReward });
           doubleStatus.style.color = '#4caf50';
           doubleBtn.style.display = 'none';
           skipBtn.style.display = 'none';
-          // update displayed gem count
-          panel.querySelector('.reward .crystal')!.innerHTML = `<span class="gem"></span> ${baseReward * 2}`;
         } else {
           doubleBtn.disabled = false;
           skipBtn.disabled = false;
@@ -406,9 +419,9 @@ export class UI {
       }
     };
 
+    // 기본 보상은 이미 지급됐으므로 이 버튼은 광고 카드를 닫기만 한다.
     skipBtn.onclick = () => {
       audio.button();
-      grantReward(1);
       doubleBtn.style.display = 'none';
       skipBtn.style.display = 'none';
       doubleStatus.textContent = t('over.baseGranted', { n: baseReward });
