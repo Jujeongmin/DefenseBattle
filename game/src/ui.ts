@@ -346,9 +346,8 @@ export class UI {
         <div style="background: rgba(100, 255, 218, 0.05); border: 1px solid rgba(100, 255, 218, 0.2); border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; text-align: center;">
           <div style="font-weight: 800; font-size: 14px; color: #64ffda; margin-bottom: 6px;">${t('over.doubleAdTitle')}</div>
           <div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">${t('over.doubleAdDesc', { n: baseReward * 2 })}</div>
-          <div style="display: flex; gap: 8px; justify-content: center; max-width: 280px; margin: 0 auto;">
+          <div style="display: flex; justify-content: center; max-width: 280px; margin: 0 auto;">
             <button id="btn-double-reward" class="wood-btn" style="flex:1; padding: 0 12px; font-size: 13px; font-weight: 800; border-radius: 0;">${t('over.doubleBtn')}</button>
-            <button id="btn-skip-ad" class="wood-btn" style="flex:1; padding: 0 12px; font-size: 12px; border-radius: 0; opacity: 0.7;">${t('over.skipBtn')}</button>
           </div>
           <div id="double-reward-status" style="font-size: 11px; color: #8892b0; margin-top: 6px; min-height: 16px;"></div>
         </div>
@@ -373,7 +372,6 @@ export class UI {
 
     // 2배 보상 광고 버튼
     const doubleBtn = panel.querySelector('#btn-double-reward') as HTMLButtonElement;
-    const skipBtn = panel.querySelector('#btn-skip-ad') as HTMLButtonElement;
     const doubleStatus = panel.querySelector('#double-reward-status') as HTMLDivElement;
 
     // 기본 보상은 이미 지급됐다는 사실을 먼저 알린다.
@@ -384,7 +382,6 @@ export class UI {
       // 광고제거 상태: 바로 2배 지급, 버튼 숨김
       grantBonus();
       doubleBtn.style.display = 'none';
-      skipBtn.style.display = 'none';
       doubleStatus.textContent = t('over.adRemovedAutoDouble');
       doubleStatus.style.color = '#4caf50';
     }
@@ -392,7 +389,6 @@ export class UI {
     doubleBtn.onclick = async () => {
       audio.button();
       doubleBtn.disabled = true;
-      skipBtn.disabled = true;
       doubleStatus.textContent = t('over.adLoading');
       doubleStatus.style.color = '#ffd54f';
 
@@ -404,28 +400,16 @@ export class UI {
           doubleStatus.textContent = t('over.doubleGranted', { n: baseReward });
           doubleStatus.style.color = '#4caf50';
           doubleBtn.style.display = 'none';
-          skipBtn.style.display = 'none';
         } else {
           doubleBtn.disabled = false;
-          skipBtn.disabled = false;
           doubleStatus.textContent = t('over.adIncomplete');
           doubleStatus.style.color = '#ff5252';
         }
       } catch {
         doubleBtn.disabled = false;
-        skipBtn.disabled = false;
         doubleStatus.textContent = t('over.adLoadFailed');
         doubleStatus.style.color = '#ff5252';
       }
-    };
-
-    // 기본 보상은 이미 지급됐으므로 이 버튼은 광고 카드를 닫기만 한다.
-    skipBtn.onclick = () => {
-      audio.button();
-      doubleBtn.style.display = 'none';
-      skipBtn.style.display = 'none';
-      doubleStatus.textContent = t('over.baseGranted', { n: baseReward });
-      doubleStatus.style.color = '#8892b0';
     };
 
     submitBtn.onclick = async () => {

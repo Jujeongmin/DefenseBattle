@@ -210,14 +210,11 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'over.doubleAdTitle': { en: '📺 Watch ad for 2x reward', ko: '📺 광고 시청하고 2배 보상' },
   'over.doubleAdDesc':  { en: 'Watch an ad to get 2x gems ({n})!', ko: '광고를 보면 보석을 2배 ({n}개) 받을 수 있어요!' },
   'over.doubleBtn':     { en: '📺 Get 2x', ko: '📺 2배 받기' },
-  // 기본 보상이 자동 지급되므로 이 버튼은 '받기' 가 아니라 광고 거절이다.
-  'over.skipBtn':       { en: 'No thanks', ko: '괜찮아요' },
   'over.adRemovedAutoDouble': { en: '✅ Ad-free bonus: 2x gems granted automatically!', ko: '✅ 광고제거 혜택: 2배 보석 자동 지급!' },
   'over.adLoading':     { en: 'Loading ad...', ko: '광고 로딩 중...' },
   'over.doubleGranted': { en: '✅ 2x reward granted! (+{n} gems)', ko: '✅ 2배 보상 지급 완료! (+{n} 보석)' },
   'over.adIncomplete':  { en: '⚠️ Watch the full ad to get the 2x reward.', ko: '⚠️ 광고를 끝까지 시청해야 2배 보상이 지급됩니다.' },
   'over.adLoadFailed':  { en: '⚠️ Failed to load ad. Please try again.', ko: '⚠️ 광고 로딩 실패. 다시 시도해 주세요.' },
-  'over.baseGranted':   { en: '✅ Base reward granted (+{n} gems)', ko: '✅ 기본 보상 지급 완료 (+{n} 보석)' },
   'over.baseAutoGranted': { en: '✅ +{n} gems already added. Watch an ad to double it!', ko: '✅ 보석 +{n} 지급 완료. 광고를 보면 2배!' },
 
   // 게임오버 - 랭킹 등록
