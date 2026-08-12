@@ -171,6 +171,7 @@ export const AD_INTERSTITIAL_COOLDOWN = 90; // 전면광고 최소 간격(초)
 export const AD_REWARD_GOLD = 50;             // 보상형 광고 시청 보상 골드
 export const AD_SHOP_REWARD_GEMS = 50;        // 상점 보상형 광고 보상 보석
 export const AD_SHOP_COOLDOWN_MINUTES = 30;   // 상점 보상형 광고 쿨다운(분)
+export const AD_REWARDED_TIMEOUT_MS = 300_000; // 보상형 광고 로딩/재생 제한시간(ms)
 export interface CrystalPackage { id: string; crystals: number; bonus?: number }
 export const CRYSTAL_PACKAGES: CrystalPackage[] = [
   { id: 'gems-100',  crystals: 100 },

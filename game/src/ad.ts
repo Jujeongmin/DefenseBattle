@@ -1,6 +1,6 @@
 import { Verse8Ads } from '@verse8/ads';
 import { getPlatform } from './platform';
-import { AD_SHOP_COOLDOWN_MINUTES } from './config';
+import { AD_SHOP_COOLDOWN_MINUTES, AD_REWARDED_TIMEOUT_MS } from './config';
 
 const SHOP_AD_COOLDOWN_KEY = 'randomdefense.shopAdCooldown.v1';
 
@@ -68,7 +68,7 @@ class AdManager {
     this.rewardedActive = true;
 
     try {
-      const result = await Verse8Ads.showRewarded({ placementId, timeoutMs: 120_000 });
+      const result = await Verse8Ads.showRewarded({ placementId, timeoutMs: AD_REWARDED_TIMEOUT_MS });
 
       switch (result.status) {
         case 'rewarded':
@@ -123,7 +123,7 @@ class AdManager {
     this.rewardedActive = true;
 
     try {
-      const result = await Verse8Ads.showRewarded({ placementId: 'shop-gems', timeoutMs: 120_000 });
+      const result = await Verse8Ads.showRewarded({ placementId: 'shop-gems', timeoutMs: AD_REWARDED_TIMEOUT_MS });
 
       switch (result.status) {
         case 'rewarded':
