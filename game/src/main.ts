@@ -9,7 +9,7 @@ import { Menu } from './menu';
 import { preloadAll } from './assets';
 import { audio } from './audio';
 import { syncWithServer } from './meta';
-import { t, getLang, setLang } from './i18n';
+import { t, getLang, setLang, type Lang } from './i18n';
 import { maybeStartTutorial, endTutorial } from './tutorial';
 import { initVXShop } from './vxshop';
 
@@ -17,7 +17,7 @@ import { initVXShop } from './vxshop';
 function setupLangButtons(): void {
   const cur = getLang();
   document.querySelectorAll<HTMLButtonElement>('.menu-lang button').forEach((b) => {
-    const lang = b.dataset.lang as ('en' | 'ko');
+    const lang = b.dataset.lang as Lang;
     b.classList.toggle('active', lang === cur);
     b.onclick = () => {
       if (lang === getLang()) return;
