@@ -897,9 +897,12 @@ html, body {
 }
 .settings-label { flex: 0 0 88px; font-size: 14px; font-weight: 700; }
 .lang-btns { flex: 1; display: flex; gap: 6px; }
+/* flex:1 로 균등 분할하면 버튼 내용 폭이 30px 밖에 안 돼 '한국어'·'日本語' 가 두 줄로 접힌다.
+   글자 길이에 맞춰 늘어나게 두고 줄바꿈을 막는다. */
 .lang-btns button {
-  flex: 1;
-  padding: 8px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 8px 10px;
   border: none;
   border-radius: 8px;
   background: #3a3f52;
