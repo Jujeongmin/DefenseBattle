@@ -76,7 +76,9 @@ const STRINGS: Record<string, Record<Lang, string>> = {
   'hud.sell':        { en: 'Sell', ko: '판매', ja: '売却', 'zh-Hant': '出售' },
   'hud.home':        { en: 'Home', ko: '메인', ja: 'ホーム', 'zh-Hant': '主頁' },
   'hud.probInfo':    { en: 'Odds ⓘ', ko: '확률 정보 ⓘ', ja: '確率 ⓘ', 'zh-Hant': '機率 ⓘ' },
-  'hud.upgrade':     { en: 'Upgrade', ko: '강화', ja: '強化', 'zh-Hant': '強化' },
+  // 유닛 카드의 강화 버튼. 카드 폭(가용 70px)에 한 줄로 들어가야 한다.
+  // 'Upgrade ●20' 은 101px 이라 두 줄로 접히고, 그만큼 카드가 커져 하단이 화면 밖으로 밀렸다.
+  'hud.upgrade':     { en: 'Up', ko: '강화', ja: '強化', 'zh-Hant': '強化' },
   'hud.nextWave':    { en: 'Next wave {s}s', ko: '다음 웨이브 {s}s', ja: '次のウェーブ {s}s', 'zh-Hant': '下一波 {s}s' },
 
   // 소환 로그 / 배너 (엔진)

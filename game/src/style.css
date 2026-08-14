@@ -301,7 +301,8 @@ html, body {
 /* ---------- 하단 조작부 ---------- */
 #controls {
   background: #23232b;
-  padding: 10px 10px 14px;
+  /* 하단 여백 14px 면 유닛 카드가 가장 높은 언어에서 스테이지(801px) 밖으로 밀린다. */
+  padding: 10px 10px 8px;
   border-top: 2px solid #000;
   flex: 1 1 auto;   /* 남는 세로 공간을 하단 UI가 채움 */
 }
@@ -659,11 +660,16 @@ html, body {
 /* 확률 정보: 등급 6 + 직업 3 을 한 줄씩 쌓으면 다이얼로그를 넘겨 스크롤이 생긴다.
    격자로 묶어 세로를 9행 -> 4행으로 줄여 스크롤 없이 한 화면에 담는다. */
 .prob-grid { display: grid; gap: 6px; margin-bottom: 4px; }
-.prob-grid.cols-2 { grid-template-columns: 1fr 1fr; }
-.prob-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+/* 1fr 은 최소폭이 min-content 라, 긴 직업명(Warrior 등)이 들어가면 칸이 컨테이너를 넘긴다.
+   minmax(0, 1fr) 로 최소폭을 풀어 항상 균등 분할되게 한다. */
+.prob-grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.prob-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .prob-grid .row { margin-bottom: 0; padding: 6px 8px; gap: 4px; }
 .prob-grid .row .info .t { font-size: 13px; }
 .prob-grid .prob-pct { font-size: 14px; }
+/* 3열은 칸이 111px 뿐이라 긴 직업명(Warrior)+퍼센트가 들어가지 않는다. 여백과 퍼센트 글자만 줄인다. */
+.prob-grid.cols-3 .row { padding: 6px 4px; gap: 2px; }
+.prob-grid.cols-3 .prob-pct { font-size: 13px; }
 
 /* 보석(크리스탈) 아이콘 - 💎 이모지 대체 (UI/rpg_icon4.png, 25x22) */
 .gem {
