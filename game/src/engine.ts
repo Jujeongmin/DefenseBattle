@@ -146,7 +146,10 @@ export class Game {
   }
 
   waveHp(): number {
-    const base = WAVE.hpBase * Math.pow(1 + WAVE.hpGrowthPerWave, this.wave - 1);
+    // 지수를 초선형으로: 초반은 기존과 거의 같고, 후반 웨이브만 급격히 무거워진다.
+    const n = this.wave - 1;
+    const exp = n + WAVE.hpGrowthAccel * n * n;
+    const base = WAVE.hpBase * Math.pow(1 + WAVE.hpGrowthPerWave, exp);
     return this.isBossWave ? base * WAVE.bossHpMult : base;
   }
 
