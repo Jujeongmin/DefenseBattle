@@ -52,26 +52,26 @@ function stats(xs: number[]) {
 
 const runs = Number(process.argv[2]) || 8;
 const accels = (process.argv[3] || String(WAVE.hpGrowthAccel)).split(',').map(Number);
+const bonuses = (process.argv[4] || String(GACHA.bonusPerLevel)).split(',').map(Number);
 const W = WAVE as { hpGrowthAccel: number };
+const G = GACHA as { bonusPerLevel: number };
 
 function hpAt(w: number, accel: number): number {
   const n = w - 1;
   return WAVE.hpBase * Math.pow(1 + WAVE.hpGrowthPerWave, n + accel * n * n);
 }
 
+console.log('accel   bonus/lv  w50HP     ' + [0, 4, 6, 8, 10].map((l) => ('*' + l).padStart(9)).join(''));
 for (const accel of accels) {
   W.hpGrowthAccel = accel;
-  console.log('');
-  console.log('=== hpGrowthAccel=' + accel + ' (hpGrowth=' + WAVE.hpGrowthPerWave + ', runs=' + runs + ') ===');
-  console.log('mob HP  w10=' + Math.round(hpAt(10, accel))
-    + '  w30=' + Math.round(hpAt(30, accel))
-    + '  w50=' + Math.round(hpAt(50, accel)));
-  console.log('policy      *lv  avgWave   min  max  clear%');
-  for (const policy of ['noUpgrade', 'upgrade'] as Policy[]) {
-    for (const lv of [0, 4, 8, 10]) {
-      const s = stats(Array.from({ length: runs }, () => runOnce(lv, policy)));
-      console.log(policy.padEnd(11), String(lv).padStart(3), String(s.avg).padStart(8),
-                  String(s.min).padStart(5), String(s.max).padStart(4), String(s.clear).padStart(6) + '%');
-    }
+  for (const bonus of bonuses) {
+    G.bonusPerLevel = bonus;
+    const cells = [0, 4, 6, 8, 10].map((lv) => {
+      const s = stats(Array.from({ length: runs }, () => runOnce(lv, 'noUpgrade')));
+      return (s.avg + '/' + s.clear + '%').padStart(9);
+    });
+    console.log(String(accel).padEnd(7), String(bonus).padEnd(9),
+      String(Math.round(hpAt(50, accel))).padStart(7), '  ' + cells.join(''));
   }
 }
+console.log('\n(값 = 평균도달웨이브 / 클리어율, noUpgrade 정책)');
