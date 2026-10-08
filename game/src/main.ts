@@ -10,7 +10,7 @@ import { preloadAll, warmTints } from './assets';
 import { audio } from './audio';
 import { getPlatform } from './platform';
 import { meta, saveMeta, reloadMeta, useItem } from './meta';
-import { crystalReward, starsFor, STAGE_BY_ID, STAGES, PVP } from './config';
+import { crystalReward, starsFor, STAGE_BY_ID, STAGES, PVP, PLAY_SPEED } from './config';
 import { completeStage, stageOptions, endlessOptions, stageUnlocked, unitLevels } from './progress';
 import { syncPurchases, addSeasonXp } from './shop';
 import { showRewarded, rewardedAvailable, maybeInterstitial } from './ads';
@@ -298,6 +298,7 @@ function step(now: number): void {
   if (!game || !renderer || !ui) return;
   const pvp = game.isPvp;
   if (dt > (pvp ? 1.0 : 0.1)) dt = pvp ? 1.0 : 0.1; // 일반: 큰 점프 방지 / PvP: 실시간 유지
+  dt *= PLAY_SPEED;
   // 큰 dt 는 잘게 나눠 시뮬레이션 (충돌/이동 정확도)
   while (dt > 0) {
     const d = Math.min(dt, 0.05);

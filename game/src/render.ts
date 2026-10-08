@@ -3,7 +3,7 @@
 // ============================================================
 import { MAP, Game } from './engine';
 import { unitSprite, mobSprite, tileSprite, uiSprite } from './assets';
-import { GRADES, UNIT_BY_ID } from './config';
+import { GRADES, UNIT_BY_ID, PLAY_SPEED } from './config';
 import type { Job, Mob } from './types';
 
 export const JOB_TINT: Record<Job, string> = {
@@ -130,7 +130,7 @@ export class Renderer {
 
   draw(): void {
     const ctx = this.ctx;
-    this.t = performance.now() / 1000;
+    this.t = (performance.now() / 1000) * PLAY_SPEED; // 걷기 애니메이션도 게임 속도에 맞춘다
     ctx.imageSmoothingEnabled = false; // 픽셀 아트 선명하게
     ctx.clearRect(0, 0, MAP.size, MAP.size);
     ctx.save();
@@ -171,7 +171,7 @@ export class Renderer {
     ctx.font = `bold 13px ${FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`BOSS  ${Math.ceil(ratio * 100)}%   ${Math.max(0, this.game.bossTimer).toFixed(0)}s`, MAP.size / 2, y + h / 2 + 1);
+    ctx.fillText(`BOSS  ${Math.ceil(ratio * 100)}%   ${Math.max(0, this.game.bossTimer / PLAY_SPEED).toFixed(0)}s`, MAP.size / 2, y + h / 2 + 1);
     ctx.restore();
   }
 

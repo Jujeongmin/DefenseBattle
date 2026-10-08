@@ -3,7 +3,7 @@
 //  두 구현이 같은 인터페이스를 가져 UI/게임 흐름은 상대 종류를 신경 쓰지 않는다.
 // ============================================================
 import { Game, type BoardSnapshot } from './engine';
-import { PVP, JOBS } from './config';
+import { PVP, JOBS, PLAY_SPEED } from './config';
 import { aiStep } from './ai';
 import { meta } from './meta';
 import { unitLevels } from './progress';
@@ -182,11 +182,12 @@ class BotSession implements PvpSession {
     let last = Date.now();
     this.timer = setInterval(() => {
       const now = Date.now();
-      const dt = Math.min(0.2, (now - last) / 1000);
+      const real = Math.min(0.2, (now - last) / 1000);
       last = now;
       if (now < startAt || this.done) return;
-      game.update(dt);
-      acc += dt; snapAcc += dt;
+      const dt = real * PLAY_SPEED;
+      for (let left = dt; left > 0; left -= 0.05) game.update(Math.min(left, 0.05));
+      acc += dt; snapAcc += real; // AI 판단은 게임 시간, 스냅샷 전송은 실시간 기준
       if (acc >= 0.35) { acc = 0; aiStep(game, skill); }
       if (snapAcc >= PVP.reportInterval) { snapAcc = 0; h.onSnapshot(game.snapshot()); }
     }, 50);

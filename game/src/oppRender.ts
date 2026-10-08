@@ -4,7 +4,7 @@
 // ============================================================
 import { MAP, SNAP_KIND, type BoardSnapshot } from './engine';
 import { unitSprite, mobSprite } from './assets';
-import { GRADES, JOBS, RACES } from './config';
+import { GRADES, JOBS, RACES, PLAY_SPEED } from './config';
 import { fieldBackground, FRAME, WALK_SEQ, JOB_TINT } from './render';
 import type { Job, Race } from './types';
 
@@ -74,7 +74,7 @@ export class OppRenderer {
     const prev = this.prev;
     const span = prev ? Math.max(1, cur.at - prev.at) : 1;
     const a = prev ? Math.min(1, Math.max(0, (now - cur.at) / span)) : 1;
-    const t = now / 1000;
+    const t = (now / 1000) * PLAY_SPEED;
 
     // 전설 이상 유닛 발밑 오라 (전력 비교용)
     for (const u of cur.units) {

@@ -2,7 +2,7 @@
 //  게임 화면 DOM UI - 상단바/소환/강화/합성·판매/소환권/PvP HUD/결과/튜토리얼
 // ============================================================
 import {
-  JOB_KR, RACE_KR, GRADES, DMG_MULT, ECONOMY, WAVE, PVP, SKILL_KR, GRADE_INDEX, MERGE_COUNT,
+  JOB_KR, RACE_KR, GRADES, DMG_MULT, ECONOMY, WAVE, PVP, SKILL_KR, GRADE_INDEX, MERGE_COUNT, PLAY_SPEED,
 } from './config';
 import { MAP, Game, type BoardSnapshot } from './engine';
 import { mobPortraitSrc, unitIconUrl } from './assets';
@@ -154,7 +154,7 @@ export class UI {
     const bt = $('boss-timer');
     if (g.waveState === 'waiting_boss' || (g.isBossWave && g.waveState === 'spawning')) {
       bt.classList.remove('hidden');
-      bt.innerHTML = `${icon('timer')} ${g.bossTimer.toFixed(1)}s`;
+      bt.innerHTML = `${icon('timer')} ${(g.bossTimer / PLAY_SPEED).toFixed(1)}s`;
     } else {
       bt.classList.add('hidden');
     }

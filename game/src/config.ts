@@ -124,6 +124,12 @@ export const WAVE = {
   bossSizeMult: 2,
 } as const;
 
+// 실시간 1초 = 게임 시간 PLAY_SPEED 초 (메인 루프 / AI 연습전 루프에서 곱한다).
+// 배속 버튼(1x/2x/3x)은 이 위에 곱해진다. 밸런스 수치(스폰 간격, 휴식, 보스 제한 시간 등)는
+// 게임 시간 기준이라 그대로이고, 실제 플레이 시간만 1/PLAY_SPEED 로 줄어든다.
+// 엔진(Game.update)에는 곱하지 않는다 - tools/simulate.ts 결과가 바뀌지 않게.
+export const PLAY_SPEED = 2;
+
 // ---------- 몹 종류 (웨이브 구성 다양화) ----------
 // fast: 빠르고 약함 / tank: 느리고 단단함. 등장 시작 웨이브와 간격(n번째 몹마다)
 export const MOB_KINDS = {
