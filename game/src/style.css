@@ -59,6 +59,9 @@ b, strong { font-weight: 700; }
   background: var(--edge);
 }
 .hidden { display: none !important; }
+/* 스크롤은 되지만 스크롤바는 그리지 않는다 (모바일 게임 화면에 웹 스크롤바가 끼면 어색함) */
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 /* ---------- 픽셀 아이콘 (icons.ts) ---------- */
 .pi {
