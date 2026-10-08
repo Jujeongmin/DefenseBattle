@@ -52,7 +52,7 @@ PvP 는 AI 연습전만 가능. Verse8 프로젝트(.env 에 `VITE_AGENT8_VERSE`
 │       ├── ui.ts            # 게임 화면 HUD/영웅관리/PvP HUD/결과/튜토리얼
 │       ├── render.ts        # 캔버스 렌더러 (투사체·파티클·화면흔들림·보스바)
 │       ├── assets.ts        # 스프라이트 로더 + 해금 유닛 색조 변형 시트 생성
-│       ├── audio.ts         # WebAudio 합성 효과음 + 트랙별 BGM(메뉴/전투/보스/PvP)
+│       ├── audio.ts         # Mixkit 효과음(WebAudio 버퍼) + 트랙별 BGM(메뉴/전투/보스/PvP, <audio> 반복)
 │       ├── meta.ts / types.ts / dom.ts / style.css
 ├── server/                  # Agent8 GameServer (server/src/server.ts, test/)
 ├── tools/simulate.ts        # 헤드리스 밸런스 시뮬레이터
