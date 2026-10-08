@@ -16,11 +16,13 @@ export function enableDeckDrag(root: HTMLElement, onDrop: DeckDrop): void {
       const x0 = e.clientX, y0 = e.clientY;
       let ghost: HTMLElement | null = null;
       let over: HTMLElement | null = null;
-      try { el.setPointerCapture(e.pointerId); } catch { /* 합성 이벤트 등 */ }
+      // 포인터 캡처는 쓰지 않는다: 캡처하면 click 이 카드로 넘어가 카드 안 버튼(?, 넣기, 강화)이 눌리지 않는다.
+      // 대신 window 에서 움직임·뗌을 받는다 (손가락이 카드 밖으로 나가도 끌기가 이어짐).
 
       const slotAt = (x: number, y: number) =>
         (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('[data-drop-slot]') ?? null;
       const move = (ev: PointerEvent) => {
+        if (ev.pointerId !== e.pointerId) return;
         if (!ghost) {
           if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 8) return;
           // 끌기 시작: 카드 그림을 손가락에 붙인다
@@ -37,8 +39,9 @@ export function enableDeckDrag(root: HTMLElement, onDrop: DeckDrop): void {
         if (s !== over) { over?.classList.remove('drop-hover'); s?.classList.add('drop-hover'); over = s; }
       };
       const finish = (ev: PointerEvent | null) => {
-        el.removeEventListener('pointermove', move);
-        el.onpointerup = null; el.onpointercancel = null;
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointercancel', cancel);
         if (!ghost) return; // 끌지 않았다 → 클릭으로 처리
         ghost.remove();
         over?.classList.remove('drop-hover');
@@ -53,9 +56,11 @@ export function enableDeckDrag(root: HTMLElement, onDrop: DeckDrop): void {
         if (s) onDrop(key, fromSlot, Number(s.dataset.dropSlot));
         else if (fromSlot !== null) onDrop(key, fromSlot, 'out');
       };
-      el.addEventListener('pointermove', move);
-      el.onpointerup = (ev) => finish(ev);
-      el.onpointercancel = () => finish(null);
+      const up = (ev: PointerEvent) => { if (ev.pointerId === e.pointerId) finish(ev); };
+      const cancel = (ev: PointerEvent) => { if (ev.pointerId === e.pointerId) finish(null); };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+      window.addEventListener('pointercancel', cancel);
     };
   });
 }
