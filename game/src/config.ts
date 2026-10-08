@@ -8,13 +8,15 @@ import type {
 } from './types';
 
 // ---------- 유닛 (직업) ----------
-// base: 스프라이트 시트/투사체 형태, hue: 색조 회전(도) - 아트 교체 전 임시 변형
+// base: 투사체 형태 (+ sheet 가 없으면 스프라이트 시트), sheet: 전용 시트 이름 (public/sprites/{sheet}_{등급}.png)
+// hue: 색조 회전(도) - 전용 아트가 없을 때의 임시 변형
 // cooldown: 공격 간격(초), rangeMult: 사거리 배수
 // unlock: 해금 조건 (캠페인 스테이지 첫 클리어) 또는 보석 구매
 export interface UnitDef {
   id: Job;
   kr: string;
   base: BaseJob;
+  sheet?: string;
   hue: number;
   cooldown: number;
   rangeMult: number;
@@ -27,11 +29,11 @@ export const UNITS: UnitDef[] = [
   { id: 'archer',   kr: '궁수',     base: 'archer',  hue: 0,    cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: '다중 사격' },
   { id: 'wizard',   kr: '마법사',   base: 'wizard',  hue: 0,    cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: '범위 폭발' },
   { id: 'warrior',  kr: '전사',     base: 'warrior', hue: 0,    cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: '둔화' },
-  { id: 'ranger',   kr: '레인저',   base: 'archer',  hue: 190,  cooldown: 1.25, rangeMult: 1.3,  atkMult: 1.15, role: '저격·치명타', unlockStage: '1-3', unlockCrystals: 300 },
-  { id: 'frost',    kr: '빙결술사', base: 'wizard',  hue: 165,  cooldown: 1.1,  rangeMult: 1.0,  atkMult: 0.7,  role: '범위 빙결', unlockStage: '1-6', unlockCrystals: 500 },
-  { id: 'paladin',  kr: '성기사',   base: 'warrior', hue: 45,   cooldown: 1.1,  rangeMult: 1.0,  atkMult: 1.0,  role: '보스 특화', unlockStage: '1-10', unlockCrystals: 800 },
-  { id: 'bomber',   kr: '폭격수',   base: 'wizard',  hue: -50,  cooldown: 1.7,  rangeMult: 1.05, atkMult: 1.25, role: '대형 폭발', unlockStage: '2-5', unlockCrystals: 1200 },
-  { id: 'assassin', kr: '암살자',   base: 'warrior', hue: 250,  cooldown: 0.7,  rangeMult: 0.9,  atkMult: 0.8,  role: '처형', unlockStage: '3-1', unlockCrystals: 1800 },
+  { id: 'ranger',   kr: '레인저',   base: 'archer', sheet: 'Ranger',  hue: 0,  cooldown: 1.25, rangeMult: 1.3,  atkMult: 1.15, role: '저격·치명타', unlockStage: '1-3', unlockCrystals: 300 },
+  { id: 'frost',    kr: '빙결술사', base: 'wizard', sheet: 'Frost',  hue: 0,  cooldown: 1.1,  rangeMult: 1.0,  atkMult: 0.7,  role: '범위 빙결', unlockStage: '1-6', unlockCrystals: 500 },
+  { id: 'paladin',  kr: '성기사',   base: 'warrior', sheet: 'Paladin', hue: 0,   cooldown: 1.1,  rangeMult: 1.0,  atkMult: 1.0,  role: '보스 특화', unlockStage: '1-10', unlockCrystals: 800 },
+  { id: 'bomber',   kr: '폭격수',   base: 'wizard', sheet: 'Bomber',  hue: 0,  cooldown: 1.7,  rangeMult: 1.05, atkMult: 1.25, role: '대형 폭발', unlockStage: '2-5', unlockCrystals: 1200 },
+  { id: 'assassin', kr: '암살자',   base: 'warrior', sheet: 'Assassin', hue: 0,  cooldown: 0.7,  rangeMult: 0.9,  atkMult: 0.8,  role: '처형', unlockStage: '3-1', unlockCrystals: 1800 },
 ];
 export const UNIT_BY_ID: Record<Job, UnitDef> = Object.fromEntries(UNITS.map((u) => [u.id, u])) as Record<Job, UnitDef>;
 export const JOBS: Job[] = UNITS.map((u) => u.id);
@@ -39,7 +41,7 @@ export const STARTER_UNITS: Job[] = ['archer', 'wizard', 'warrior'];
 export const DECK_SIZE = 4;
 export const JOB_KR: Record<Job, string> = Object.fromEntries(UNITS.map((u) => [u.id, u.kr])) as Record<Job, string>;
 const BASE_SPRITE: Record<BaseJob, string> = { archer: 'Archer', wizard: 'Wizard', warrior: 'Warrior' };
-export const JOB_SPRITE: Record<Job, string> = Object.fromEntries(UNITS.map((u) => [u.id, BASE_SPRITE[u.base]])) as Record<Job, string>;
+export const JOB_SPRITE: Record<Job, string> = Object.fromEntries(UNITS.map((u) => [u.id, u.sheet ?? BASE_SPRITE[u.base]])) as Record<Job, string>;
 
 // 유닛 영구 레벨 (컬렉션): 레벨당 공격력 +8%, Lv5/Lv10 에 스킬 강화(퍽)
 export const UNIT_MAX_LEVEL = 10;
