@@ -4,9 +4,9 @@
 import {
   RESEARCH, researchCost, DAILY_QUESTS, ACHIEVEMENTS, PRODUCTS, ITEM_KR,
   UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, UNIT_PERK_LEVELS, unitUpgradeCost, SKILL_DESC, SKILL_KR,
-  DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, STAGES_PER_CHAPTER, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, type RoadStep, type AttackKey,
-  SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, PVP, FEATURE_KR, productEfficiency,
-  V1, CAMPAIGN, TROPHY_ROAD, PVP_TIERS,
+  DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, type RoadStep, type AttackKey,
+  SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, FEATURE_KR, productEfficiency,
+  CAMPAIGN, TROPHY_ROAD, PVP_TIERS,
 } from './config';
 import { meta, saveMeta, researchLevel, currentSeasonId } from './meta';
 import { getPlatform } from './platform';
@@ -72,7 +72,6 @@ export class Menu {
   }
   /** 결과 화면 → 스테이지 정보(시작 전) 바로 열기 */
   openStage(id: string): void { this.openStageInfo(id); }
-  openPvpPanel(): void { this.openPvp(); }
   /** 결과 화면 '다시 대전' → 바로 매칭 */
   quickMatch(): void { this.startMatchmaking(); }
 
@@ -81,86 +80,8 @@ export class Menu {
   }
 
   // ======================= 로비 =======================
+  // ======================= 로비: 대전(아레나) 중심 + 캠페인·무한 모드 =======================
   private render(): void {
-    if (V1) { this.renderV1(); return; }
-    const root = $('main-menu');
-    const tier = pvpTier(meta.pvp.trophies);
-    const next = STAGE_BY_ID[nextStageId()];
-    const ch = CHAPTERS[next.chapter - 1];
-    const chCleared = STAGES.filter((s) => s.chapter === next.chapter && stageStars(s.id) > 0).length;
-    const allCleared = STAGES.every((s) => stageStars(s.id) > 0);
-    const vx = getPlatform().getVX();
-    const parade = meta.deck.map((j) => spriteIcon(unitIconUrl(j))).join('');
-    const pvpOn = featureUnlocked('pvp');
-    const endlessOn = featureUnlocked('endless');
-    // 메뉴는 해금 전엔 아예 숨기고, 해금 직후엔 NEW 표시 (누르면 사라짐)
-    const on = (f: LobbyFeature) => featureUnlocked(f);
-    const tag = (f: LobbyFeature) => (featureNew(f) ? NEW_TAG : '');
-    const dot = '<span class="dot"></span>';
-    const fresh = (['units', 'research', 'quests', 'pvp', 'endless'] as const).filter((f) => featureNew(f) && !this.announced.has(f));
-    const notices: string[] = [];
-    if (canClaimMonthly()) notices.push(`<div class="notice">${icon('calendar')} 월정액 오늘의 보석 <button class="btn small green" data-act="monthly">받기 ${icon('gem')}</button></div>`);
-    const seasonReady = this.seasonClaimable();
-    root.innerHTML = `
-      <div class="lobby-top">
-        <div class="profile-chip" data-act="profile" style="color:${tier.color}">
-          <div class="tier-badge">${icon('trophy')}</div>
-          <div><div class="nm" style="color:var(--text)">${esc(meta.nick)}</div><div class="tr">${tier.kr} · ${meta.pvp.trophies}</div></div>
-        </div>
-        <div class="res-chip" data-act="shop"><span class="crystal">${icon('gem')} ${meta.crystals.toLocaleString()}</span><span class="plus">${icon('plus')}</span></div>
-        ${vx !== null ? `<div class="res-chip" data-act="shop"><span class="trophy">VX ${vx.toLocaleString()}</span></div>` : ''}
-        <button class="gear-btn" data-act="settings" aria-label="설정">${icon('settings')}</button>
-      </div>
-      <div class="lobby-body">
-        <h1 class="game-title">랜덤 디펜스</h1>
-        <div class="game-sub">소환 · 합성 · 배치로 막아내라!</div>
-        <div class="parade">${parade}</div>
-        ${notices.join('')}
-        <div class="play-card">
-          <div class="chap"><span>CHAPTER ${ch.n} · <b>${ch.kr}</b></span><span>${chCleared}/${STAGES_PER_CHAPTER}</span></div>
-          <div class="chap-bar"><div style="width:${(chCleared / STAGES_PER_CHAPTER) * 100}%"></div></div>
-          <button class="btn red play-btn" data-act="play">${icon('play')} ${allCleared ? '스테이지 선택' : `스테이지 ${next.id}`}
-            <small>${next.waves}웨이브 · ${next.unlocks ? `클리어 시 ${UNIT_BY_ID[next.unlocks].kr} 해금` : `보상 ${icon('gem')}${stageStars(next.id) ? next.replayReward : next.firstReward}`}</small></button>
-          <button class="btn small blue" data-act="stages">${icon('map')} 스테이지 맵</button>
-        </div>
-        ${pvpOn || endlessOn ? `<div class="mode-row">
-          ${pvpOn ? `<button class="mode-card pvp" data-act="pvp">
-            <div class="ic">${icon('sword')}</div><div class="t">PvP 대전</div><div class="d">${tier.kr}</div>
-            ${seasonReady ? dot : ''}${tag('pvp')}
-          </button>` : ''}
-          ${endlessOn ? `<button class="mode-card endless" data-act="endless">
-            <div class="ic">${icon('infinity')}</div><div class="t">무한 모드</div><div class="d">${icon('flag')} ${meta.bestWave || 0}</div>${tag('endless')}
-          </button>` : ''}
-        </div>` : ''}
-      </div>
-      <nav class="lobby-nav">
-        <button data-act="shop"><span class="ic">${icon('shop')}</span>상점${PRODUCTS.some((p) => p.id === 'starter_pack') && !productOwned('starter_pack') ? '<span class="dot"></span>' : ''}</button>
-        ${on('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}</span>덱${tag('units') || (UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : '')}</button>` : ''}
-        ${on('research') ? `<button data-act="research"><span class="ic">${icon('flask')}</span>연구${tag('research')}</button>` : ''}
-        ${on('quests') ? `<button data-act="quests"><span class="ic">${icon('scroll')}</span>퀘스트${tag('quests') || (this.questClaimable() ? dot : '')}</button>` : ''}
-        ${on('pvp') ? `<button data-act="pvp"><span class="ic">${icon('trophy')}</span>시즌</button>` : ''}
-      </nav>`;
-    bindActions(root, {
-      profile: () => this.openProfile(),
-      shop: () => this.openShop(),
-      units: () => { markFeatureSeen('units'); this.openUnits(); },
-      research: () => { markFeatureSeen('research'); this.openResearch(); },
-      quests: () => { markFeatureSeen('quests'); this.openQuests(); },
-      settings: () => this.openSettings(),
-      stages: () => this.openStages(),
-      play: () => (allCleared ? this.openStages() : this.openStageInfo(next.id)),
-      pvp: () => { markFeatureSeen('pvp'); this.openPvp(); },
-      endless: () => { markFeatureSeen('endless'); this.openEndless(); },
-      monthly: () => { const n = claimMonthly(); if (n) { audio.coin(); toast(`월정액 보석 +${n} ${icon('gem')}`); this.render(); } },
-    });
-    root.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => audio.button(), { capture: true }));
-    // 새로 열린 메뉴 안내 (접속당 한 번)
-    for (const f of fresh) this.announced.add(f);
-    if (fresh.length) toast(`새 메뉴 열림: <b>${fresh.map((f) => FEATURE_KR[f]).join(', ')}</b>`, 2800);
-  }
-
-  // ======================= v1 로비: 대전 + 트로피 로드 =======================
-  private renderV1(): void {
     const root = $('main-menu');
     // 도달했지만 아직 안 받은 로드 보상 (이전 버전 저장본 등)
     const got = claimRoad();
@@ -173,16 +94,21 @@ export class Menu {
     const pct = next ? Math.max(0, Math.min(100, ((p.trophies - prevAt) / (next.at - prevAt)) * 100)) : 100;
     const nextIc = next ? roadRewardIcon(next) : icon('crown');
     const parade = meta.deck.map((j) => spriteIcon(unitIconUrl(j))).join('');
-    const campDone = CAMPAIGN.filter((s) => stageStars(s.id) > 0).length;
+    const vx = getPlatform().getVX();
+    const nextStage = STAGE_BY_ID[nextStageId()];
+    const allCleared = CAMPAIGN.every((s) => stageStars(s.id) > 0);
+    const endlessOn = featureUnlocked('endless');
     const dot = '<span class="dot"></span>';
-    const fresh = (['units', 'pvp'] as const).filter((f) => featureNew(f) && !this.announced.has(f));
+    const tag = (f: LobbyFeature) => (featureNew(f) ? NEW_TAG : '');
+    const fresh = (['units', 'research', 'quests', 'pvp', 'endless'] as const).filter((f) => featureNew(f) && !this.announced.has(f));
     root.innerHTML = `
       <div class="lobby-top">
         <div class="profile-chip" data-act="profile" style="color:${tier.color}">
           <div class="tier-badge">${icon('trophy')}</div>
           <div><div class="nm" style="color:var(--text)">${esc(meta.nick)}</div><div class="tr">${tier.kr} · ${p.trophies}</div></div>
         </div>
-        <div class="res-chip"><span class="crystal">${icon('gem')} ${meta.crystals.toLocaleString()}</span></div>
+        <div class="res-chip" data-act="shop"><span class="crystal">${icon('gem')} ${meta.crystals.toLocaleString()}</span><span class="plus">${icon('plus')}</span></div>
+        ${vx !== null ? `<div class="res-chip" data-act="shop"><span class="trophy">VX ${vx.toLocaleString()}</span></div>` : ''}
         <button class="gear-btn" data-act="settings" aria-label="설정">${icon('settings')}</button>
       </div>
       <div class="lobby-body v1">
@@ -194,16 +120,26 @@ export class Menu {
           <div class="road-bar"><div style="width:${pct}%"></div></div>
           ${next ? `<div class="road-next">다음 보상 ${nextIc} <span>${icon('trophy')}${next.at}</span></div>` : ''}
           <button class="btn red play-btn" data-act="battle">${icon('sword')} 대전 시작</button>
-          <div class="arena-sub">${p.wins}승 ${p.losses}패${p.streak > 1 ? ` · ${p.streak}연승` : ''}</div>
+          <div class="arena-sub">${p.wins}승 ${p.losses}패${p.streak > 1 ? ` · ${p.streak}연승` : ''}
+            <button class="btn small gold pass-btn" data-act="pass">${icon('trophy')} 시즌 패스${this.seasonClaimable() ? dot : ''}</button></div>
+        </div>
+        <div class="mode-row">
+          <button class="mode-card camp" data-act="stages">
+            <div class="ic">${icon('map')}</div><div class="t">캠페인</div><div class="d">${allCleared ? `${icon('check')} 모두 클리어` : `스테이지 ${nextStage.id}`}</div>
+          </button>
+          ${endlessOn ? `<button class="mode-card endless" data-act="endless">
+            <div class="ic">${icon('infinity')}</div><div class="t">무한 모드</div><div class="d">${icon('flag')} ${meta.bestWave || 0}</div>${tag('endless')}
+          </button>` : ''}
         </div>` : `<div class="play-card">
           <button class="btn red play-btn" data-act="tutorial">${icon('play')} 튜토리얼 시작</button>
         </div>`}
-        ${pvpOn ? `<button class="btn small blue camp-btn" data-act="stages">${icon('map')} 연습 스테이지 ${campDone}/${CAMPAIGN.length}</button>` : ''}
       </div>
       <nav class="lobby-nav">
-        <button data-act="shop"><span class="ic">${icon('shop')}</span>상점</button>
-        ${featureUnlocked('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}</span>덱${featureNew('units') ? NEW_TAG : UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : ''}</button>` : ''}
-        ${pvpOn ? `<button data-act="road"><span class="ic">${icon('trophy')}</span>트로피 로드</button>` : ''}
+        <button data-act="shop"><span class="ic">${icon('shop')}</span>상점${!productOwned('starter_pack') ? dot : ''}</button>
+        ${featureUnlocked('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}</span>덱${tag('units') || (UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : '')}</button>` : ''}
+        ${featureUnlocked('research') ? `<button data-act="research"><span class="ic">${icon('flask')}</span>연구${tag('research')}</button>` : ''}
+        ${featureUnlocked('quests') ? `<button data-act="quests"><span class="ic">${icon('scroll')}</span>퀘스트${tag('quests') || (this.questClaimable() ? dot : '')}</button>` : ''}
+        ${pvpOn ? `<button data-act="road"><span class="ic">${icon('trophy')}</span>로드</button>` : ''}
         ${pvpOn ? `<button data-act="rank"><span class="ic">${icon('medal')}</span>랭킹</button>` : ''}
       </nav>`;
     bindActions(root, {
@@ -215,6 +151,10 @@ export class Menu {
       battle: () => { markFeatureSeen('pvp'); this.startMatchmaking(); },
       road: () => this.openRoad(),
       rank: () => this.openPvp('rank'),
+      pass: () => this.openPvp('pass'),
+      research: () => { markFeatureSeen('research'); this.openResearch(); },
+      quests: () => { markFeatureSeen('quests'); this.openQuests(); },
+      endless: () => { markFeatureSeen('endless'); this.openEndless(); },
       shop: () => this.openShop(),
       monthly: () => { const n = claimMonthly(); if (n) { audio.coin(); toast(`월정액 보석 +${n} ${icon('gem')}`); this.render(); } },
     });
@@ -300,7 +240,7 @@ export class Menu {
     const draw = () => {
       const c = this.selectedChapter;
       const chStars = chapterStars(c);
-      const nodes = (V1 ? CAMPAIGN : STAGES.filter((s) => s.chapter === c)).map((s) => {
+      const nodes = STAGES.filter((s) => s.chapter === c).map((s) => {
         const st = stageStars(s.id);
         const open = stageUnlocked(s.id);
         const isNext = open && st === 0;
@@ -315,10 +255,10 @@ export class Menu {
       }).join('');
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>스테이지</h2>
-        ${V1 ? '' : `<div class="tab-row">${CHAPTERS.map((ch) => `<button data-act="chap" data-n="${ch.n}" class="${ch.n === c ? 'active' : ''}">${chapterUnlocked(ch.n) ? '' : icon('lock') + ' '}${ch.n}. ${ch.kr}</button>`).join('')}</div>`}
+        ${`<div class="tab-row">${CHAPTERS.map((ch) => `<button data-act="chap" data-n="${ch.n}" class="${ch.n === c ? 'active' : ''}">${chapterUnlocked(ch.n) ? '' : icon('lock') + ' '}${ch.n}. ${ch.kr}</button>`).join('')}</div>`}
         <div class="fine" style="margin:-4px 0 10px">${CHAPTERS[c - 1].desc} · 스테이지당 ${CHAPTERS[c - 1].waves}웨이브</div>
         <div class="stage-grid">${nodes}</div>
-        ${V1 ? '' : `<div class="section-title"><span>챕터 별 보상</span><span>${icon('star')} ${chStars}/30</span></div>
+        ${`<div class="section-title"><span>챕터 별 보상</span><span>${icon('star')} ${chStars}/30</span></div>
         <div class="star-goals">${goals}</div>`}</div>`, () => this.render());
       bindActions(el, {
         chap: (b) => { this.selectedChapter = Number(b.dataset.n); draw(); },
@@ -458,7 +398,7 @@ export class Menu {
       }
       return `<div class="unit-card ${inDeck ? 'in-deck' : ''} ${unlocked ? '' : 'locked'}" ${unlocked ? `data-drag="${u.id}"` : ''}>
         <div class="head">${spriteIcon(unitIconUrl(u.id))}
-          <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : V1 && roadUnlockAt(u.id) ? `${icon('lock')} ${icon('trophy')}${roadUnlockAt(u.id)}` : u.unlockStage ? `${icon('lock')} ${u.unlockStage} 클리어` : icon('lock')}</div></div></div>
+          <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : `${icon('lock')} ${[roadUnlockAt(u.id) ? `${icon('trophy')}${roadUnlockAt(u.id)}` : '', u.unlockStage ?? ''].filter(Boolean).join(' / ')}`}</div></div></div>
         <div class="lv-pips">${pips}</div>
         <div class="sk" data-act="info" data-job="${u.id}"><b>${SKILL_KR[u.id]}</b> <span class="info-dot">?</span></div>
         <div class="acts">${acts}</div></div>`;
@@ -584,7 +524,7 @@ export class Menu {
         if (id === 'monthly_pass' && monthlyActive()) extra = ` <span class="badge green">${monthlyDaysLeft()}일 남음</span>`;
         const eff = owned ? 0 : productEfficiency(p, price(id));
         return `<div class="shop-card ${hot ? 'hot' : ''}">${eff > 100 ? `<span class="eff">효율<b>${eff}%</b></span>` : ''}<div class="ic">${icon(p.icon)}</div>
-          <div class="info"><div class="t">${p.kr}${p.badge ? ` <span class="badge">${p.badge}</span>` : ''}${extra}</div><div class="d">${V1 ? p.desc.replace('(일반 모드)', '(연습 스테이지)') : p.desc}</div></div>
+          <div class="info"><div class="t">${p.kr}${p.badge ? ` <span class="badge">${p.badge}</span>` : ''}${extra}</div><div class="d">${p.desc}</div></div>
           <button class="btn small ${owned ? '' : 'gold'}" data-act="buy" data-id="${id}" ${owned ? 'disabled' : ''}>${owned ? `보유 ${icon('check')}` : `VX ${price(id)}`}</button></div>`;
       };
       const gems = PRODUCTS.filter((p) => p.category === 'crystal').map((p) => {
@@ -601,9 +541,9 @@ export class Menu {
         <div class="section-title">추천 패키지</div>
         ${!productOwned('starter_pack') ? card('starter_pack', true) : ''}
         ${card('monthly_pass', true)}
-        ${V1 ? '' : card('ad_remove')}
-        ${V1 ? '' : `<div class="section-title">PvP 시즌 패스</div>${card('season_premium')}`}
-        <div class="section-title">부스터 <span class="fine">${V1 ? '연습 스테이지 전용' : '일반 모드 전용'}</span></div>
+        ${card('ad_remove')}
+        <div class="section-title">PvP 시즌 패스</div>${card('season_premium')}
+        <div class="section-title">부스터 <span class="fine">캠페인·무한 모드 전용</span></div>
         ${card('summon_ticket_pack')}${card('mythic_ticket')}${card('gold_booster_pack')}
         <div class="section-title">보석</div><div class="gem-grid">${gems}</div>
         <div class="fine">${vx !== null ? '* 로컬 개발 환경: 데모 VX 로 결제를 흉내냅니다.' : '* 결제는 Verse8 VX 로 진행되며, 결제 완료 후 자동 지급됩니다.'}</div></div>`, () => this.render());
@@ -626,22 +566,11 @@ export class Menu {
   }
 
   // ======================= PvP =======================
-  openPvp(tab: 'battle' | 'pass' | 'rank' = 'battle'): void {
-    // v1: 로비 '랭킹' 버튼 → 랭킹만 (대전은 로비의 '대전 시작' 버튼으로 한다)
-    const rankOnly = V1 && tab === 'rank';
+  /** 랭킹 / 시즌 패스 창 (대전은 로비의 '대전 시작') */
+  openPvp(tab: 'pass' | 'rank' = 'rank'): void {
     const draw = async () => {
-      const p = meta.pvp;
-      const tier = pvpTier(p.trophies);
       let body = '';
-      if (tab === 'battle') {
-        body = `<div style="text-align:center;margin:6px 0 10px">
-            <div style="font-size:36px">${icon('trophy')}</div>
-            <div class="tier-name" style="font-size:18px;color:${tier.color}">${tier.kr}</div>
-            <div class="trophy" style="font-size:18px">${p.trophies} 트로피</div>
-            <div class="fine">${p.wins}승 ${p.losses}패 · 연승 ${p.streak}</div></div>
-          <div class="fine" style="margin-bottom:8px">몹 카드를 상대 전장에 던져 무너뜨리세요 · 승리 ${icon('trophy')}+${PVP.trophyWin}</div>
-          <button class="btn red close" style="font-size:18px" data-act="match">${icon('sword')} 대전 시작</button>`;
-      } else if (tab === 'pass') {
+      if (tab === 'pass') {
         const t = seasonTier();
         const inTier = meta.season.xp % SEASON_XP_PER_TIER;
         const rows = SEASON_TIERS.map((def, i) => {
@@ -664,15 +593,9 @@ export class Menu {
         body = '<div class="fine">불러오는 중...</div>';
       }
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
-        <h2>${rankOnly ? '랭킹' : 'PvP 아레나'}</h2>
-        ${rankOnly ? '' : `<div class="tab-row">
-          <button data-act="tab" data-t="battle" class="${tab === 'battle' ? 'active' : ''}">대전</button>
-          ${V1 ? '' : `<button data-act="tab" data-t="pass" class="${tab === 'pass' ? 'active' : ''}">시즌 패스${this.seasonClaimable() ? ' •' : ''}</button>`}
-          <button data-act="tab" data-t="rank" class="${tab === 'rank' ? 'active' : ''}">랭킹</button></div>`}
+        <h2>${tab === 'pass' ? '시즌 패스' : '랭킹'}</h2>
         <div id="pvp-body">${body}</div></div>`, () => this.render());
       bindActions(el, {
-        tab: (b) => { tab = b.dataset.t as typeof tab; void draw(); },
-        match: () => this.startMatchmaking(),
         claim: (b) => {
           const ok = claimSeasonReward(Number(b.dataset.n), b.dataset.p === '1');
           if (ok) { audio.coin(); toast('시즌 보상 획득!'); void draw(); }

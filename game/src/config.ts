@@ -7,10 +7,6 @@ import type {
   Job, Race, GradeKey, Grade, ResearchDef, DailyQuestDef, AchievementDef, ResearchKey, ItemKey, BaseJob,
 } from './types';
 
-// ---------- v1 프로토타입 빌드 (Voodoo 제출용) ----------
-// true: 결제·광고·퀘스트·시즌 패스·무한 모드·연구를 숨기고 '대전 + 트로피 로드' 하나에 집중한다.
-//       캠페인은 튜토리얼/기초 학습용 앞 5스테이지만, 유닛 해금은 트로피 로드에서.
-export const V1 = true;
 
 // ---------- 유닛 (직업) ----------
 // base: 투사체 형태 (+ sheet 가 없으면 스프라이트 시트), sheet: 전용 시트 이름 (public/sprites/{sheet}_{등급}.png)
@@ -460,12 +456,12 @@ export const STAGES: StageDef[] = CHAPTERS.flatMap((ch, ci) =>
       races: index === 0 ? ['orc'] : index === 1 ? ['undead'] : index === 2 ? ['troll'] : undefined,
       firstReward: 40 + index * 12,
       replayReward: 10 + index * 3,
-      unlocks: V1 ? undefined : UNITS.find((u) => u.unlockStage === id)?.id, // v1 은 트로피 로드에서 해금
+      unlocks: UNITS.find((u) => u.unlockStage === id)?.id, // 트로피 로드에서도 열린다 (먼저 닿는 쪽)
     };
   }),
 );
-/** 플레이할 수 있는 캠페인 스테이지 (v1 은 튜토리얼 + 기초 학습용 앞 5개) */
-export const CAMPAIGN: StageDef[] = V1 ? STAGES.slice(0, 5) : STAGES;
+/** 플레이할 수 있는 캠페인 스테이지 */
+export const CAMPAIGN: StageDef[] = STAGES;
 
 // ---------- 트로피 로드 (v1 의 진행 축) - 트로피가 오르면 보석과 유닛 해금 ----------
 export interface RoadStep { at: number; crystals?: number; unit?: Job; attack?: AttackKey }
@@ -502,10 +498,9 @@ export function starsFor(peakMobs: number): number {
   return peakMobs <= STAR_PEAK.three ? 3 : peakMobs <= STAR_PEAK.two ? 2 : 1;
 }
 // 기능 해금 스테이지 - 로비 메뉴는 해금 전엔 보이지 않고, 해금되면 NEW 로 하나씩 등장한다
-// v1: 1-1 튜토리얼을 마치면 바로 대전/유닛이 열리고, 연구·퀘스트·무한 모드는 쓰지 않는다 ('off' = 열리지 않음)
-export const FEATURE_UNLOCK: Record<'units' | 'research' | 'quests' | 'pvp' | 'endless', string> = V1
-  ? { units: '1-1', research: 'off', quests: 'off', pvp: '1-1', endless: 'off' }
-  : { units: '1-1', research: '1-2', quests: '1-3', pvp: '1-5', endless: '1-10' };
+// 대전 중심: 1-1 튜토리얼을 마치면 바로 대전·덱, 이후 캠페인을 하며 연구·퀘스트·무한 모드가 열린다
+export const FEATURE_UNLOCK: Record<'units' | 'research' | 'quests' | 'pvp' | 'endless', string> =
+  { units: '1-1', research: '1-2', quests: '1-3', pvp: '1-1', endless: '1-10' };
 export const FEATURE_KR: Record<keyof typeof FEATURE_UNLOCK, string> = {
   units: '유닛', research: '연구', quests: '퀘스트', pvp: 'PvP 대전', endless: '무한 모드',
 };

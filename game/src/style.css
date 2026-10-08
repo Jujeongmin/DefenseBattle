@@ -285,6 +285,9 @@ b, strong { font-weight: 700; }
 .play-btn .pi { width: 20px; height: 20px; vertical-align: -3px; }
 .play-btn small { display: block; font-size: 13px; margin-top: 2px; }
 .mode-row { display: flex; gap: 10px; width: 100%; }
+.arena-sub { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.arena-sub .pass-btn { position: relative; font-size: 12px; }
+.arena-sub .pass-btn .dot { top: -4px; right: -4px; }
 .mode-card {
   flex: 1;
   position: relative;
