@@ -2,7 +2,7 @@
 //  진입점 - 부팅 / 화면 전환(로비↔게임) / 판 흐름(스테이지·무한·PvP) / 메인 루프
 // ============================================================
 import './style.css';
-import { Game } from './engine';
+import { Game, type BoardSnapshot } from './engine';
 import { Renderer } from './render';
 import { UI, type ResultView } from './ui';
 import { Spotlight, type SpotStep } from './tutorial';
@@ -93,7 +93,7 @@ function startPvp(g: Game, u: UI, s: PvpSession): void {
   });
   void s.ready({
     onStart: (startAt) => u.countdown(startAt, () => { g.paused = false; }),
-    onSnapshot: (snap) => u.setOpponent(snap),
+    onSnapshot: (snap) => { window.__oppSnap = snap; u.setOpponent(snap); },
     onAttack: (p) => g.receiveAttack(p),
     onResult: (r) => {
       if (resultShown) return;
@@ -356,6 +356,7 @@ void boot();
 declare global {
   interface Window {
     __game: Game | null;
+    __oppSnap: BoardSnapshot | null; // 마지막으로 받은 상대 전장 (디버그)
     __meta: typeof meta;
     __launch: (l: Launch) => void;
     __forceDraw: () => void;
