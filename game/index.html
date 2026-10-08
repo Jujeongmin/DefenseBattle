@@ -35,13 +35,14 @@
         </header>
 
         <!-- PvP: 상대 상태 -->
+        <!-- 상대 정보 한 줄 + 상대 전장. PvP 에선 #pvp-hud 가 display:contents 라 둘 다 #game-frame 의 줄이 된다 -->
         <div id="pvp-hud" class="hidden">
-          <canvas id="opp-canvas" width="72" height="72"></canvas>
           <div class="opp-info">
             <div class="opp-name"><span id="opp-nick">상대</span><span id="opp-bot" class="hidden"> <i class="pi pi-robot"></i></span> <span id="opp-trophy" class="trophy"></span></div>
             <div class="opp-bar"><div id="opp-fill"></div><span id="opp-count">0 / 100</span></div>
             <div class="opp-sub" id="opp-sub">Wave 1 · 유닛 0</div>
           </div>
+          <canvas id="opp-canvas" width="72" height="72"></canvas>
         </div>
 
         <!-- 전장 -->

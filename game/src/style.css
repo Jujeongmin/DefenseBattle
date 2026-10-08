@@ -619,31 +619,37 @@ b, strong { font-weight: 700; }
   image-rendering: pixelated;
 }
 
-/* PvP 상대 HUD: 상대 전장을 항상 보여 준다 (oppRender.ts) */
-#pvp-hud {
+/* PvP: 상대 정보 한 줄 + 상대 전장 / 내 전장이 남은 높이를 반씩 나눠 같은 크기로 보인다 (oppRender.ts) */
+#game-frame.pvp #pvp-hud { display: contents; }
+.opp-info {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
+  gap: 8px;
+  padding: 4px 10px;
   background: #3b2416;
-  border-bottom: 3px solid var(--edge);
+  border-bottom: 2px solid var(--edge);
   text-shadow: var(--outline-thin);
+  font-size: 12px;
+  font-weight: 700;
 }
+.opp-name { white-space: nowrap; max-width: 40%; overflow: hidden; text-overflow: ellipsis; }
+.opp-bar { flex: 1; position: relative; height: 16px; background: var(--edge); border: 2px solid var(--edge); overflow: hidden; }
+#opp-fill { height: 100%; width: 0; background: var(--red); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.3); transition: width 0.3s; }
+#opp-count { position: absolute; inset: 0; text-align: center; font-size: 11px; line-height: 12px; }
+.opp-sub { color: var(--cream-2); white-space: nowrap; }
 #opp-canvas {
-  width: clamp(110px, 21vh, 180px);
-  height: clamp(110px, 21vh, 180px);
-  flex: 0 0 auto;
+  flex: 1 1 0;
+  min-height: 0;
+  align-self: center;
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
+  margin-bottom: 4px; /* 내 전장과 구분선 - 여백이라 두 전장 크기는 같게 유지 */
   background: #6c9a3a;
   image-rendering: pixelated;
-  border: 3px solid var(--edge);
-  box-shadow: 0 0 0 2px #8a6f55;
 }
-.opp-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.opp-name { font-size: 14px; font-weight: 700; }
-.opp-bar { position: relative; height: 16px; background: var(--edge); border: 2px solid var(--edge); overflow: hidden; margin: 3px 0; }
-#opp-fill { height: 100%; width: 0; background: var(--red); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.3); transition: width 0.3s; }
-#opp-count { position: absolute; inset: 0; text-align: center; font-size: 11px; line-height: 12px; font-weight: 700; }
-.opp-sub { font-size: 12px; color: var(--cream-2); }
+#game-frame.pvp { background: #3b2416; }
+#game-frame.pvp #battlefield { flex: 1 1 0; min-height: 0; aspect-ratio: auto; background: #3b2416; }
+#game-frame.pvp #controls { flex: 0 0 auto; }
 
 #battlefield {
   position: relative;
@@ -656,9 +662,6 @@ b, strong { font-weight: 700; }
   background: #6c9a3a;
   overflow: hidden;
 }
-/* PvP: 상대 전장이 들어간 만큼 내 전장은 남는 높이에 맞춰 줄어든다 (정사각형 유지, 좌우 여백) */
-#game-frame.pvp #battlefield { flex: 1 1 0; min-height: 0; aspect-ratio: auto; background: #3b2416; }
-#game-frame.pvp #controls { flex: 0 0 auto; }
 #game-canvas {
   width: 100%;
   height: 100%;
