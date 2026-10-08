@@ -8,7 +8,7 @@ import { GRADES, JOBS, RACES, PLAY_SPEED } from './config';
 import { fieldBackground, FRAME, WALK_SEQ, JOB_TINT, UNIT_DRAW } from './render';
 import type { Job, Race } from './types';
 
-interface SnapMob { x: number; y: number; race: Race; kind: number; dir: number; size: number }
+interface SnapMob { x: number; y: number; race: Race; kind: number; dir: number; size: number; variant: number }
 interface SnapUnit { job: Job; grade: number; x: number; y: number }
 interface SnapFrame { at: number; mobs: Map<number, SnapMob>; units: SnapUnit[] }
 
@@ -25,6 +25,7 @@ function parse(s: BoardSnapshot, at: number): SnapFrame {
       race: RACES[code & 3] ?? 'orc',
       kind: (code >> 2) & 3,
       dir: (code >> 4) & 3,
+      variant: (code >> 6) & 7,
       size: s.mobs[i + 4],
     });
   }
@@ -98,7 +99,7 @@ export class OppRenderer {
       const s = m.size;
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
       ctx.beginPath(); ctx.ellipse(x, y + s * 0.38, s * 0.32, s * 0.12, 0, 0, Math.PI * 2); ctx.fill();
-      const spr = mobSprite(m.race);
+      const spr = mobSprite(m.race, m.variant);
       if (spr.ready) {
         const col = WALK_SEQ[Math.floor((t + id * 0.07) / 0.16) % WALK_SEQ.length];
         ctx.drawImage(spr.img, col * FRAME, m.dir * FRAME, FRAME, FRAME, x - s / 2, y - s / 2, s, s);

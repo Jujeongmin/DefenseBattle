@@ -70,7 +70,7 @@ export class UI {
     $('btn-pause').classList.toggle('hidden', pvp);
     $('btn-speed').textContent = '1x';
     $('btn-pause').innerHTML = icon('pause');
-    $('stage-label').textContent = ctx.kind === 'stage' ? `스테이지 ${ctx.stageId}` : ctx.kind === 'endless' ? '무한 모드' : 'PvP';
+    $('stage-label').textContent = ctx.kind === 'stage' ? ctx.stageId ?? '' : ctx.kind === 'endless' ? '무한' : 'PvP';
     if (pvp) this.buildAttackCards();
     $('sell-panel').classList.add('hidden');
     $('coach').classList.add('hidden');

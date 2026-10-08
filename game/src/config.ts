@@ -64,6 +64,8 @@ export function perkMult(level: number): number {
 export const RACES: Race[] = ['troll', 'orc', 'undead'];
 export const RACE_KR: Record<Race, string> = { troll: '트롤', orc: '오크', undead: '언데드' };
 export const RACE_SPRITE: Record<Race, string> = { troll: 'Mob_Troll', orc: 'Mob_Orc', undead: 'Mob_Undead' };
+/** 종족별 몹 그림 변형 개수 (sprites/Mob_{종족}_{0..n-1}.png) - 몹 종류마다 다른 그림을 쓴다 */
+export const MOB_VARIANTS: Record<Race, number> = { troll: 3, orc: 6, undead: 4 };
 
 // ---------- 직업 x 종족 데미지 배율 ----------
 // 상성: 유리 1.0 / 불리 0.9. 차이를 작게 둬서 상성을 몰라도 크게 손해 보지 않게 한다 (화면엔 ▲/▼ 만 표시).

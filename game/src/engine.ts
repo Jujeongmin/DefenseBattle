@@ -7,7 +7,7 @@ import {
   DMG_MULT, RACES, JOB_KR, FULL_RANGE_FROM_INDEX, RESEARCH_PER,
   MOB_KINDS, SKILLS, SKILL_FROM_INDEX, MERGE_COUNT, PVP, UNIT_BY_ID, STARTER_UNITS,
   UNIT_LEVEL_ATK, perkMult,
-  rollGrade, rollJob, makeRng, JOBS,
+  rollGrade, rollJob, makeRng, JOBS, MOB_VARIANTS,
 } from './config';
 import {
   meta, researchLevel, addDailyProgress, setDailyBestWave, unlockAchievement,
@@ -96,7 +96,7 @@ export interface BoardSnapshot {
   unitCount: number;
   topGrade: number;
   gold: number;
-  /** 몹 [id, x, y, code, size] 평탄화. x,y 는 0~255 양자화, code = 종족 | 종류<<2 | 방향<<4 */
+  /** 몹 [id, x, y, code, size] 평탄화. x,y 는 0~255 양자화, code = 종족 | 종류<<2 | 방향<<4 | 그림변형<<6 */
   mobs: number[];
   /** 유닛 [직업 index, 등급 index, x, y] 평탄화 (x,y 는 0~255 양자화) */
   units: number[];
@@ -291,9 +291,15 @@ export class Game {
       speedMult = 1.1;
     }
     const start = pathAt(pos);
+    const race = this.currentRace;
+    const n = MOB_VARIANTS[race];
+    // 그림 변형: 보스는 가장 강해 보이는 마지막, 탱커는 그 앞, 빠른 몹은 1번, 보통 몹은 앞쪽 두 가지를 섞는다
+    const variant = boss ? n - 1 : kind === 'tank' || kind === 'giant' || kind === 'elite' ? Math.max(0, n - 2)
+      : kind === 'fast' || kind === 'rush' ? Math.min(1, n - 1) : Math.floor(Math.random() * Math.min(2, n));
     const m: Mob = {
       id: nextId++,
-      race: this.currentRace,
+      race,
+      variant,
       kind,
       x: start.x,
       y: start.y,
@@ -359,7 +365,7 @@ export class Game {
     const mobs: number[] = [];
     for (const m of this.mobs.slice(0, 120)) {
       const kind = m.boss ? SNAP_KIND.boss : m.kind === 'sent' || m.kind === 'elite' || m.kind === 'rush' || m.kind === 'giant' ? SNAP_KIND.sent : SNAP_KIND.normal;
-      mobs.push(m.id, q(m.x), q(m.y), RACES.indexOf(m.race) | (kind << 2) | (m.dir << 4), Math.round(m.size));
+      mobs.push(m.id, q(m.x), q(m.y), RACES.indexOf(m.race) | (kind << 2) | (m.dir << 4) | (m.variant << 6), Math.round(m.size));
     }
     const units: number[] = [];
     for (const u of this.units.slice(0, 80)) units.push(JOBS.indexOf(u.job), u.gradeIndex, q(u.x), q(u.y));

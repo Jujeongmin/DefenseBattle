@@ -65,6 +65,7 @@ export type MobKind = 'normal' | 'fast' | 'tank' | 'sent' | 'rush' | 'giant' | '
 export interface Mob {
   id: number;
   race: Race;
+  variant: number;     // 종족 안의 그림 변형 (MOB_VARIANTS)
   kind: MobKind;       // fast=빠름/약함, tank=느림/단단함, sent/elite=PvP 상대가 보낸 몹
   x: number;
   y: number;

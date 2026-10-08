@@ -326,7 +326,7 @@ export class Renderer {
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
       ctx.beginPath(); ctx.ellipse(m.x, m.y + s * 0.38, s * 0.32, s * 0.12, 0, 0, Math.PI * 2); ctx.fill();
       this.drawMobAura(m);
-      const spr = mobSprite(m.race);
+      const spr = mobSprite(m.race, m.variant);
       if (spr.ready) {
         const period = m.kind === 'fast' ? 0.1 : m.kind === 'tank' ? 0.22 : 0.16;
         const col = m.pause > 0 ? 1 : this.walkCol(m.id * 0.07, period); // 코너 정지 시 대기 프레임

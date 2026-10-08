@@ -4,7 +4,7 @@
 //  해금 유닛(레인저/빙결술사 등)은 기본 3종 시트를 색조 회전한 캔버스로 생성
 //  (전용 아트가 준비되면 UNITS 의 hue 를 0 으로 두고 시트만 추가하면 된다)
 // ============================================================
-import { JOB_SPRITE, GRADES, RACE_SPRITE, UNITS, UNIT_BY_ID } from './config';
+import { JOB_SPRITE, GRADES, RACE_SPRITE, UNITS, UNIT_BY_ID, MOB_VARIANTS } from './config';
 import type { Job, Race, GradeKey } from './types';
 
 export interface SpriteEntry {
@@ -99,8 +99,8 @@ export function unitIconUrl(job: Job, gradeIndex = 0): string {
   return unitSprite(job, GRADES[gradeIndex].key).url;
 }
 
-export function mobSprite(race: Race): SpriteEntry {
-  return loadImage(`${RACE_SPRITE[race]}_0`);
+export function mobSprite(race: Race, variant = 0): SpriteEntry {
+  return loadImage(`${RACE_SPRITE[race]}_${Math.min(variant, MOB_VARIANTS[race] - 1)}`);
 }
 
 // 맵 타일 (public/tiles/*.png)
@@ -121,7 +121,7 @@ export function preloadAll(): void {
   for (const u of UNITS) {
     for (const g of GRADES) loadImage(`${JOB_SPRITE[u.id]}_${g.spriteIndex}`);
   }
-  for (const race of Object.keys(RACE_SPRITE) as Race[]) loadImage(`${RACE_SPRITE[race]}_0`);
+  for (const race of Object.keys(RACE_SPRITE) as Race[]) for (let v = 0; v < MOB_VARIANTS[race]; v++) loadImage(`${RACE_SPRITE[race]}_${v}`);
   for (const t of ['terrain', 'dirtpath', 'deco']) tileSprite(t);
   uiSprite('coin');
 }
