@@ -16,6 +16,7 @@ const QUEUE_TTL = 15_000;        // 대기열 하트비트 만료(ms) - 클라�
 const MATCH_TTL = 60_000;        // 매칭 결과 보관(ms)
 const TROPHY_WIN = 30;
 const TROPHY_LOSS = 20;
+const BOT_MIN_MATCH_MS = 40_000; // 봇전 결과를 받는 최소 경기 시간
 const RANKING = 'pvpRanking';
 const MAX_META_BYTES = 60_000;
 
@@ -247,6 +248,33 @@ export class Server {
       $room.broadcastToRoom('pvpResult', result);
       return result;
     });
+  }
+
+  // ================= 봇전 (라이브 매칭이 없을 때 봇이 상대) =================
+  /** 봇전 시작 기록 - 결과는 이 id 로 한 번만, 일정 시간이 지난 뒤에만 받는다 (트로피 부풀리기 방지) */
+  async pvpBotStart(): Promise<{ id: string }> {
+    const id = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    await $global.updateMyState({ pvpBot: { id, t: Date.now() } });
+    return { id };
+  }
+
+  /** 봇전 결과 - 트로피 규칙은 실제 대전과 같다. 잘못된 id/너무 짧은 경기는 null */
+  async pvpBotResult(opts: { id?: string; won?: boolean } = {}): Promise<{ delta: number; trophies: number } | null> {
+    const me = $sender.account;
+    const st = await $global.getMyState(['pvpBot', 'nick']);
+    const rec = st.pvpBot as { id: string; t: number } | null | undefined;
+    if (!rec || rec.id !== opts.id || Date.now() - rec.t < BOT_MIN_MATCH_MS) return null;
+    await $global.updateMyState({ pvpBot: null });
+    const s = await getStats(me);
+    const won = !!opts.won;
+    const d = won ? TROPHY_WIN + Math.min(10, s.streak * 2) : -Math.min(TROPHY_LOSS, s.trophies);
+    s.trophies += d;
+    if (won) { s.wins += 1; s.streak = Math.max(0, s.streak) + 1; } else { s.losses += 1; s.streak = 0; }
+    await $global.updateUserState(me, { pvp: s });
+    const nick = cleanNick(st.nick);
+    await $global.addCollectionItem(RANKING, { account: me, nick, trophies: s.trophies, wins: s.wins }, { id: me })
+      .catch(() => $global.updateCollectionItem(RANKING, { __id: me, account: me, nick, trophies: s.trophies, wins: s.wins }));
+    return { delta: d, trophies: s.trophies };
   }
 
   // ================= 랭킹 =================

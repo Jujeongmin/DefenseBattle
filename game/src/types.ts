@@ -205,7 +205,7 @@ export interface MetaData {
   grantedPurchases: string[];
   /** 1회 한정 상품 구매 여부 */
   oneTime: Record<string, boolean | number>;
-  pvp: { trophies: number; wins: number; losses: number; streak: number };
+  pvp: { trophies: number; wins: number; losses: number; streak: number; lossStreak?: number };
   /** 해금한 유닛과 영구 레벨 (없으면 미해금) */
   units: Partial<Record<Job, number>>;
   /** 출전 덱 (최대 4 = 배치 구역 수) */

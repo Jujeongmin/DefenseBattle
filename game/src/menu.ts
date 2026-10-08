@@ -22,7 +22,7 @@ import {
   seasonTier, claimSeasonReward, rewardText,
 } from './shop';
 import { freeTicketAdsLeft, watchForTickets, rewardedAvailable, FREE_TICKET_AMOUNT } from './ads';
-import { onlineAvailable, findOnlineMatch, createBotSession, MatchTimeout, type PvpSession } from './pvp';
+import { onlineAvailable, findMatch, type PvpSession } from './pvp';
 import { $, toast, openOverlay, closeOverlay, bindActions, spriteIcon, confirmModal } from './dom';
 import type { Job, Race, ResearchKey } from './types';
 
@@ -57,6 +57,8 @@ export class Menu {
   /** 결과 화면 → 스테이지 정보(시작 전) 바로 열기 */
   openStage(id: string): void { this.openStageInfo(id); }
   openPvpPanel(): void { this.openPvp(); }
+  /** 결과 화면 '다시 대전' → 바로 매칭 */
+  quickMatch(): void { this.startMatchmaking(); }
 
   refresh(): void {
     if (!$('main-menu').classList.contains('hidden')) this.render();
@@ -470,18 +472,13 @@ export class Menu {
       const tier = pvpTier(p.trophies);
       let body = '';
       if (tab === 'battle') {
-        const online = onlineAvailable();
         body = `<div style="text-align:center;margin:6px 0 10px">
             <div style="font-size:36px">${icon('trophy')}</div>
             <div class="tier-name" style="font-size:18px;color:${tier.color}">${tier.kr}</div>
             <div class="trophy" style="font-size:18px">${p.trophies} 트로피</div>
             <div class="fine">${p.wins}승 ${p.losses}패 · 연승 ${p.streak}</div></div>
-          <div class="row"><div class="ic">${icon('sword')}</div><div class="info"><div class="t">실시간 1:1 대결</div>
-            <div class="d">같은 웨이브를 동시에 막으며 몹을 보내 상대를 무너뜨리세요. 먼저 몹 100마리가 쌓이면 패배!</div></div></div>
-          <div class="row"><div class="ic">${icon('scroll')}</div><div class="info"><div class="d">연구 미적용(공정) · 유닛 레벨 적용 · 배속 1x 고정<br>승리 ${icon('trophy')}+${PVP.trophyWin} ${icon('gem')}${PVP.rewardWin} · 패배 ${icon('trophy')}-${PVP.trophyLoss} ${icon('gem')}${PVP.rewardLoss}</div></div></div>
-          <button class="btn red close" style="font-size:17px" data-act="match" ${online ? '' : 'disabled'}>${icon('sword')} 실시간 매칭</button>
-          <button class="btn blue close" data-act="bot">${icon('robot')} AI 연습전 (트로피 변동 없음)</button>
-          ${online ? '' : '<div class="fine">실시간 매칭은 Verse8 환경(게임서버 연결)에서 활성화됩니다.</div>'}`;
+          <div class="fine" style="margin-bottom:8px">몹 카드를 상대 전장에 던져 무너뜨리세요 · 승리 ${icon('trophy')}+${PVP.trophyWin}</div>
+          <button class="btn red close" style="font-size:18px" data-act="match">${icon('sword')} 대전 시작</button>`;
       } else if (tab === 'pass') {
         const t = seasonTier();
         const inTier = meta.season.xp % SEASON_XP_PER_TIER;
@@ -514,7 +511,6 @@ export class Menu {
       bindActions(el, {
         tab: (b) => { tab = b.dataset.t as typeof tab; void draw(); },
         match: () => this.startMatchmaking(),
-        bot: () => this.launchPvp(createBotSession()),
         claim: (b) => {
           const ok = claimSeasonReward(Number(b.dataset.n), b.dataset.p === '1');
           if (ok) { audio.coin(); toast('시즌 보상 획득!'); void draw(); }
@@ -557,19 +553,13 @@ export class Menu {
       <div class="fine">${icon('trophy')} ${meta.pvp.trophies} 근처의 상대를 찾고 있어요</div>
       <button class="btn close" data-act="cancel">취소</button></div>`, () => { signal.cancelled = true; });
     bindActions(el, { cancel: () => closeOverlay('modal') });
-    findOnlineMatch((sec) => { const t = document.getElementById('mm-time'); if (t) t.textContent = `${Math.floor(sec)}초`; }, signal)
+    findMatch((sec) => { const t = document.getElementById('mm-time'); if (t) t.textContent = `${Math.floor(sec)}초`; }, signal)
       .then((session) => { if (!signal.cancelled) this.launchPvp(session); })
-      .catch(async (e) => {
+      .catch((e) => {
         if (signal.cancelled) return;
         closeOverlay('modal');
-        if (e instanceof MatchTimeout) {
-          if (await confirmModal('상대를 찾지 못했어요', '지금은 대기 중인 상대가 없어요.<br>AI 연습전으로 플레이할까요?', 'AI 연습전', '닫기')) {
-            this.launchPvp(createBotSession());
-          }
-        } else {
-          console.warn(e);
-          toast('서버 연결에 실패했어요');
-        }
+        console.warn(e);
+        toast('대전을 시작하지 못했어요');
       });
   }
 
@@ -577,10 +567,10 @@ export class Menu {
     const m = session.match;
     const myTier = pvpTier(meta.pvp.trophies);
     const opTier = pvpTier(m.opponent.trophies);
-    openOverlay('modal', `<div class="dialog matching"><h2>${m.bot ? 'AI 연습전' : '매칭 완료!'}</h2>
+    openOverlay('modal', `<div class="dialog matching"><h2>매칭 완료!</h2>
       <div class="vs"><div class="p"><div class="nm">${esc(meta.nick)}</div><div class="tier-name" style="color:${myTier.color}">${icon('trophy')} ${meta.pvp.trophies}</div></div>
       <div class="x">VS</div>
-      <div class="p"><div class="nm">${esc(m.opponent.nick)}${m.bot ? ` ${icon('robot')}` : ''}</div><div class="tier-name" style="color:${opTier.color}">${icon('trophy')} ${m.opponent.trophies}</div></div></div>
+      <div class="p"><div class="nm">${esc(m.opponent.nick)}</div><div class="tier-name" style="color:${opTier.color}">${icon('trophy')} ${m.opponent.trophies}</div></div></div>
       <div class="fine">곧 전투가 시작됩니다</div></div>`);
     audio.sendAttack();
     setTimeout(() => {

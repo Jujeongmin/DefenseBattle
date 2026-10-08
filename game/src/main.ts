@@ -15,7 +15,7 @@ import { crystalReward, starsFor, STAGE_BY_ID, STAGES, PVP, PLAY_SPEED } from '.
 import { completeStage, stageOptions, endlessOptions, stageUnlocked, unitLevels } from './progress';
 import { syncPurchases, addSeasonXp } from './shop';
 import { showRewarded, rewardedAvailable, maybeInterstitial } from './ads';
-import { createBotSession, type PvpSession } from './pvp';
+import type { PvpSession } from './pvp';
 import { $, toast } from './dom';
 import type { GameOverData } from './types';
 import { icon } from './icons';
@@ -109,29 +109,27 @@ function startPvp(g: Game, u: UI, s: PvpSession): void {
 }
 
 function showPvpResult(g: Game, u: UI, s: PvpSession, r: { won: boolean; trophyDelta: number; trophies: number; reason: string }): void {
-  const bot = s.match.bot;
-  const crystals = Math.round((r.won ? PVP.rewardWin : PVP.rewardLoss) * (bot ? 0.5 : 1));
-  const xp = Math.round((r.won ? PVP.seasonXpWin : PVP.seasonXpLoss) * (bot ? 0.5 : 1));
+  // 봇전도 실제 대전과 똑같이 처리한다 (상대가 봇인지 화면에 드러내지 않음)
+  const crystals = r.won ? PVP.rewardWin : PVP.rewardLoss;
+  const xp = r.won ? PVP.seasonXpWin : PVP.seasonXpLoss;
   meta.crystals += crystals;
   addSeasonXp(xp);
-  if (!bot) {
+  if (r.reason !== 'cancel') {
     meta.pvp.trophies = r.trophies;
-    if (r.won) { meta.pvp.wins += 1; meta.pvp.streak += 1; } else { meta.pvp.losses += 1; meta.pvp.streak = 0; }
+    if (r.won) { meta.pvp.wins += 1; meta.pvp.streak += 1; meta.pvp.lossStreak = 0; }
+    else { meta.pvp.losses += 1; meta.pvp.streak = 0; meta.pvp.lossStreak = (meta.pvp.lossStreak ?? 0) + 1; }
   }
   saveMeta();
   audio.gameEnd(r.won);
-  const rewards = [`${icon('gem')} +${crystals}`, `시즌 XP +${xp}`];
-  if (!bot) rewards.unshift(`${icon('trophy')} ${r.trophyDelta >= 0 ? '+' : ''}${r.trophyDelta}`);
+  const rewards = [`${icon('trophy')} ${r.trophyDelta >= 0 ? '+' : ''}${r.trophyDelta}`, `${icon('gem')} +${crystals}`];
   u.showResult({
     win: r.won,
     title: r.won ? `${icon('trophy')} 승리!` : '패배',
-    sub: `${s.match.opponent.nick}${bot ? ` ${icon('robot')}` : ''} 상대 · Wave ${g.wave} · 보낸 공격 ${g.sentCount}회${r.reason === 'leave' && r.won ? ' · 상대 이탈' : ''}`,
+    sub: `${s.match.opponent.nick} · Wave ${g.wave}${r.reason === 'leave' && r.won ? ' · 상대 이탈' : ''}`,
     rewards,
     buttons: [
       ...(rewardedAvailable() ? [{ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward(crystals) }] : []),
-      bot
-        ? { label: `${icon('robot')} 다시 연습전`, cls: 'red', action: () => { void exitGame(true).then(() => launch({ kind: 'pvp', session: createBotSession() })); } }
-        : { label: `${icon('sword')} 다시 대전`, cls: 'red', action: () => { void exitGame(true).then(() => menu.openPvpPanel()); } },
+      { label: `${icon('sword')} 다시 대전`, cls: 'red', action: () => { void exitGame(true).then(() => menu.quickMatch()); } },
       { label: '로비로', cls: '', action: () => void exitGame(true) },
     ],
   });

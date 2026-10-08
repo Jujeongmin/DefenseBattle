@@ -94,6 +94,15 @@ describe('PvP 룸', () => {
     expect(await server.pvpAttack({ tier: 1, wave: 2 })).toBe(true);
   });
 
+  test('봇전 결과: 잘못된 id·너무 짧은 경기는 트로피 반영 안 함', async (server) => {
+    server.connect({ account: 'b1' });
+    const { id } = await server.pvpBotStart();
+    expect(await server.pvpBotResult({ id: 'wrong', won: true })).toBe(null);
+    expect(await server.pvpBotResult({ id, won: true })).toBe(null); // 시작 직후 (최소 경기 시간 전)
+    const lb = await server.pvpLeaderboard();
+    expect(lb.me.trophies).toBe(0);
+  });
+
   test('경기 중 이탈하면 상대 승리', async (server) => {
     await server.simulateJoin('r2', 'p3');
     await server.simulateJoin('r2', 'p4');

@@ -386,7 +386,8 @@ export class UI {
   // ---------- PvP: 상대 상태 ----------
   setOpponentInfo(nick: string, trophies: number, bot: boolean): void {
     $('opp-nick').textContent = nick;
-    $('opp-bot').classList.toggle('hidden', !bot);
+    void bot; // 봇도 실제 유저처럼 보여 준다
+    $('opp-bot').classList.add('hidden');
     $('opp-trophy').innerHTML = `${icon('trophy')}${trophies}`;
   }
 
