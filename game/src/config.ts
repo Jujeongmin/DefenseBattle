@@ -99,10 +99,12 @@ export const GRADE_INDEX: Record<GradeKey, number> =
 // 전설(index 3) 이상은 맵 전체 사거리
 export const FULL_RANGE_FROM_INDEX = 3;
 
-// 등급별 사거리(픽셀). 전설 이상은 Infinity 로 처리.
-// 구역 중심에서 길 대부분이 닿게 넉넉히 준다. 예전 값(215/270/330)은 소환이 몇 직업에 몰려
-// 빈 구역이 생기면 그쪽 길이 통째로 사거리 밖이라, 실력과 상관없이 초반에 무너지는 판이 많았다.
-export const GRADE_RANGE: number[] = [320, 380, 440, Infinity, Infinity, Infinity];
+// 등급별 사거리(픽셀, 전장 720). 유닛은 자기 구역 앞 변과 양쪽 모서리 근처만 지킨다 →
+// 어느 직업을 어느 구역에 둘지, 상대가 던지는 쪽에 맞춰 구역을 바꾸는 게 전략이 된다.
+// 빈 구역이 생겨도 이웃 구역 바깥쪽 유닛이 그 변의 모서리 쪽 절반 정도는 닿는다. 태초만 맵 전체.
+export const GRADE_RANGE: number[] = [220, 240, 260, 290, 320, Infinity];
+/** 이 등급부터 맵 전체 사거리 (태초) */
+export const GLOBAL_RANGE_FROM_INDEX = 5;
 
 // ---------- 경제 ----------
 // 시작 골드/처치 골드는 넉넉하게: 초반 화력이 모자라면 처치→골드→소환이 막혀 운으로 무너진다 (tools/simulate.ts)

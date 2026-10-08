@@ -1,7 +1,9 @@
 // ============================================================
 //  캔버스 렌더러
 // ============================================================
-import { MAP, Game } from './engine';
+import { MAP, Game, pathAt } from './engine';
+
+const GAP_SAMPLES = 160; // 길 한 바퀴를 몇 점으로 나눠 사거리 구멍을 볼지
 import { unitSprite, mobSprite, tileSprite, uiSprite } from './assets';
 import { GRADES, UNIT_BY_ID, PLAY_SPEED, ATTACKS } from './config';
 import type { Job, Mob, Effect } from './types';
@@ -140,6 +142,7 @@ export class Renderer {
     if (sh > 0.2) ctx.translate((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
     this.drawBackground();
     this.drawZones();
+    this.drawGaps();
     this.drawUnitAuras();
     this.drawMobs();
     this.drawUnits();
@@ -214,6 +217,27 @@ export class Renderer {
     ctx.lineTo(t[1].x, t[1].y);
     ctx.lineTo(t[2].x, t[2].y);
     ctx.closePath();
+  }
+
+  /** 어떤 유닛도 닿지 않는 길 구간을 빨갛게 - 어디가 뚫렸는지 보고 구역을 바꾼다 (0.4초마다 다시 계산) */
+  private gaps: { x: number; y: number }[] = [];
+  private gapAt = -1;
+  private drawGaps(): void {
+    const g = this.game;
+    if (!g.units.length) return;
+    if (this.t - this.gapAt > 0.4 || this.gapAt < 0) {
+      this.gapAt = this.t;
+      this.gaps = [];
+      const ranges = g.units.map((u) => ({ x: u.x, y: u.y, r: g.unitRange(u) }));
+      for (let i = 0; i < GAP_SAMPLES; i++) {
+        const p = pathAt(i / GAP_SAMPLES);
+        if (!ranges.some((u) => (u.x - p.x) ** 2 + (u.y - p.y) ** 2 <= u.r * u.r)) this.gaps.push(p);
+      }
+    }
+    if (!this.gaps.length) return;
+    const ctx = this.ctx;
+    ctx.fillStyle = `rgba(255,50,40,${0.22 + Math.sin(this.t * 4) * 0.08})`;
+    for (const p of this.gaps) ctx.fillRect(p.x - 12, p.y - 12, 24, 24);
   }
 
   private drawZones(): void {

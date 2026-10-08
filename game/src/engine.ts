@@ -4,7 +4,7 @@
 // ============================================================
 import {
   ECONOMY, WAVE, GRADES, GRADE_BY_KEY, GRADE_INDEX, GRADE_RANGE,
-  DMG_MULT, RACES, JOB_KR, FULL_RANGE_FROM_INDEX, RESEARCH_PER,
+  DMG_MULT, RACES, JOB_KR, FULL_RANGE_FROM_INDEX, GLOBAL_RANGE_FROM_INDEX, RESEARCH_PER,
   MOB_KINDS, SKILLS, SKILL_FROM_INDEX, MERGE_COUNT, PVP, UNIT_BY_ID, STARTER_UNITS,
   UNIT_LEVEL_ATK, perkMult,
   rollGrade, rollJob, makeRng, JOBS, MOB_VARIANTS, ATTACKS, STARTER_ATTACKS, RESIST_MULT,
@@ -644,7 +644,7 @@ export class Game {
   unitLevel(u: Unit): number { return this.levels[u.job] || 1; }
 
   unitRange(u: { gradeIndex: number; job: Job }): number {
-    return u.gradeIndex >= FULL_RANGE_FROM_INDEX ? Infinity : GRADE_RANGE[u.gradeIndex] * UNIT_BY_ID[u.job].rangeMult;
+    return u.gradeIndex >= GLOBAL_RANGE_FROM_INDEX ? Infinity : GRADE_RANGE[u.gradeIndex] * UNIT_BY_ID[u.job].rangeMult;
   }
 
   /** 컬렉션(영구) 레벨 */
