@@ -42,10 +42,10 @@ export function pickThrow(game: Game, opp: BoardSnapshot | null, skill: number):
   return { tier, pos };
 }
 
-/** 한 번 판단하는 간격(실시간 초) - 사람 손 속도에 맞춘다 (실력 0.3 ≈ 0.68초, 0.9 ≈ 0.44초).
- *  예전엔 게임 시간 0.35초(= 2배속에서 실시간 0.175초)마다 판단해 사람보다 훨씬 빨리 진형을 갖췄다. */
+/** 한 번 판단하는 간격(실시간 초) - 사람 손 속도에 맞춘다 (사람 손 속도).
+ *  (실력 0.3 ≈ 0.6초, 0.75 ≈ 0.44초) 예전엔 게임 시간 0.35초(= 2배속에서 실시간 0.175초)마다 판단해 사람보다 훨씬 빨리 진형을 갖췄다. */
 export function thinkInterval(skill: number): number {
-  return 0.8 - skill * 0.4;
+  return 0.7 - skill * 0.35;
 }
 
 export function aiStep(game: Game, skill: number, opp: BoardSnapshot | null = null): void {

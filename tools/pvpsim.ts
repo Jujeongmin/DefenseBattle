@@ -6,7 +6,7 @@
 import { Game } from '../game/src/engine';
 import { meta } from '../game/src/meta';
 import { aiStep, thinkInterval } from '../game/src/ai';
-import { botSkill } from '../game/src/pvp';
+import { botSkill, botDeck } from '../game/src/pvp';
 import { PVP, PLAY_SPEED, TROPHY_ROAD } from '../game/src/config';
 if (process.env.PVP_HPM) (PVP as { hpMult: number }).hpMult = Number(process.env.PVP_HPM);
 import type { BoardSnapshot } from '../game/src/engine';
@@ -20,9 +20,9 @@ const ALL: Job[] = ['archer', 'wizard', 'warrior', 'ranger', 'frost', 'paladin',
 /** 한 판: 플레이어가 이겼는지, 실시간 길이(초) */
 function match(playerSkill: number, bot: number, levels = 1): { won: boolean; sec: number } {
   const seed = Math.floor(Math.random() * 2 ** 31);
-  const botDeck = [...ALL].sort(() => Math.random() - 0.5).slice(0, 4);
+  const bDeck = botDeck(meta.pvp.trophies);
   const a = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: DECK, unitLevels: Object.fromEntries(DECK.map((j) => [j, levels])) });
-  const b = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: botDeck, unitLevels: Object.fromEntries(botDeck.map((j) => [j, levels])) });
+  const b = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: bDeck, unitLevels: Object.fromEntries(bDeck.map((j) => [j, levels])) });
   a.on('attack', (p) => b.receiveAttack(p));
   b.on('attack', (p) => a.receiveAttack(p));
   let snapA: BoardSnapshot | null = null, snapB: BoardSnapshot | null = null;

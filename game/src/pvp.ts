@@ -3,7 +3,7 @@
 //  두 구현이 같은 인터페이스를 가져 UI/게임 흐름은 상대 종류를 신경 쓰지 않는다.
 // ============================================================
 import { Game, type BoardSnapshot } from './engine';
-import { PVP, JOBS, PLAY_SPEED } from './config';
+import { PVP, JOBS, PLAY_SPEED, STARTER_UNITS, TROPHY_ROAD, DECK_SIZE } from './config';
 import { aiStep, thinkInterval } from './ai';
 import { meta } from './meta';
 import { unitLevels } from './progress';
@@ -188,12 +188,19 @@ export function createBotSession(): PvpSession {
   });
 }
 
-/** 봇 실력 0~1: 트로피가 오를수록 강해지고(트로피 로드 축에 맞춰 ~500 에서 0.9), 연승하면 조금 세게 / 연패하면 조금 약하게 (승률 50~60%, tools/pvpsim.ts) */
+/** 봇 실력 0~0.75: 트로피가 오를수록 강해지되 사람이 이길 만한 수준에서 멈춘다.
+ *  연승하면 조금 세게, 연패하면 확실히 약하게 (매스마켓: 지기만 하는 판이 이어지지 않게). tools/pvpsim.ts */
 export function botSkill(): number {
   const p = meta.pvp;
-  const base = 0.3 + p.trophies / 500;
-  const adj = Math.min(4, p.streak) * 0.06 - Math.min(3, p.lossStreak ?? 0) * 0.08;
-  return Math.max(0.15, Math.min(0.95, base + adj));
+  const base = 0.2 + p.trophies / 1000;
+  const adj = Math.min(4, p.streak) * 0.05 - Math.min(3, p.lossStreak ?? 0) * 0.1;
+  return Math.max(0.1, Math.min(0.75, base + adj));
+}
+
+/** 봇 덱: 그 트로피에서 열려 있을 유닛만 (기본 3종 + 트로피 로드로 열린 유닛) */
+export function botDeck(trophies: number): Job[] {
+  const pool = JOBS.filter((j) => STARTER_UNITS.includes(j) || TROPHY_ROAD.some((s) => s.unit === j && s.at <= trophies));
+  return [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(DECK_SIZE, pool.length));
 }
 
 /** 봇전 트로피 규칙 - 서버 finishMatch 와 같다 */
@@ -215,6 +222,7 @@ class BotSession implements PvpSession {
     this.handlers = h;
     const skill = botSkill();
     const think = thinkInterval(skill);
+    const openDelay = 1.5 + Math.random() * 1.5;
     if (onlineAvailable()) {
       // 트로피는 서버가 관리한다: 봇전 시작을 서버에 알리고 받은 id 로만 결과를 보고할 수 있다
       try {
@@ -223,8 +231,7 @@ class BotSession implements PvpSession {
       } catch (e) { console.warn('[pvp] 봇전 시작 기록 실패 - 트로피 미반영', e); }
     }
     // 덱: 플레이어 덱과 같은 수, 해금 유닛 중 무작위 (레벨은 플레이어 평균 수준)
-    const pool = [...JOBS].sort(() => Math.random() - 0.5);
-    const deck = pool.slice(0, Math.max(3, meta.deck.length)) as Job[];
+    const deck = botDeck(this.match.opponent.trophies);
     const lv = unitLevels();
     const vals = Object.values(lv) as number[];
     const avg = Math.max(1, Math.round(vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.length)));
@@ -241,10 +248,12 @@ class BotSession implements PvpSession {
       const real = Math.min(0.2, (now - last) / 1000);
       last = now;
       if (now < startAt || this.done) return;
+      const sinceStart = (now - startAt) / 1000;
       const dt = real * PLAY_SPEED;
       for (let left = dt; left > 0; left -= 0.05) game.update(Math.min(left, 0.05));
       acc += real; snapAcc += real; // 판단·스냅샷 모두 실시간 기준 (사람과 같은 손 속도)
-      if (acc >= think) { acc = 0; aiStep(game, skill, this.opp); }
+      // 시작 직후 잠깐은 손을 대지 않는다 (사람이 상황을 파악하는 시간)
+      if (acc >= think && sinceStart > openDelay) { acc = 0; aiStep(game, skill, this.opp); }
       if (snapAcc >= PVP.reportInterval) { snapAcc = 0; h.onSnapshot(game.snapshot()); }
     }, 50);
   }
