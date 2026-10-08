@@ -783,6 +783,19 @@ b, strong { font-weight: 700; }
 #opp-fill { height: 100%; width: 0; background: var(--red); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.3); transition: width 0.3s; }
 #opp-count { position: absolute; inset: 0; text-align: center; font-size: 11px; line-height: 12px; }
 .opp-sub { color: var(--cream-2); white-space: nowrap; }
+/* 나 = 파랑, 상대 = 빨강 (몹 외곽선·막대·카드 모두 같은 색 규칙) */
+.side-tag {
+  display: inline-block; padding: 1px 5px; font-size: 10px; font-weight: 700; line-height: 1.3;
+  color: #fff; text-shadow: none; vertical-align: 1px;
+}
+.side-tag.me { background: #2f86d6; box-shadow: inset 0 -2px 0 #1d5d99; }
+.side-tag.opp { background: #d93636; box-shadow: inset 0 -2px 0 #932020; }
+#progress-row .side-tag { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); z-index: 1; }
+#game-frame:not(.pvp) .pvp-only { display: none; }
+#game-frame.pvp #mob-progress-fill { background: #2f86d6; }
+#game-frame.pvp #mob-progress-fill.warn { background: var(--red); }
+.opp-label .side-tag { font-size: 10px; }
+#game-frame.pvp .attack-card { border-image-source: url('/ui/frame/btn_blue.png'); }
 /* 상대 전장: 평소엔 내 전장 오른쪽 위 작은 창, 몹 카드를 끄는 동안(.aiming) 크게 펼쳐 조준 */
 #opp-canvas {
   position: absolute;

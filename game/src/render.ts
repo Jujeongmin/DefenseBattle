@@ -4,6 +4,7 @@
 import { MAP, Game } from './engine';
 import { unitSprite, mobSprite, tileSprite, uiSprite } from './assets';
 import { GRADES, UNIT_BY_ID, PLAY_SPEED, ATTACKS } from './config';
+import { outlined, SIDE_COLOR } from './outline';
 import type { Job, Mob, Effect } from './types';
 
 export const JOB_TINT: Record<Job, string> = {
@@ -333,7 +334,9 @@ export class Renderer {
         ctx.save();
         if (m.hitFlash > 0) ctx.globalAlpha = 0.65;
         if (m.ghost) ctx.globalAlpha *= 0.6 + Math.sin(this.t * 3 + m.id) * 0.1; // 유령: 반투명
-        this.frame(spr.img, col, m.dir, m.x - s / 2, m.y - s / 2, s);
+        // 상대가 던진 몹은 빨간 외곽선 (웨이브 몹과 같은 그림이라도 구분)
+        const img = m.kind === 'card' ? outlined(spr.img, spr.url, SIDE_COLOR.opp) ?? spr.img : spr.img;
+        this.frame(img, col, m.dir, m.x - s / 2, m.y - s / 2, s);
         ctx.restore();
         // 상태 색 덧칠 (ctx.filter 는 사파리 미지원이라 source-atop 대신 반투명 원으로 표시)
         if (m.slow > 0) {
@@ -357,7 +360,7 @@ export class Renderer {
       const by = m.y - s / 2 - 8;
       ctx.fillStyle = 'rgba(0,0,0,0.65)';
       ctx.fillRect(m.x - w / 2 - 1, by - 1, w + 2, h + 2);
-      ctx.fillStyle = m.boss ? '#ff5252' : m.kind === 'card' ? '#ff8a3d' : ratio > 0.5 ? '#7ee87e' : ratio > 0.25 ? '#ffd54f' : '#ff7b7b';
+      ctx.fillStyle = m.boss ? '#ff5252' : m.kind === 'card' ? SIDE_COLOR.opp : ratio > 0.5 ? '#7ee87e' : ratio > 0.25 ? '#ffd54f' : '#ff7b7b';
       ctx.fillRect(m.x - w / 2, by, w * ratio, h);
       const big = m.card !== undefined && ATTACKS[m.card].hpMult >= 5 && m.gold === undefined; // 거인·킹·마왕은 이름표
       if (m.boss || big) {
@@ -400,15 +403,16 @@ export class Renderer {
         ctx.stroke();
       }
     } else if (m.kind === 'card') {
-      // 상대가 던진 몹: 발밑 붉은 고리 (+ 신관은 회복 범위)
+      // 상대가 던진 몹: 발밑 빨간 고리 (+ 신관은 회복 범위)
       const def = ATTACKS[m.card!];
       if (def.heal) {
         ctx.fillStyle = 'rgba(126,232,126,0.10)';
         ctx.beginPath(); ctx.arc(m.x, m.y, 130, 0, Math.PI * 2); ctx.fill();
       }
-      ctx.strokeStyle = `rgba(255,90,61,${0.55 + Math.sin(this.t * 6) * 0.2})`;
+      ctx.fillStyle = 'rgba(255,59,59,0.28)';
+      ctx.strokeStyle = `rgba(255,59,59,${0.7 + Math.sin(this.t * 6) * 0.2})`;
       ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.ellipse(m.x, m.y + m.size * 0.38, m.size * 0.36, m.size * 0.14, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(m.x, m.y + m.size * 0.38, m.size * 0.38, m.size * 0.15, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     }
   }
 
