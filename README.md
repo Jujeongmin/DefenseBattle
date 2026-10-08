@@ -107,3 +107,14 @@ Verse8 VX Shop 에 아래 **productId** 로 상품을 등록해야 한다 (가�
 - PvP 는 각 클라이언트가 자기 필드를 시뮬레이션하고 서버는 매칭·중계·판정만 담당한다.
   같은 `seed` 로 웨이브 구성(종족·몹 종류)이 양쪽 동일. 배속 1x 고정, 연구 미적용, 유닛 레벨 적용.
 - 백그라운드 탭: 일반 모드는 멈추고, PvP 는 타이머 보조로 계속 진행된다.
+
+## 에셋 출처
+
+| 에셋 | 사용처 | 라이선스 |
+| --- | --- | --- |
+| [Tiny Swords](https://pixelfrog-assets.itch.io/tiny-swords) (Pixel Frog) | 맵 지형·장식(`tiles/`, 구버전 CC0), UI 버튼·종이·나무·리본(`ui/frame/`, Free Pack) | 구버전 CC0 / Free Pack: 상업 이용 가능, 원본 팩 재배포 금지 |
+| [Kenney 1-Bit Pack](https://kenney.nl/assets/1-bit-pack) | UI 아이콘(`ui/icons/`, 색 입혀 가공) | CC0 |
+| [Galmuri](https://github.com/quiple/galmuri) (Lee Minseo) | 픽셀 폰트(`fonts/`) | SIL OFL 1.1 |
+
+원본 팩은 `Asset/`(gitignore)에 두고, 가공본만 `game/public` 에 커밋한다.
+가공 스크립트: `python tools/build_ui_assets.py` (Pillow 필요). 팩에 없는 아이콘(별, TV, 티켓 등)은 스크립트 안에 직접 그렸다.

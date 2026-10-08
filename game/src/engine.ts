@@ -16,6 +16,7 @@ import type {
   Job, Race, GradeKey, Unit, Mob, MobKind, Zone, Effect, LogEntry, Banner, Stack, JobStack,
   WaveState, GameOverData, AchievementDef, DragState, GameOptions, AttackPayload, ResearchKey,
 } from './types';
+import { icon } from './icons';
 
 // ---- 맵 기하 (논리 좌표: 720 x 720) ----
 export const MAP = { size: 720 } as const;
@@ -282,7 +283,7 @@ export class Game {
     this.gold -= cost;
     this.sentCount += 1;
     const payload: AttackPayload = { tier, wave: Math.max(1, this.wave) };
-    this.pushLog(`⚔ 상대에게 ${PVP.attacks[tier].kr} 전송!`);
+    this.pushLog(`${icon('sword')} 상대에게 ${PVP.attacks[tier].kr} 전송!`);
     this.emit('attack', payload);
     return true;
   }
@@ -293,7 +294,7 @@ export class Game {
     const hp = this.baseHp(p.wave) * def.hpMult;
     const kind: MobKind = p.tier === 1 ? 'elite' : 'sent';
     for (let i = 0; i < def.count; i++) this.pending.push({ kind, hp, delay: i * 0.25 });
-    this.pushLog(`⚠ 상대가 ${def.kr}을(를) 보냈습니다!`);
+    this.pushLog(`${icon('warning')} 상대가 ${def.kr}을(를) 보냈습니다!`);
     if (p.tier === 1) this.shake = Math.max(this.shake, 6);
     this.emit('incoming', p);
   }
@@ -412,10 +413,10 @@ export class Game {
     const rate = grade.summonRate;
     const verb = source === 'merge' ? '합성' : '소환';
     const text = source === 'merge'
-      ? `🔨 ${JOB_KR[job]} ${grade.kr}등급 합성`
+      ? `${icon('hammer')} ${JOB_KR[job]} ${grade.kr}등급 합성`
       : `${rate}% ${JOB_KR[job]} ${grade.kr}등급 소환`;
     if (gIdx >= GRADE_INDEX['mythic']) {
-      this.mythicBanner = { text: `✨ ${JOB_KR[job]} ${grade.kr} 등급 ${verb}! ✨`, ttl: 4 };
+      this.mythicBanner = { text: `${JOB_KR[job]} ${grade.kr} 등급 ${verb}!`, ttl: 4 };
       this.shake = Math.max(this.shake, 5);
     } else {
       this.pushLog(text);
@@ -863,7 +864,7 @@ export class Game {
     this.mobs = this.mobs.filter((m) => m.boss);
     if (this.waveState === 'waiting_boss') this.bossTimer = Math.max(this.bossTimer, 45);
     this.shake = 12;
-    this.pushLog('✨ 부활! 필드가 정리되었습니다');
+    this.pushLog('부활! 필드가 정리되었습니다');
     return true;
   }
 

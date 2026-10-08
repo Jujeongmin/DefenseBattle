@@ -9,6 +9,7 @@ import { mobPortraitSrc, unitIconUrl } from './assets';
 import { meta, useItem } from './meta';
 import { audio } from './audio';
 import { $, toast, spriteIcon } from './dom';
+import { icon } from './icons';
 import type { Job, Race, GradeKey } from './types';
 
 // 상성 % 색상
@@ -54,7 +55,7 @@ export class UI {
     this.speeds = pvp ? [1] : meta.adRemoved ? [1, 2, 3] : [1, 2];
     this.bind();
     game.on('roster', () => { this.renderStacks(); this.sellOpen?.(); });
-    game.on('achievement', (a) => toast(`🏅 업적 달성: ${a.kr} (+${a.reward}💎)`));
+    game.on('achievement', (a) => toast(`${icon('medal')} 업적 달성: ${a.kr} (+${a.reward}${icon('gem')})`));
     game.on('shoot', (job) => audio.attack(job === 'archer' || job === 'ranger' ? 'archer' : job === 'wizard' || job === 'frost' || job === 'bomber' ? 'wizard' : 'warrior'));
     game.on('kill', (boss) => audio.kill(boss));
     game.on('bossSpawn', () => { audio.boss(); if (!pvp) audio.switchBgm('boss'); });
@@ -68,9 +69,9 @@ export class UI {
     $('btn-speed').classList.toggle('hidden', pvp);
     $('btn-pause').classList.toggle('hidden', pvp);
     $('btn-speed').textContent = '1x';
-    $('btn-pause').textContent = '❚❚';
+    $('btn-pause').innerHTML = icon('pause');
     $('stage-label').textContent = ctx.kind === 'stage' ? `스테이지 ${ctx.stageId}` : ctx.kind === 'endless' ? '무한 모드' : 'PvP';
-    PVP.attacks.forEach((a, i) => { $(`btn-attack-${i}`).querySelector('span')!.textContent = `🪙${a.cost}`; });
+    PVP.attacks.forEach((a, i) => { $(`btn-attack-${i}`).querySelector('span')!.innerHTML = `${icon('coin')}${a.cost}`; });
     $('sell-panel').classList.add('hidden');
     $('coach').classList.add('hidden');
     $('countdown').classList.add('hidden');
@@ -87,7 +88,7 @@ export class UI {
     $('btn-pause').onclick = () => {
       audio.button();
       this.game.paused = !this.game.paused;
-      $('btn-pause').textContent = this.game.paused ? '▶' : '❚❚';
+      $('btn-pause').innerHTML = icon(this.game.paused ? 'play' : 'pause');
     };
     $('btn-speed').onclick = () => {
       audio.button();
@@ -100,9 +101,9 @@ export class UI {
     $('btn-menu').onclick = () => { audio.button(); this.ctx.onExit(); };
     $('btn-mute').onclick = () => {
       const muted = audio.toggleMute();
-      $('btn-mute').textContent = muted ? '🔇' : '🔊';
+      $('btn-mute').innerHTML = icon(muted ? 'mute' : 'sound');
     };
-    $('btn-mute').textContent = audio.isMuted() ? '🔇' : '🔊';
+    $('btn-mute').innerHTML = icon(audio.isMuted() ? 'mute' : 'sound');
     ([0, 1] as const).forEach((tier) => {
       $(`btn-attack-${tier}`).onclick = () => {
         if (!this.game.sendAttack(tier)) this.flashGold();
@@ -148,7 +149,7 @@ export class UI {
     const bt = $('boss-timer');
     if (g.waveState === 'waiting_boss' || (g.isBossWave && g.waveState === 'spawning')) {
       bt.classList.remove('hidden');
-      bt.textContent = `⏱ ${g.bossTimer.toFixed(1)}s`;
+      bt.innerHTML = `${icon('timer')} ${g.bossTimer.toFixed(1)}s`;
     } else {
       bt.classList.add('hidden');
     }
@@ -158,7 +159,7 @@ export class UI {
     const banner = $('mythic-banner');
     if (g.mythicBanner) {
       banner.classList.remove('hidden');
-      banner.textContent = g.mythicBanner.text;
+      banner.innerHTML = g.mythicBanner.text;
     } else {
       banner.classList.add('hidden');
     }
@@ -197,8 +198,8 @@ export class UI {
     if (key === this.lastTickets) return;
     this.lastTickets = key;
     const chips: string[] = [];
-    if (meta.items.summonTicket > 0) chips.push(`<button class="ticket-chip" data-t="summonTicket">🎟️ 무료 소환 ×${meta.items.summonTicket}</button>`);
-    if (meta.items.mythicTicket > 0) chips.push(`<button class="ticket-chip mythic" data-t="mythicTicket">🌟 신화 확정 ×${meta.items.mythicTicket}</button>`);
+    if (meta.items.summonTicket > 0) chips.push(`<button class="ticket-chip" data-t="summonTicket">${icon('ticket')} 무료 소환 ×${meta.items.summonTicket}</button>`);
+    if (meta.items.mythicTicket > 0) chips.push(`<button class="ticket-chip mythic" data-t="mythicTicket">${icon('star')} 신화 확정 ×${meta.items.mythicTicket}</button>`);
     row.innerHTML = chips.join('');
     row.querySelectorAll<HTMLButtonElement>('[data-t]').forEach((b) => {
       b.onclick = () => {
@@ -235,7 +236,7 @@ export class UI {
         ${spriteIcon(unitIconUrl(job, top))}
         <div class="name">${JOB_KR[job]} Lv.${level}</div>
         <div class="skill">${SKILL_KR[job]}</div>
-        <button class="up-btn" data-job="${job}">강화 🪙${cost}</button>`;
+        <button class="up-btn" data-job="${job}">강화 ${icon('coin')}${cost}</button>`;
       const btn = div.querySelector('.up-btn') as HTMLButtonElement;
       btn.disabled = count === 0 || this.game.gold < cost;
       btn.onclick = () => { if (this.game.upgrade(job)) audio.button(); };
@@ -281,7 +282,7 @@ export class UI {
       }).join('');
       panel.innerHTML = `
         <div class="dialog sell-dialog${firstOpen ? ' anim' : ''}">
-          <button class="close-x">✕</button>
+          <button class="close-x">${icon('close')}</button>
           <div class="sell-head">
             <h2>영웅 관리</h2>
             ${mode === 'sell' ? `<div class="qty-row">
@@ -290,8 +291,8 @@ export class UI {
               <button data-qty="all" class="${qty === Infinity ? 'active' : ''}">ALL</button></div>` : ''}
           </div>
           <div class="mode-tabs">
-            <button data-mode="merge" class="merge ${mode === 'merge' ? 'active' : ''}">🔨 합성${mergeJobs.size ? ' •' : ''}</button>
-            <button data-mode="sell" class="sell ${mode === 'sell' ? 'active' : ''}">🪙 판매</button>
+            <button data-mode="merge" class="merge ${mode === 'merge' ? 'active' : ''}">${icon('hammer')} 합성${mergeJobs.size ? ' •' : ''}</button>
+            <button data-mode="sell" class="sell ${mode === 'sell' ? 'active' : ''}">${icon('coin')} 판매</button>
           </div>
           <div class="sell-hint">${mode === 'merge' ? `같은 유닛·등급 ${MERGE_COUNT}개 → 상위 등급 1개 (카드를 탭)` : '골드가 급할 때 판매해 소환/강화에 투자하세요'}</div>
           <div class="grade-row">${cards}</div>
@@ -331,8 +332,9 @@ export class UI {
 
   // ---------- PvP: 상대 상태 ----------
   setOpponentInfo(nick: string, trophies: number, bot: boolean): void {
-    $('opp-nick').textContent = nick + (bot ? ' 🤖' : '');
-    $('opp-trophy').textContent = `🏆${trophies}`;
+    $('opp-nick').textContent = nick;
+    $('opp-bot').classList.toggle('hidden', !bot);
+    $('opp-trophy').innerHTML = `${icon('trophy')}${trophies}`;
   }
 
   setOpponent(s: BoardSnapshot): void {
@@ -398,9 +400,9 @@ export class UI {
     $('sell-panel').classList.add('hidden');
     const panel = $('gameover-panel');
     const stars = v.stars !== undefined
-      ? `<div class="stars">${[0, 1, 2].map((i) => `<span class="${i < v.stars! ? '' : 'off'}">⭐</span>`).join('')}</div>` : '';
+      ? `<div class="stars">${[0, 1, 2].map((i) => `<span class="${i < v.stars! ? '' : 'off'}">${icon('star')}</span>`).join('')}</div>` : '';
     const unlock = v.unlocked ? `<div class="unlock">${spriteIcon(unitIconUrl(v.unlocked, 2))}
-      <div><div style="font-size:18px">🎉 새 유닛 해금: ${JOB_KR[v.unlocked]}</div><div class="fine" style="text-align:left">로비 → 유닛에서 덱에 편성하세요</div></div></div>` : '';
+      <div><div style="font-size:18px">새 유닛 해금: ${JOB_KR[v.unlocked]}</div><div class="fine" style="text-align:left">로비 → 유닛에서 덱에 편성하세요</div></div></div>` : '';
     panel.innerHTML = `<div class="dialog result">
       <h2 class="${v.win ? 'win' : 'lose'}">${v.title}</h2>
       ${stars}

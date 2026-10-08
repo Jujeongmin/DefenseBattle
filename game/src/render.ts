@@ -2,7 +2,7 @@
 //  캔버스 렌더러
 // ============================================================
 import { MAP, Game } from './engine';
-import { unitSprite, mobSprite, tileSprite } from './assets';
+import { unitSprite, mobSprite, tileSprite, uiSprite } from './assets';
 import { GRADES, UNIT_BY_ID } from './config';
 import type { Job, Mob } from './types';
 
@@ -17,12 +17,33 @@ const WALK_SEQ = [1, 0, 1, 2]; // 걷기 컬럼 순서 (1=정지 기준)
 const ATTACK_SEQ = [1, 2, 0, 1]; // 공격 스윙 프레임 순서 (1=정지 기준)
 const ATTACK_ANIM_DUR = 0.1;     // engine.ts 의 u.flash 초기값과 동일해야 함
 
-// 타일 맵 설정 (16px 원본 타일 → TILE 크기로 스케일)
-const TILE = 45; // 720 / 16
-const GRASS_SRC = { sx: 16, sy: 80 }; // grass.png 의 채움 잔디 타일
-const DIRT_SRC = { sx: 0, sy: 0 };    // dirt.png 의 채움 흙 타일
-const PATH_INSET = 70;                // 경로 중심선 여백 (PATH.corners 와 동일)
-const BAND_HALF = 30;                 // 흙길 밴드 반폭
+// ---- Tiny Swords 지형 타일 ----
+// tiles/terrain.png = Tilemap_Flat 원본(640x256, 64px 셀). 잔디 4x4 오토타일 = 열 0~3.
+// tiles/dirtpath.png = 모래 4x4 오토타일을 흙색으로 톤 변환한 시트.
+//   각 4x4 안의 배치: 열/행 0~2 가 3x3(모서리·변·중앙), 열 3 은 세로 1칸 폭 변형,
+//   행 3 은 가로 1칸 높이 변형, (3,3) 은 단독 타일.
+// tiles/deco.png = 덤불/돌 장식 가로 시트(64px 셀 6개).
+const TILE = 45;       // 720 / 16
+const SRC = 64;        // 원본 타일 한 칸 크기
+const PATH_INSET = 70; // 경로 중심선 여백 (PATH.corners 와 동일)
+const BAND_HALF = 30;  // 흙길 밴드 반폭
+const DECO_COUNT = 6;
+const FONT = 'Galmuri11, sans-serif';
+
+// 3x3 오토타일에서 이웃 유무(위/아래/좌/우)에 따라 쓸 셀의 (col,row) 를 고른다.
+function autoTile(up: boolean, down: boolean, left: boolean, right: boolean): { cx: number; cy: number } {
+  const cx = left && right ? 1 : left ? 2 : right ? 0 : 3;
+  const cy = up && down ? 1 : up ? 2 : down ? 0 : 3;
+  return { cx, cy };
+}
+
+// 좌표 기반 결정론적 해시(0~1) - 장식 배치가 매번 같도록
+function hash2(a: number, b: number): number {
+  let h = (a * 374761393 + b * 668265263) ^ (a << 13);
+  h = Math.imul(h ^ (h >>> 15), 1274126177);
+  h = h ^ (h >>> 16);
+  return (h >>> 0) / 4294967295;
+}
 
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
@@ -59,7 +80,7 @@ export class Renderer {
   // 타일 배경은 오프스크린에 한 번만 그려 재사용 (타일 로드 완료 후 캐시)
   private drawBackground(): void {
     if (this.bg) { this.ctx.drawImage(this.bg, 0, 0); return; }
-    const ready = tileSprite('grass').ready && tileSprite('dirt').ready;
+    const ready = ['terrain', 'dirtpath', 'deco'].every((n) => tileSprite(n).ready);
     if (!ready) { this.drawTiles(this.ctx); return; }
     const c = document.createElement('canvas');
     c.width = MAP.size; c.height = MAP.size;
@@ -71,15 +92,10 @@ export class Renderer {
     this.ctx.drawImage(c, 0, 0);
   }
 
-  // 배경 장식: 흙길 가장자리 그림자 + 필드 비네트
+  // 배경 장식: 필드 비네트
   private decorate(cx: CanvasRenderingContext2D): void {
-    const o1 = PATH_INSET - BAND_HALF, i1 = PATH_INSET + BAND_HALF;
     const S = MAP.size;
     cx.save();
-    cx.strokeStyle = 'rgba(60,40,20,0.35)';
-    cx.lineWidth = 3;
-    cx.strokeRect(o1, o1, S - o1 * 2, S - o1 * 2);
-    cx.strokeRect(i1, i1, S - i1 * 2, S - i1 * 2);
     const g = cx.createRadialGradient(S / 2, S / 2, S * 0.25, S / 2, S / 2, S * 0.75);
     g.addColorStop(0, 'rgba(0,0,0,0)');
     g.addColorStop(1, 'rgba(0,0,0,0.28)');
@@ -103,10 +119,10 @@ export class Renderer {
     ctx.fillStyle = g;
     this.roundRect(x, y, w * ratio, h, 6); ctx.fill();
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 13px sans-serif';
+    ctx.font = `bold 13px ${FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`BOSS  ${Math.ceil(ratio * 100)}%   ⏱ ${Math.max(0, this.game.bossTimer).toFixed(0)}s`, MAP.size / 2, y + h / 2 + 1);
+    ctx.fillText(`BOSS  ${Math.ceil(ratio * 100)}%   ${Math.max(0, this.game.bossTimer).toFixed(0)}s`, MAP.size / 2, y + h / 2 + 1);
     ctx.restore();
   }
 
@@ -139,28 +155,45 @@ export class Renderer {
     return ATTACK_SEQ[idx];
   }
 
-  // 잔디 필드 + 흙길 링을 타일로 그린다
+  // 잔디 필드 + 흙길 링(오토타일) + 바깥 테두리 장식
   private drawTiles(ctx: CanvasRenderingContext2D): void {
-    const grass = tileSprite('grass');
-    const dirt = tileSprite('dirt');
+    const terrain = tileSprite('terrain');
+    const dirt = tileSprite('dirtpath');
+    const deco = tileSprite('deco');
     const n = Math.ceil(MAP.size / TILE);
     const o1 = PATH_INSET - BAND_HALF;         // 흙길 바깥 경계
-    const i1 = PATH_INSET + BAND_HALF;          // 흙길 안쪽 경계
+    const i1 = PATH_INSET + BAND_HALF;         // 흙길 안쪽 경계
     const oFar = MAP.size - o1, iFar = MAP.size - i1;
+    const isPath = (gx: number, gy: number) => {
+      const cx = gx * TILE + TILE / 2, cy = gy * TILE + TILE / 2;
+      const inOuter = cx >= o1 && cx <= oFar && cy >= o1 && cy <= oFar;
+      const inInner = cx > i1 && cx < iFar && cy > i1 && cy < iFar;
+      return inOuter && !inInner;
+    };
     for (let gy = 0; gy < n; gy++) {
       for (let gx = 0; gx < n; gx++) {
+        if (terrain.ready) ctx.drawImage(terrain.img, SRC, SRC, SRC, SRC, gx * TILE, gy * TILE, TILE, TILE);
+        else { ctx.fillStyle = '#8bb04a'; ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE); }
+      }
+    }
+    for (let gy = 0; gy < n; gy++) {
+      for (let gx = 0; gx < n; gx++) {
+        if (!isPath(gx, gy)) continue;
+        if (!dirt.ready) { ctx.fillStyle = '#a9843f'; ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE); continue; }
+        const { cx, cy } = autoTile(isPath(gx, gy - 1), isPath(gx, gy + 1), isPath(gx - 1, gy), isPath(gx + 1, gy));
+        ctx.drawImage(dirt.img, cx * SRC, cy * SRC, SRC, SRC, gx * TILE, gy * TILE, TILE, TILE);
+      }
+    }
+    // 길 바깥 잔디에만 덤불/돌 (길 안쪽은 유닛 배치 구역이라 비워둔다)
+    if (!deco.ready) return;
+    for (let gy = 0; gy < n; gy++) {
+      for (let gx = 0; gx < n; gx++) {
+        if (isPath(gx, gy)) continue;
         const cx = gx * TILE + TILE / 2, cy = gy * TILE + TILE / 2;
-        const inOuter = cx >= o1 && cx <= oFar && cy >= o1 && cy <= oFar;
-        const inInner = cx > i1 && cx < iFar && cy > i1 && cy < iFar;
-        const isPath = inOuter && !inInner;    // 사각 링(흙길)
-        const spr = isPath ? dirt : grass;
-        const src = isPath ? DIRT_SRC : GRASS_SRC;
-        if (spr.ready) {
-          ctx.drawImage(spr.img, src.sx, src.sy, 16, 16, gx * TILE, gy * TILE, TILE, TILE);
-        } else {
-          ctx.fillStyle = isPath ? '#d3b183' : '#8bb04a';
-          ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE);
-        }
+        if (cx > o1 && cx < oFar && cy > o1 && cy < oFar) continue;
+        if (hash2(gx, gy) > 0.4) continue;
+        const idx = Math.floor(hash2(gx + 91, gy + 17) * DECO_COUNT);
+        ctx.drawImage(deco.img, idx * SRC, 0, SRC, SRC, gx * TILE, gy * TILE, TILE, TILE);
       }
     }
   }
@@ -243,10 +276,31 @@ export class Renderer {
     // 교환 아이콘 (대상 구역 위)
     if (drag.to !== null) {
       const to = this.game.zones[drag.to];
-      ctx.font = 'bold 30px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('⇄', to.cx, to.cy);
+      this.drawSwapMark(to.cx, to.cy);
+    }
+    ctx.restore();
+  }
+
+  // 구역 교환 표시: 엇갈린 두 화살표
+  private drawSwapMark(x: number, y: number): void {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillStyle = '#fff';
+    for (const dir of [1, -1]) {
+      const yy = y + dir * 8;
+      ctx.beginPath();
+      ctx.moveTo(x - dir * 16, yy - 3);
+      ctx.lineTo(x + dir * 8, yy - 3);
+      ctx.lineTo(x + dir * 8, yy - 9);
+      ctx.lineTo(x + dir * 18, yy);
+      ctx.lineTo(x + dir * 8, yy + 9);
+      ctx.lineTo(x + dir * 8, yy + 3);
+      ctx.lineTo(x - dir * 16, yy + 3);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fill();
     }
     ctx.restore();
   }
@@ -298,7 +352,7 @@ export class Renderer {
       ctx.fillRect(m.x - w / 2, by, w * ratio, h);
       if (m.boss || m.kind === 'elite') {
         ctx.fillStyle = m.boss ? '#ffd54f' : '#ff8a3d';
-        ctx.font = 'bold 14px sans-serif';
+        ctx.font = `bold 14px ${FONT}`;
         ctx.textAlign = 'center';
         ctx.lineWidth = 3;
         ctx.strokeStyle = 'rgba(0,0,0,0.7)';
@@ -467,7 +521,7 @@ export class Renderer {
           const alpha = Math.max(0, Math.min(1, (e.ttl / 0.7) * 1.6));
           ctx.globalAlpha = alpha;
           const size = e.crit ? 24 + (p < 0.15 ? (0.15 - p) * 60 : 0) : 17;
-          ctx.font = `bold ${size}px sans-serif`;
+          ctx.font = `bold ${size}px ${FONT}`;
           ctx.textAlign = 'center';
           ctx.lineWidth = 3;
           ctx.strokeStyle = 'rgba(0,0,0,0.75)';
@@ -482,14 +536,18 @@ export class Renderer {
         case 'gold': {
           const p = 1 - e.ttl / 0.8;
           ctx.globalAlpha = Math.max(0, 1 - p * p);
-          ctx.font = 'bold 15px sans-serif';
+          ctx.font = `bold 15px ${FONT}`;
           ctx.textAlign = 'center';
           ctx.lineWidth = 3;
           ctx.strokeStyle = 'rgba(0,0,0,0.7)';
           ctx.fillStyle = '#ffcf3f';
           const ty = e.y - 14 - p * 22;
-          ctx.strokeText(`+${e.value}🪙`, e.x, ty);
-          ctx.fillText(`+${e.value}🪙`, e.x, ty);
+          const label = `+${e.value}`;
+          const tw = ctx.measureText(label).width;
+          ctx.strokeText(label, e.x - 8, ty);
+          ctx.fillText(label, e.x - 8, ty);
+          const coin = uiSprite('coin');
+          if (coin.ready) ctx.drawImage(coin.img, e.x - 8 + tw / 2 + 1, ty - 13, 16, 16);
           ctx.globalAlpha = 1;
           break;
         }

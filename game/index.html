@@ -7,9 +7,6 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>랜덤 디펜스</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="app">
@@ -31,8 +28,8 @@
             <div id="boss-timer" class="hidden">120.0</div>
           </div>
           <div class="top-right">
-            <button id="btn-mute" class="icon-btn">🔊</button>
-            <button id="btn-pause" class="icon-btn">❚❚</button>
+            <button id="btn-mute" class="icon-btn"><i class="pi pi-sound"></i></button>
+            <button id="btn-pause" class="icon-btn"><i class="pi pi-pause"></i></button>
             <button id="btn-speed" class="icon-btn">1x</button>
           </div>
         </header>
@@ -41,7 +38,7 @@
         <div id="pvp-hud" class="hidden">
           <canvas id="opp-canvas" width="72" height="72"></canvas>
           <div class="opp-info">
-            <div class="opp-name"><span id="opp-nick">상대</span> <span id="opp-trophy" class="trophy"></span></div>
+            <div class="opp-name"><span id="opp-nick">상대</span><span id="opp-bot" class="hidden"> <i class="pi pi-robot"></i></span> <span id="opp-trophy" class="trophy"></span></div>
             <div class="opp-bar"><div id="opp-fill"></div><span id="opp-count">0 / 100</span></div>
             <div class="opp-sub" id="opp-sub">Wave 1 · 유닛 0</div>
           </div>
@@ -51,14 +48,14 @@
         <main id="battlefield">
           <canvas id="game-canvas"></canvas>
           <div id="summon-log"></div>
-          <div id="gold-badge"><span class="coin">🪙</span><span id="gold-amount">100</span></div>
+          <div id="gold-badge"><i class="pi pi-coin"></i><span id="gold-amount">100</span></div>
           <div id="mythic-banner" class="hidden"></div>
           <div id="countdown" class="hidden"></div>
           <div id="coach" class="hidden"></div>
           <div id="debug-panel" class="hidden">
-            <button id="debug-mythic">🐛 신화</button>
-            <button id="debug-eternal">🐛 태초</button>
-            <button id="debug-gold">🐛 +500G</button>
+            <button id="debug-mythic">DEV 신화</button>
+            <button id="debug-eternal">DEV 태초</button>
+            <button id="debug-gold">DEV +500G</button>
           </div>
         </main>
 
@@ -71,19 +68,19 @@
         <!-- 하단 조작부 -->
         <section id="controls">
           <div id="attack-row" class="hidden">
-            <button id="btn-attack-0" class="attack-btn">⚔ 몹 무리 <span>🪙40</span></button>
-            <button id="btn-attack-1" class="attack-btn elite">☠ 정예 몹 <span>🪙160</span></button>
+            <button id="btn-attack-0" class="attack-btn"><i class="pi pi-sword"></i> 몹 무리 <span><i class="pi pi-coin"></i>40</span></button>
+            <button id="btn-attack-1" class="attack-btn elite"><i class="pi pi-skull"></i> 정예 몹 <span><i class="pi pi-coin"></i>160</span></button>
           </div>
           <div class="control-buttons">
-            <button id="btn-sell-panel" class="side-btn">🧙<br />영웅<span id="merge-dot" class="dot hidden"></span></button>
+            <button id="btn-sell-panel" class="side-btn"><i class="pi pi-helmet"></i>영웅<span id="merge-dot" class="dot hidden"></span></button>
             <div class="summon-wrap">
               <div id="ticket-row"></div>
               <button id="btn-summon" class="summon-btn">
                 <span class="summon-title">소환</span>
-                <span class="summon-cost"><span class="coin">🪙</span>20</span>
+                <span class="summon-cost"><i class="pi pi-coin"></i>20</span>
               </button>
             </div>
-            <button id="btn-menu" class="side-btn">🏠<br />나가기</button>
+            <button id="btn-menu" class="side-btn"><i class="pi pi-home"></i>나가기</button>
           </div>
           <div id="unit-stacks"></div>
         </section>

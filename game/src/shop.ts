@@ -9,6 +9,7 @@ import {
 import { meta, saveMeta, todayStr, addItem, currentSeasonId } from './meta';
 import { getPlatform } from './platform';
 import type { ItemKey, PurchaseRecord } from './types';
+import { icon, type IconName } from './icons';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -118,10 +119,10 @@ export function claimSeasonReward(tier: number, premium: boolean): boolean {
 }
 export function rewardText(r: SeasonReward): string {
   const parts: string[] = [];
-  if (r.crystals) parts.push(`💎${r.crystals}`);
+  if (r.crystals) parts.push(`${icon('gem')}${r.crystals}`);
   if (r.items) {
-    const icons: Record<ItemKey, string> = { summonTicket: '🎟️', mythicTicket: '🌟', goldBooster: '💰' };
-    for (const [k, n] of Object.entries(r.items)) if (n) parts.push(`${icons[k as ItemKey]}${n}`);
+    const icons: Record<ItemKey, IconName> = { summonTicket: 'ticket', mythicTicket: 'star', goldBooster: 'bag' };
+    for (const [k, n] of Object.entries(r.items)) if (n) parts.push(`${icon(icons[k as ItemKey])}${n}`);
   }
   return parts.join(' ');
 }

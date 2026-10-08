@@ -108,6 +108,11 @@ export function tileSprite(name: string): SpriteEntry {
   return loadImage(name, 'tiles');
 }
 
+// UI 이미지 (public/ui/*.png) - 캔버스에 그리는 동전 등
+export function uiSprite(name: string): SpriteEntry {
+  return loadImage(name, 'ui');
+}
+
 export function mobPortraitSrc(race: Race): string {
   return `sprites/${RACE_SPRITE[race]}_0.png`;
 }
@@ -117,8 +122,8 @@ export function preloadAll(): void {
     for (const g of GRADES) loadImage(`${JOB_SPRITE[u.id]}_${g.spriteIndex}`);
   }
   for (const race of Object.keys(RACE_SPRITE) as Race[]) loadImage(`${RACE_SPRITE[race]}_0`);
-  tileSprite('grass');
-  tileSprite('dirt');
+  for (const t of ['terrain', 'dirtpath', 'deco']) tileSprite(t);
+  uiSprite('coin');
 }
 
 /** 모든 기본 스프라이트 로드 완료 후 색조 변형 시트 미리 생성 (첫 표시 지연 방지) */

@@ -2,6 +2,7 @@
 //  랜덤 디펜스 - 게임 데이터/밸런스 테이블
 //  (게임 기획서 기준. 숫자 하나만 바꿔도 밸런스가 조정되도록 이곳에 집중)
 // ============================================================
+import type { IconName } from './icons';
 import type {
   Job, Race, GradeKey, Grade, ResearchDef, DailyQuestDef, AchievementDef, ResearchKey, ItemKey, BaseJob,
 } from './types';
@@ -257,45 +258,45 @@ export interface ProductDef {
   category: ProductCategory;
   oneTime?: boolean;        // 계정당 1회 한정
   badge?: string;
-  icon: string;
+  icon: IconName;
   grant: ProductGrant;
 }
 export const AD_REMOVE_VX = 300; // 광고제거 패키지 가격(VX)
 export const MONTHLY_DAILY_CRYSTALS = 100;
 export const PRODUCTS: ProductDef[] = [
   // 패키지
-  { id: 'starter_pack', kr: '스타터 패키지', icon: '🎁', category: 'package', vx: 30, oneTime: true, badge: '1회 한정',
+  { id: 'starter_pack', kr: '스타터 패키지', icon: 'chest', category: 'package', vx: 30, oneTime: true, badge: '1회 한정',
     desc: '보석 500 + 소환권 20 + 신화 확정권 1 + 골드 부스터 3',
     grant: { crystals: 500, items: { summonTicket: 20, mythicTicket: 1, goldBooster: 3 } } },
-  { id: 'monthly_pass', kr: '월정액 (30일)', icon: '📅', category: 'package', vx: 90, badge: '추천',
+  { id: 'monthly_pass', kr: '월정액 (30일)', icon: 'calendar', category: 'package', vx: 90, badge: '추천',
     desc: `즉시 보석 300 + 30일간 매일 보석 ${MONTHLY_DAILY_CRYSTALS}`,
     grant: { crystals: 300, monthlyDays: 30 } },
-  { id: 'ad_remove', kr: '광고 제거 패키지', icon: '⚡', category: 'package', vx: AD_REMOVE_VX, oneTime: true,
+  { id: 'ad_remove', kr: '광고 제거 패키지', icon: 'bolt', category: 'package', vx: AD_REMOVE_VX, oneTime: true,
     desc: '광고 제거 + 3배속 해금 + 보석 300',
     grant: { adRemove: true, crystals: 300 } },
   // 시즌 패스
-  { id: 'season_premium', kr: 'PvP 시즌 패스', icon: '🏆', category: 'pass', vx: 150,
+  { id: 'season_premium', kr: 'PvP 시즌 패스', icon: 'trophy', category: 'pass', vx: 150,
     desc: '이번 시즌 프리미엄 보상 트랙 해금 (지난 단계 보상도 수령 가능)',
     grant: { seasonPremium: true } },
   // 부스터 (일반 모드 전용 - PvP 에서는 사용 불가)
-  { id: 'summon_ticket_30', kr: '소환권 30장', icon: '🎟️', category: 'booster', vx: 30,
+  { id: 'summon_ticket_30', kr: '소환권 30장', icon: 'ticket', category: 'booster', vx: 30,
     desc: '골드 없이 소환 30회 (일반 모드)', grant: { items: { summonTicket: 30 } } },
-  { id: 'mythic_ticket', kr: '신화 확정 소환권', icon: '🌟', category: 'booster', vx: 60,
+  { id: 'mythic_ticket', kr: '신화 확정 소환권', icon: 'star', category: 'booster', vx: 60,
     desc: '신화 등급 유닛 1회 확정 소환 (일반 모드)', grant: { items: { mythicTicket: 1 } } },
-  { id: 'gold_booster_5', kr: '골드 부스터 5개', icon: '💰', category: 'booster', vx: 25,
+  { id: 'gold_booster_5', kr: '골드 부스터 5개', icon: 'bag', category: 'booster', vx: 25,
     desc: '사용한 판의 시작 골드 2배 (일반 모드)', grant: { items: { goldBooster: 5 } } },
   // 보석
-  { id: 'crystal_100', kr: '보석 100', icon: '💎', category: 'crystal', vx: 10, desc: '', grant: { crystals: 100 } },
-  { id: 'crystal_550', kr: '보석 550', icon: '💎', category: 'crystal', vx: 50, badge: '+10%', desc: '', grant: { crystals: 550 } },
-  { id: 'crystal_1200', kr: '보석 1,200', icon: '💎', category: 'crystal', vx: 100, badge: '+20%', desc: '', grant: { crystals: 1200 } },
-  { id: 'crystal_2600', kr: '보석 2,600', icon: '💎', category: 'crystal', vx: 200, badge: '+30%', desc: '', grant: { crystals: 2600 } },
+  { id: 'crystal_100', kr: '보석 100', icon: 'gem', category: 'crystal', vx: 10, desc: '', grant: { crystals: 100 } },
+  { id: 'crystal_550', kr: '보석 550', icon: 'gem', category: 'crystal', vx: 50, badge: '+10%', desc: '', grant: { crystals: 550 } },
+  { id: 'crystal_1200', kr: '보석 1,200', icon: 'gem', category: 'crystal', vx: 100, badge: '+20%', desc: '', grant: { crystals: 1200 } },
+  { id: 'crystal_2600', kr: '보석 2,600', icon: 'gem', category: 'crystal', vx: 200, badge: '+30%', desc: '', grant: { crystals: 2600 } },
 ];
 export const PRODUCT_BY_ID: Record<string, ProductDef> = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
 
-export const ITEM_KR: Record<ItemKey, { kr: string; icon: string }> = {
-  summonTicket: { kr: '소환권', icon: '🎟️' },
-  mythicTicket: { kr: '신화 확정권', icon: '🌟' },
-  goldBooster: { kr: '골드 부스터', icon: '💰' },
+export const ITEM_KR: Record<ItemKey, { kr: string; icon: IconName }> = {
+  summonTicket: { kr: '소환권', icon: 'ticket' },
+  mythicTicket: { kr: '신화 확정권', icon: 'star' },
+  goldBooster: { kr: '골드 부스터', icon: 'bag' },
 };
 
 // ---------- PvP 시즌 패스 ----------

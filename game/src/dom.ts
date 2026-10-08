@@ -4,11 +4,12 @@
 export const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
   document.getElementById(id) as T;
 
+/** 토스트. msg 는 HTML (아이콘 포함) - 사용자 입력 문자열을 넣지 말 것 */
 export function toast(msg: string, ms = 2200): void {
   const layer = $('toast-layer');
   const t = document.createElement('div');
   t.className = 'toast';
-  t.textContent = msg;
+  t.innerHTML = msg;
   layer.appendChild(t);
   setTimeout(() => t.remove(), ms);
 }

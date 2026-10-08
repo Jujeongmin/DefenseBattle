@@ -17,6 +17,7 @@ import { showRewarded, rewardedAvailable, maybeInterstitial } from './ads';
 import { createBotSession, type PvpSession } from './pvp';
 import { $, toast } from './dom';
 import type { GameOverData } from './types';
+import { icon } from './icons';
 
 preloadAll();
 warmTints();
@@ -118,18 +119,18 @@ function showPvpResult(g: Game, u: UI, s: PvpSession, r: { won: boolean; trophyD
   }
   saveMeta();
   audio.gameEnd(r.won);
-  const rewards = [`💎 +${crystals}`, `시즌 XP +${xp}`];
-  if (!bot) rewards.unshift(`🏆 ${r.trophyDelta >= 0 ? '+' : ''}${r.trophyDelta}`);
+  const rewards = [`${icon('gem')} +${crystals}`, `시즌 XP +${xp}`];
+  if (!bot) rewards.unshift(`${icon('trophy')} ${r.trophyDelta >= 0 ? '+' : ''}${r.trophyDelta}`);
   u.showResult({
     win: r.won,
-    title: r.won ? '🏆 승리!' : '패배',
-    sub: `${s.match.opponent.nick}${bot ? ' 🤖' : ''} 상대 · Wave ${g.wave} · 보낸 공격 ${g.sentCount}회${r.reason === 'leave' && r.won ? ' · 상대 이탈' : ''}`,
+    title: r.won ? `${icon('trophy')} 승리!` : '패배',
+    sub: `${s.match.opponent.nick}${bot ? ` ${icon('robot')}` : ''} 상대 · Wave ${g.wave} · 보낸 공격 ${g.sentCount}회${r.reason === 'leave' && r.won ? ' · 상대 이탈' : ''}`,
     rewards,
     buttons: [
-      ...(rewardedAvailable() ? [{ label: `📺 광고 보고 💎 +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward(crystals) }] : []),
+      ...(rewardedAvailable() ? [{ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward(crystals) }] : []),
       bot
-        ? { label: '🤖 다시 연습전', cls: 'red', action: () => { void exitGame(true).then(() => launch({ kind: 'pvp', session: createBotSession() })); } }
-        : { label: '⚔ 다시 대전', cls: 'red', action: () => { void exitGame(true).then(() => menu.openPvpPanel()); } },
+        ? { label: `${icon('robot')} 다시 연습전`, cls: 'red', action: () => { void exitGame(true).then(() => launch({ kind: 'pvp', session: createBotSession() })); } }
+        : { label: `${icon('sword')} 다시 대전`, cls: 'red', action: () => { void exitGame(true).then(() => menu.openPvpPanel()); } },
       { label: '로비로', cls: '', action: () => void exitGame(true) },
     ],
   });
@@ -151,7 +152,7 @@ function onGameOver(g: Game, d: GameOverData): void {
       rewards: [],
       extraHtml: '<div class="fine">광고를 보고 필드의 몹을 모두 정리한 뒤 이어서 싸울 수 있어요 (1회)</div>',
       buttons: [
-        { label: '📺 부활하고 계속하기', cls: 'green', action: async () => {
+        { label: `${icon('tv')} 부활하고 계속하기`, cls: 'green', action: async () => {
           if (await showRewarded('revive') && g.revive()) { u.hideResult(); audio.merge(); }
           else toast('광고를 끝까지 보면 부활할 수 있어요');
         } },
@@ -185,14 +186,14 @@ function finishSolo(u: UI, d: GameOverData): void {
         ? `${l.stageId} · 최대 필드 몹 ${d.peakMobs}마리${res.firstClear ? ' · 첫 클리어!' : res.newBest ? ' · 별 기록 갱신!' : ''}`
         : `${d.reason} · Wave ${d.wave}/${st.waves}`,
       stars: d.cleared ? stars : undefined,
-      rewards: crystals ? [`💎 +${crystals}`] : [],
+      rewards: crystals ? [`${icon('gem')} +${crystals}`] : [],
       unlocked: res.unlocked,
-      extraHtml: d.cleared ? '' : '<div class="fine">TIP: 🧙 유닛 레벨업 · 🔬 연구 · 상성(%) 높은 유닛 배치 · 합성 타이밍을 노려보세요</div>',
+      extraHtml: d.cleared ? '' : '<div class="fine">TIP: 유닛 레벨업 · 연구 · 상성(%) 높은 유닛 배치 · 합성 타이밍을 노려보세요</div>',
       buttons: [],
     };
-    if (crystals > 0 && rewardedAvailable()) view.buttons.push({ label: `📺 광고 보고 💎 +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward(crystals) });
-    if (canNext) view.buttons.push({ label: `▶ 다음 스테이지 ${next.id}`, cls: 'red', action: () => void exitGame(true, st.index).then(() => menu.openStage(next.id)) });
-    view.buttons.push({ label: '🔄 다시 하기', cls: canNext ? '' : 'red', action: () => void exitGame(true, st.index).then(() => menu.openStage(l.stageId)) });
+    if (crystals > 0 && rewardedAvailable()) view.buttons.push({ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward(crystals) });
+    if (canNext) view.buttons.push({ label: `${icon('play')} 다음 스테이지 ${next.id}`, cls: 'red', action: () => void exitGame(true, st.index).then(() => menu.openStage(next.id)) });
+    view.buttons.push({ label: '다시 하기', cls: canNext ? '' : 'red', action: () => void exitGame(true, st.index).then(() => menu.openStage(l.stageId)) });
     view.buttons.push({ label: '로비로', cls: '', action: () => void exitGame(true, st.index) });
     u.showResult(view);
   } else {
@@ -201,12 +202,12 @@ function finishSolo(u: UI, d: GameOverData): void {
     saveMeta();
     u.showResult({
       win: d.cleared,
-      title: d.cleared ? '🎉 50웨이브 클리어!' : '게임 오버',
+      title: d.cleared ? '50웨이브 클리어!' : '게임 오버',
       sub: `${d.reason} · 최고 기록 ${meta.bestWave}웨이브`,
-      rewards: [`Wave ${d.wave}`, `💎 +${reward}`],
+      rewards: [`Wave ${d.wave}`, `${icon('gem')} +${reward}`],
       buttons: [
-        ...(reward > 0 && rewardedAvailable() ? [{ label: `📺 광고 보고 💎 +${reward} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward(reward) }] : []),
-        { label: '🔄 다시 하기', cls: 'red', action: () => void exitGame(true).then(() => launch({ kind: 'endless', goldBooster: false })) },
+        ...(reward > 0 && rewardedAvailable() ? [{ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${reward} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward(reward) }] : []),
+        { label: '다시 하기', cls: 'red', action: () => void exitGame(true).then(() => launch({ kind: 'endless', goldBooster: false })) },
         { label: '로비로', cls: '', action: () => void exitGame(true) },
       ],
     });
@@ -220,8 +221,8 @@ async function doubleReward(amount: number): Promise<void> {
     meta.crystals += amount;
     saveMeta();
     audio.coin();
-    toast(`보상 2배! 💎 +${amount}`);
-    if (btn) btn.textContent = '✓ 2배 보상 받음';
+    toast(`보상 2배! ${icon('gem')} +${amount}`);
+    if (btn) btn.innerHTML = `${icon('check')} 2배 보상 받음`;
   } else if (btn) {
     btn.disabled = false;
   }
@@ -234,10 +235,10 @@ function startTutorial(g: Game, u: UI): void {
   let step = 0;
   const show = () => {
     if (g !== game) return;
-    if (step === 0) u.coach('👆 <b>소환</b> 버튼을 눌러 영웅을 불러오세요! (🪙20)', 'btn-summon');
+    if (step === 0) u.coach(`<b>소환</b> 버튼을 눌러 영웅을 불러오세요! (${icon('coin')}20)`, 'btn-summon');
     else if (step === 1) u.coach('좋아요! 영웅은 몹을 자동으로 공격해요.<br>골드가 모이면 계속 <b>소환</b>하세요', 'btn-summon');
-    else if (step === 2) u.coach('🔨 같은 유닛·등급 <b>3개</b>가 모였어요!<br><b>영웅</b> 버튼에서 상위 등급으로 <b>합성</b>하세요', 'btn-sell-panel');
-    else if (step === 3) u.coach('💪 <b>강화</b>하면 그 유닛 전체가 강해져요', 'unit-stacks');
+    else if (step === 2) u.coach('같은 유닛·등급 <b>3개</b>가 모였어요!<br><b>영웅</b> 버튼에서 상위 등급으로 <b>합성</b>하세요', 'btn-sell-panel');
+    else if (step === 3) u.coach('<b>강화</b>하면 그 유닛 전체가 강해져요', 'unit-stacks');
     else if (step === 4) {
       u.coach('카드의 <b>%</b>는 이번 몹과의 상성이에요.<br>전장을 <b>드래그</b>해 구역을 바꿀 수 있어요. 행운을 빌어요!');
       meta.tutorial = 1;
@@ -339,7 +340,7 @@ async function boot(): Promise<void> {
   }
   const granted = await syncPurchases().catch(() => [] as string[]);
   menu.show();
-  if (granted.length) toast('결제한 상품이 지급되었어요 🎁');
+  if (granted.length) toast('결제한 상품이 지급되었어요');
 }
 void boot();
 

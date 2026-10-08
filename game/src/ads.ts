@@ -5,6 +5,7 @@
 //  Verse8 호스트 밖(로컬 개발)에서는 개발 서버에서만 가짜 광고로 흐름 테스트
 // ============================================================
 import { meta, saveMeta, todayStr, addItem } from './meta';
+import { icon } from './icons';
 
 export const AD_PLACEMENTS = {
   doubleReward: 'reward_double',
@@ -42,7 +43,7 @@ function fakeAd(label: string): Promise<boolean> {
     const el = document.createElement('div');
     el.className = 'overlay';
     el.style.zIndex = '95';
-    el.innerHTML = `<div class="dialog" style="text-align:center"><h2>📺 광고 (개발용)</h2>
+    el.innerHTML = `<div class="dialog" style="text-align:center"><h2>${icon('tv')} 광고 (개발용)</h2>
       <div class="fine">${label}</div><div class="spinner"></div>
       <button class="btn small" data-skip>닫기(보상 없음)</button></div>`;
     document.getElementById('app')!.appendChild(el);
