@@ -188,6 +188,7 @@ export class Menu {
       <div class="lobby-body v1">
         <h1 class="game-title">랜덤 디펜스</h1>
         <div class="parade">${parade}</div>
+        ${canClaimMonthly() ? `<div class="notice">${icon('calendar')} 월정액 오늘의 보석 <button class="btn small green" data-act="monthly">받기 ${icon('gem')}</button></div>` : ''}
         ${pvpOn ? `<div class="play-card arena-card">
           <div class="arena-name tier-name" style="color:${tier.color}">${icon('trophy')} ${tier.kr} 아레나 <span>${p.trophies}</span></div>
           <div class="road-bar"><div style="width:${pct}%"></div></div>
@@ -200,6 +201,7 @@ export class Menu {
         ${pvpOn ? `<button class="btn small blue camp-btn" data-act="stages">${icon('map')} 연습 스테이지 ${campDone}/${CAMPAIGN.length}</button>` : ''}
       </div>
       <nav class="lobby-nav">
+        <button data-act="shop"><span class="ic">${icon('shop')}</span>상점</button>
         ${featureUnlocked('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}</span>덱${featureNew('units') ? NEW_TAG : UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : ''}</button>` : ''}
         ${pvpOn ? `<button data-act="road"><span class="ic">${icon('trophy')}</span>트로피 로드</button>` : ''}
         ${pvpOn ? `<button data-act="rank"><span class="ic">${icon('medal')}</span>랭킹</button>` : ''}
@@ -213,6 +215,8 @@ export class Menu {
       battle: () => { markFeatureSeen('pvp'); this.startMatchmaking(); },
       road: () => this.openRoad(),
       rank: () => this.openPvp('rank'),
+      shop: () => this.openShop(),
+      monthly: () => { const n = claimMonthly(); if (n) { audio.coin(); toast(`월정액 보석 +${n} ${icon('gem')}`); this.render(); } },
     });
     root.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => audio.button(), { capture: true }));
     for (const f of fresh) this.announced.add(f);
@@ -580,7 +584,7 @@ export class Menu {
         if (id === 'monthly_pass' && monthlyActive()) extra = ` <span class="badge green">${monthlyDaysLeft()}일 남음</span>`;
         const eff = owned ? 0 : productEfficiency(p, price(id));
         return `<div class="shop-card ${hot ? 'hot' : ''}">${eff > 100 ? `<span class="eff">효율<b>${eff}%</b></span>` : ''}<div class="ic">${icon(p.icon)}</div>
-          <div class="info"><div class="t">${p.kr}${p.badge ? ` <span class="badge">${p.badge}</span>` : ''}${extra}</div><div class="d">${p.desc}</div></div>
+          <div class="info"><div class="t">${p.kr}${p.badge ? ` <span class="badge">${p.badge}</span>` : ''}${extra}</div><div class="d">${V1 ? p.desc.replace('(일반 모드)', '(연습 스테이지)') : p.desc}</div></div>
           <button class="btn small ${owned ? '' : 'gold'}" data-act="buy" data-id="${id}" ${owned ? 'disabled' : ''}>${owned ? `보유 ${icon('check')}` : `VX ${price(id)}`}</button></div>`;
       };
       const gems = PRODUCTS.filter((p) => p.category === 'crystal').map((p) => {
@@ -597,9 +601,9 @@ export class Menu {
         <div class="section-title">추천 패키지</div>
         ${!productOwned('starter_pack') ? card('starter_pack', true) : ''}
         ${card('monthly_pass', true)}
-        ${card('ad_remove')}
-        <div class="section-title">PvP 시즌 패스</div>${card('season_premium')}
-        <div class="section-title">부스터 <span class="fine">일반 모드 전용</span></div>
+        ${V1 ? '' : card('ad_remove')}
+        ${V1 ? '' : `<div class="section-title">PvP 시즌 패스</div>${card('season_premium')}`}
+        <div class="section-title">부스터 <span class="fine">${V1 ? '연습 스테이지 전용' : '일반 모드 전용'}</span></div>
         ${card('summon_ticket_pack')}${card('mythic_ticket')}${card('gold_booster_pack')}
         <div class="section-title">보석</div><div class="gem-grid">${gems}</div>
         <div class="fine">${vx !== null ? '* 로컬 개발 환경: 데모 VX 로 결제를 흉내냅니다.' : '* 결제는 Verse8 VX 로 진행되며, 결제 완료 후 자동 지급됩니다.'}</div></div>`, () => this.render());
