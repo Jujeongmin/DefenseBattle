@@ -215,12 +215,13 @@ export class UI {
         ghost.style.top = `${e.clientY}px`;
         this.opp?.setAim(posAt(e.clientX, e.clientY));
       };
-      const end = () => { ghost?.remove(); ghost = null; this.opp?.setAim(null); };
+      const end = () => { ghost?.remove(); ghost = null; this.opp?.setAim(null); $('game-frame').classList.remove('aiming'); };
       card.onpointerdown = (e) => {
         if (card.disabled) { this.flashGold(); return; }
         e.preventDefault();
         try { card.setPointerCapture(e.pointerId); } catch { /* 합성 이벤트 등 */ }
         x0 = e.clientX; y0 = e.clientY;
+        $('game-frame').classList.add('aiming'); // 상대 전장을 크게 펼친다
         ghost = document.createElement('div');
         ghost.className = 'throw-ghost';
         ghost.innerHTML = icon(PVP.attacks[tier].icon);

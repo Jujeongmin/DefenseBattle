@@ -272,7 +272,7 @@ export class Game {
   }
 
   private addMob(kind: MobKind, hp: number, boss: boolean, pos = 0): Mob {
-    let size = 44;
+    let size = 60; // 그리기 크기 (판정에는 쓰지 않음) - 작은 화면에서도 알아보게 44 → 60
     let speedMult = 1;
     if (boss) size = 44 * WAVE.bossSizeMult;
     else if (kind === 'fast' || kind === 'tank') {

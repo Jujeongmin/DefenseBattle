@@ -5,14 +5,14 @@
 import { MAP, SNAP_KIND, pathAt, type BoardSnapshot } from './engine';
 import { unitSprite, mobSprite } from './assets';
 import { GRADES, JOBS, RACES, PLAY_SPEED } from './config';
-import { fieldBackground, FRAME, WALK_SEQ, JOB_TINT } from './render';
+import { fieldBackground, FRAME, WALK_SEQ, JOB_TINT, UNIT_DRAW } from './render';
 import type { Job, Race } from './types';
 
 interface SnapMob { x: number; y: number; race: Race; kind: number; dir: number; size: number }
 interface SnapUnit { job: Job; grade: number; x: number; y: number }
 interface SnapFrame { at: number; mobs: Map<number, SnapMob>; units: SnapUnit[] }
 
-const UNIT_SIZE = 45; // render.ts 의 유닛 크기와 동일
+const UNIT_SIZE = UNIT_DRAW;
 const deq = (v: number) => (v / 255) * MAP.size;
 
 function parse(s: BoardSnapshot, at: number): SnapFrame {
@@ -87,7 +87,7 @@ export class OppRenderer {
       if (u.grade < 3) continue;
       ctx.fillStyle = GRADES[u.grade]?.color ?? '#fff';
       ctx.globalAlpha = 0.35;
-      ctx.beginPath(); ctx.ellipse(u.x, u.y + 16, 22, 8, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(u.x, u.y + 22, 30, 11, 0, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
     }
 

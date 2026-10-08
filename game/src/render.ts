@@ -13,6 +13,8 @@ export const JOB_TINT: Record<Job, string> = {
 
 // 스프라이트 시트: 32x32 프레임, 3열(걷기) x 4행(하/좌/우/상)
 export const FRAME = 32;
+/** 유닛 그리기 크기 (논리 720 기준) */
+export const UNIT_DRAW = 62;
 export const WALK_SEQ = [1, 0, 1, 2]; // 걷기 컬럼 순서 (1=정지 기준)
 const ATTACK_SEQ = [1, 2, 0, 1]; // 공격 스윙 프레임 순서 (1=정지 기준)
 const ATTACK_ANIM_DUR = 0.1;     // engine.ts 의 u.flash 초기값과 동일해야 함
@@ -410,11 +412,11 @@ export class Renderer {
       const color = GRADES[u.gradeIndex].color;
       const pulse = 0.5 + Math.sin(this.t * 3 + u.id) * 0.2;
       ctx.fillStyle = this.hexA(color, 0.28 * pulse + 0.1);
-      ctx.beginPath(); ctx.ellipse(u.x, u.y + 16, 22, 8, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(u.x, u.y + 22, 30, 11, 0, 0, Math.PI * 2); ctx.fill();
       if (u.gradeIndex >= 4) {
         ctx.strokeStyle = this.hexA(color, 0.7 * pulse);
         ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.ellipse(u.x, u.y + 16, 26, 10, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(u.x, u.y + 22, 36, 13, 0, 0, Math.PI * 2); ctx.stroke();
       }
     }
   }
@@ -423,7 +425,7 @@ export class Renderer {
     const ctx = this.ctx;
     for (const u of this.game.units) {
       const spr = unitSprite(u.job, u.grade);
-      const s = 45; // 30 → 1.5배
+      const s = UNIT_DRAW; // 작은 화면에서도 알아보게
       if (spr.ready) {
         if (u.moveTo) {
           // 구역 교환 등으로 이동 중: 이동 방향 행 + 걷기 사이클 재생

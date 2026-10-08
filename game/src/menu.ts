@@ -176,7 +176,8 @@ export class Menu {
         <div class="parade">${parade}</div>
         ${pvpOn ? `<div class="play-card arena-card">
           <div class="arena-name tier-name" style="color:${tier.color}">${icon('trophy')} ${tier.kr} 아레나 <span>${p.trophies}</span></div>
-          <div class="road-bar"><div style="width:${pct}%"></div><span class="road-next">${nextIc}${next ? ` <small>${next.at}</small>` : ''}</span></div>
+          <div class="road-bar"><div style="width:${pct}%"></div></div>
+          ${next ? `<div class="road-next">다음 보상 ${nextIc} <span>${icon('trophy')}${next.at}</span></div>` : ''}
           <button class="btn red play-btn" data-act="battle">${icon('sword')} 대전 시작</button>
           <div class="arena-sub">${p.wins}승 ${p.losses}패${p.streak > 1 ? ` · ${p.streak}연승` : ''}</div>
         </div>` : `<div class="play-card">
