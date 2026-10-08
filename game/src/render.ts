@@ -4,7 +4,7 @@
 import { MAP, Game } from './engine';
 import { unitSprite, mobSprite, tileSprite, uiSprite } from './assets';
 import { GRADES, UNIT_BY_ID, PLAY_SPEED, ATTACKS } from './config';
-import type { Job, Mob } from './types';
+import type { Job, Mob, Effect } from './types';
 
 export const JOB_TINT: Record<Job, string> = {
   archer: '#3fae4a', wizard: '#8e5bd8', warrior: '#c9a13b', ranger: '#3fa7c9',
@@ -453,6 +453,31 @@ export class Renderer {
     }
   }
 
+  /** 상대가 던진 몹: 착지 지점에 붉은 경고 고리, 하늘에서 포물선으로 떨어진다 */
+  private drawDrop(e: Extract<Effect, { type: 'drop' }>): void {
+    const ctx = this.ctx;
+    const k = 1 - e.ttl / e.dur; // 0 → 1 (착지)
+    const a = ATTACKS[e.card];
+    // 경고 고리 (점점 좁아짐)
+    const r = 26 + (1 - k) * 34;
+    ctx.strokeStyle = `rgba(255,70,50,${0.5 + Math.sin(this.t * 18) * 0.3})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.ellipse(e.x, e.y + 10, r, r * 0.45, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = `rgba(0,0,0,${0.15 + k * 0.25})`;
+    ctx.beginPath(); ctx.ellipse(e.x, e.y + 10, 8 + k * 16, 3 + k * 6, 0, 0, Math.PI * 2); ctx.fill();
+    // 떨어지는 몹 (위쪽 바깥에서 비스듬히)
+    const spr = mobSprite(a.race, a.variant);
+    if (!spr.ready) return;
+    const s = 60 * a.size * (0.7 + k * 0.3);
+    const h = (1 - k) * (1 - k) * 520;
+    const x = e.x + (1 - k) * (e.seed - 0.5) * 160;
+    ctx.save();
+    ctx.translate(x, e.y - h);
+    ctx.rotate((1 - k) * (e.seed > 0.5 ? 1 : -1) * 3);
+    this.frame(spr.img, 1, 0, -s / 2, -s / 2, s);
+    ctx.restore();
+  }
+
   private drawEffects(): void {
     const ctx = this.ctx;
     for (const e of this.game.effects) {
@@ -530,6 +555,7 @@ export class Renderer {
           break;
         }
         case 'burst': this.drawBurst(e); break;
+        case 'drop': this.drawDrop(e); break;
         case 'dmg': {
           const p = 1 - e.ttl / 0.7;            // 0→1 진행
           const alpha = Math.max(0, Math.min(1, (e.ttl / 0.7) * 1.6));

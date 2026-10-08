@@ -106,7 +106,8 @@ export type Effect =
   | { type: 'slash'; x: number; y: number; ttl: number; seed: number }
   | { type: 'merge'; x: number; y: number; ttl: number; color: string }
   | { type: 'summon'; x: number; y: number; ttl: number; color: string; big: boolean }
-  | { type: 'burst'; x: number; y: number; ttl: number; seed: number }; // 태초 등급 타격 연출
+  | { type: 'burst'; x: number; y: number; ttl: number; seed: number } // 태초 등급 타격 연출
+  | { type: 'drop'; x: number; y: number; ttl: number; dur: number; card: number; seed: number }; // 상대가 던진 몹이 떨어지는 중 (착지 지점 경고)
 
 export interface LogEntry {
   text: string;

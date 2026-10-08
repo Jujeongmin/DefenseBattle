@@ -2,7 +2,7 @@
 //  게임 화면 DOM UI - 상단바/소환/강화/합성·판매/소환권/PvP HUD/결과/튜토리얼
 // ============================================================
 import {
-  JOB_KR, RACE_KR, GRADES, DMG_MULT, ECONOMY, WAVE, GRADE_INDEX, MERGE_COUNT, PLAY_SPEED, ATTACKS,
+  JOB_KR, RACE_KR, GRADES, DMG_MULT, ECONOMY, WAVE, GRADE_INDEX, MERGE_COUNT, PLAY_SPEED, ATTACKS, JOBS,
 } from './config';
 import { MAP, Game, pathPosNear, type BoardSnapshot } from './engine';
 import { mobPortraitSrc, unitIconUrl, mobSprite } from './assets';
@@ -59,6 +59,7 @@ export class UI {
     game.on('wave', () => { if (!pvp && !game.isBossWave) audio.switchBgm('battle'); });
     game.on('merge', () => audio.merge());
     game.on('attack', () => audio.sendAttack());
+    game.on('gameover', () => this.hideThrowHint());
     game.on('incoming', () => audio.incoming());
 
     $('pvp-hud').classList.toggle('hidden', !pvp);
@@ -239,14 +240,71 @@ export class UI {
         const moved = Math.hypot(e.clientX - x0, e.clientY - y0);
         end();
         if (pos !== null) {
-          if (this.game.sendAttack(tier, pos)) this.opp?.markThrow(pos);
-          else this.flashGold();
+          if (this.game.sendAttack(tier, pos)) {
+            this.flyThrow(card, e.clientX, e.clientY, tier);
+            this.opp?.markThrow(pos);
+            this.hideThrowHint();
+          } else this.flashGold();
         } else if (moved < 12) {
           toast(`카드를 위쪽 <b>상대 전장</b>으로 끌어다 던지세요`);
         }
       };
       card.onpointercancel = end;
     });
+  }
+
+  /** 던진 몹이 카드에서 놓은 자리까지 포물선으로 날아가고, 상대 창이 흔들린다 */
+  private flyThrow(card: HTMLElement, x: number, y: number, c: number): void {
+    const a = ATTACKS[c];
+    const r = card.getBoundingClientRect();
+    const fly = document.createElement('div');
+    fly.className = 'throw-fly';
+    fly.innerHTML = spriteIcon(mobSprite(a.race, a.variant).url, 'frame-sprite');
+    document.body.appendChild(fly);
+    const x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+    const top = Math.min(y0, y) - 90;
+    const anim = fly.animate([
+      { left: `${x0}px`, top: `${y0}px`, transform: 'translate(-50%,-50%) scale(1) rotate(0deg)' },
+      { left: `${(x0 + x) / 2}px`, top: `${top}px`, transform: 'translate(-50%,-50%) scale(1.4) rotate(200deg)', offset: 0.5 },
+      { left: `${x}px`, top: `${y}px`, transform: 'translate(-50%,-50%) scale(0.7) rotate(400deg)' },
+    ], { duration: 380, easing: 'ease-in' });
+    anim.onfinish = () => {
+      fly.remove();
+      const opp = $('opp-canvas');
+      opp.classList.remove('hit'); void opp.offsetWidth; opp.classList.add('hit');
+    };
+  }
+
+  // ---------- 첫 대전: 몹 카드를 끌어 던지는 법 (던질 때까지 손가락이 반복해서 보여 준다) ----------
+  private hintEl: HTMLElement | null = null;
+  private hintTimer: ReturnType<typeof setInterval> | null = null;
+  showThrowHint(): void {
+    if (this.hintTimer) return;
+    this.hintTimer = setInterval(() => {
+      const card = document.querySelector<HTMLButtonElement>('#attack-row .attack-card:not(:disabled)');
+      // 유닛을 몇 개 뽑은 뒤에 보여 준다 (막을 준비가 된 다음 던지기)
+      if (!card || this.game.over || this.game.paused || this.game.units.length < 5) { this.hintEl?.classList.add('hidden'); return; }
+      if (!this.hintEl) {
+        this.hintEl = document.createElement('div');
+        this.hintEl.className = 'throw-hint';
+        this.hintEl.innerHTML = `<div class="bubble">카드를 끌어서<br><b>상대 전장</b>에 던지세요!</div><div class="hand">${icon('pointer')}</div>`;
+        $('game-frame').appendChild(this.hintEl);
+      }
+      const f = $('game-frame').getBoundingClientRect();
+      const c = card.getBoundingClientRect(), o = $('opp-canvas').getBoundingClientRect();
+      const h = this.hintEl;
+      h.classList.remove('hidden');
+      h.style.setProperty('--x0', `${c.left - f.left + c.width / 2}px`);
+      h.style.setProperty('--y0', `${c.top - f.top + c.height / 2}px`);
+      h.style.setProperty('--x1', `${o.left - f.left + o.width / 2}px`);
+      h.style.setProperty('--y1', `${o.top - f.top + o.height / 2}px`);
+    }, 500);
+  }
+  hideThrowHint(): void {
+    if (this.hintTimer) clearInterval(this.hintTimer);
+    this.hintTimer = null;
+    this.hintEl?.remove();
+    this.hintEl = null;
   }
 
   // ---------- 소환권 (일반 모드 전용) ----------
@@ -389,6 +447,7 @@ export class UI {
   }
 
   // ---------- PvP: 상대 상태 ----------
+  private oppDeckKey = '';
   setOpponentInfo(nick: string, trophies: number, bot: boolean): void {
     $('opp-nick').textContent = nick;
     void bot; // 봇도 실제 유저처럼 보여 준다
@@ -402,6 +461,15 @@ export class UI {
     $('opp-count').textContent = `${s.mobCount} / ${WAVE.gameOverMobCount}`;
     $('opp-sub').textContent = `Wave ${s.wave} · 유닛 ${s.unitCount}${s.bossHp >= 0 ? ` · 보스 ${Math.round(s.bossHp * 100)}%` : ''}`;
     this.opp?.push(s);
+    // 상대 덱: 무엇이 날아올지(몹 카드)와 무엇으로 막는지(유닛) - 상성을 보고 카드를 고른다
+    const key = `${s.atk?.join(',')}|${s.deck?.join(',')}`;
+    if (s.atk && key !== this.oppDeckKey) {
+      this.oppDeckKey = key;
+      const atk = s.atk.map((c) => ATTACKS[c]).filter(Boolean)
+        .map((a) => spriteIcon(mobSprite(a.race, a.variant).url, 'frame-sprite', '')).join('');
+      const deck = (s.deck ?? []).map((j) => JOBS[j]).filter(Boolean).map((j) => spriteIcon(unitIconUrl(j))).join('');
+      $('opp-deck').innerHTML = `<div class="od-row" title="상대 몹 카드">${atk}</div><div class="od-row units" title="상대 유닛">${deck}</div>`;
+    }
   }
 
   // ---------- 카운트다운 ----------

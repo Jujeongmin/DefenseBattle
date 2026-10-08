@@ -78,6 +78,7 @@ function startPvp(g: Game, u: UI, s: PvpSession): void {
   session = s;
   snapAcc = 0;
   u.setOpponentInfo(s.match.opponent.nick, s.match.opponent.trophies, s.match.bot);
+  if (meta.pvp.wins + meta.pvp.losses === 0) u.showThrowHint(); // 첫 대전: 던지는 법
   g.on('attack', (p) => s.sendAttack(p));
   let resultShown = false;
   // 판정 대기 안전장치: 내가 무너졌는데 서버 결과가 안 오면 패배 처리

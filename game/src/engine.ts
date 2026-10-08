@@ -102,9 +102,16 @@ export interface BoardSnapshot {
   /** 유닛 [직업 index, 등급 index, x, y] 평탄화 (x,y 는 0~255 양자화) */
   units: number[];
   bossHp: number; // 보스 체력 비율 (없으면 -1)
+  /** 유닛 덱 (JOBS 번호) - 상대가 무엇으로 막는지 보고 카드를 고른다 */
+  deck?: number[];
+  /** 몹 카드 덱 (ATTACKS 번호) - 무엇이 날아올지 */
+  atk?: number[];
   /** 형식 버전 - 2 부터 상대 전장을 스프라이트로 그릴 수 있다 */
   v?: number;
 }
+
+/** 상대가 던진 몹이 떨어지는 시간(게임 초) - 착지 지점을 미리 보여 대비할 틈을 준다 */
+export const DROP_WARN = 1.6;
 
 /** 스냅샷 몹 code 의 종류 값 */
 export const SNAP_KIND = { normal: 0, sent: 1, boss: 2 } as const;
@@ -347,7 +354,12 @@ export class Game {
     const def = ATTACKS[card];
     const hp = this.baseHp(p.wave) * def.hpMult;
     const pos = Number.isFinite(p.pos) ? (p.pos as number) : 0;
-    for (let i = 0; i < def.count; i++) this.pending.push({ card, hp, delay: i * 0.25, pos });
+    const at = pathAt(pos);
+    for (let i = 0; i < def.count; i++) {
+      const delay = DROP_WARN + i * 0.25;
+      this.pending.push({ card, hp, delay, pos });
+      this.effects.push({ type: 'drop', x: at.x + (Math.random() - 0.5) * 36, y: at.y + (Math.random() - 0.5) * 36, ttl: delay, dur: delay, card, seed: Math.random() });
+    }
     this.pushLog(`${icon('warning')} 상대의 ${def.kr}!`);
     if (def.cost >= 80) this.shake = Math.max(this.shake, 6);
     this.emit('incoming', p);
@@ -370,6 +382,7 @@ export class Game {
     if (!ready.length) return;
     this.pending = this.pending.filter((p) => p.delay > 0);
     for (const p of ready) this.addMob('card', p.hp, false, p.pos, p.card);
+    this.shake = Math.max(this.shake, ATTACKS[ready[0].card].cost >= 80 ? 7 : 3); // 착지 쿵
   }
 
   // PvP 상대 미니맵/상태 보고용 요약
@@ -392,6 +405,8 @@ export class Game {
       mobs,
       units,
       bossHp: boss ? boss.hp / boss.maxHp : -1,
+      deck: this.opts.deck.map((j) => JOBS.indexOf(j)),
+      atk: this.attackCards,
       v: 2,
     };
   }
