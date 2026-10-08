@@ -90,7 +90,7 @@ export class Menu {
     const chCleared = STAGES.filter((s) => s.chapter === next.chapter && stageStars(s.id) > 0).length;
     const allCleared = STAGES.every((s) => stageStars(s.id) > 0);
     const vx = getPlatform().getVX();
-    const parade = meta.deck.map((j) => spriteIcon(unitIconUrl(j, Math.min(5, unitLevel(j) >> 1)))).join('');
+    const parade = meta.deck.map((j) => spriteIcon(unitIconUrl(j))).join('');
     const pvpOn = featureUnlocked('pvp');
     const endlessOn = featureUnlocked('endless');
     // 메뉴는 해금 전엔 아예 숨기고, 해금 직후엔 NEW 표시 (누르면 사라짐)
@@ -172,7 +172,7 @@ export class Menu {
     const prevAt = [...TROPHY_ROAD].reverse().find((s) => s.at <= p.trophies)?.at ?? 0;
     const pct = next ? Math.max(0, Math.min(100, ((p.trophies - prevAt) / (next.at - prevAt)) * 100)) : 100;
     const nextIc = next ? roadRewardIcon(next) : icon('crown');
-    const parade = meta.deck.map((j) => spriteIcon(unitIconUrl(j, Math.min(5, unitLevel(j) >> 1)))).join('');
+    const parade = meta.deck.map((j) => spriteIcon(unitIconUrl(j))).join('');
     const campDone = CAMPAIGN.filter((s) => stageStars(s.id) > 0).length;
     const dot = '<span class="dot"></span>';
     const fresh = (['units', 'pvp'] as const).filter((f) => featureNew(f) && !this.announced.has(f));
@@ -453,7 +453,7 @@ export class Menu {
           <button class="btn small green" data-act="up" data-job="${u.id}" ${canUpgradeUnit(u.id) ? '' : 'disabled'}>${maxed ? 'MAX' : `${icon('gem')}${unitUpgradeCost(lv)}`}</button>`;
       }
       return `<div class="unit-card ${inDeck ? 'in-deck' : ''} ${unlocked ? '' : 'locked'}" ${unlocked ? `data-drag="${u.id}"` : ''}>
-        <div class="head">${spriteIcon(unitIconUrl(u.id, unlocked ? Math.min(5, lv >> 1) : 0))}
+        <div class="head">${spriteIcon(unitIconUrl(u.id))}
           <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : V1 && roadUnlockAt(u.id) ? `${icon('lock')} ${icon('trophy')}${roadUnlockAt(u.id)}` : u.unlockStage ? `${icon('lock')} ${u.unlockStage} 클리어` : icon('lock')}</div></div></div>
         <div class="lv-pips">${pips}</div>
         <div class="sk" data-act="info" data-job="${u.id}"><b>${SKILL_KR[u.id]}</b> <span class="info-dot">?</span></div>
