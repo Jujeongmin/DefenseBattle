@@ -390,8 +390,11 @@ export const STAR_PEAK = { three: 40, two: 70 };
 export function starsFor(peakMobs: number): number {
   return peakMobs <= STAR_PEAK.three ? 3 : peakMobs <= STAR_PEAK.two ? 2 : 1;
 }
-// 기능 해금 스테이지
-export const FEATURE_UNLOCK = { pvp: '1-5', endless: '1-10', research: '1-2' } as const;
+// 기능 해금 스테이지 - 로비 메뉴는 해금 전엔 보이지 않고, 해금되면 NEW 로 하나씩 등장한다
+export const FEATURE_UNLOCK = { units: '1-1', research: '1-2', quests: '1-3', pvp: '1-5', endless: '1-10' } as const;
+export const FEATURE_KR: Record<keyof typeof FEATURE_UNLOCK, string> = {
+  units: '유닛', research: '연구', quests: '퀘스트', pvp: 'PvP 대전', endless: '무한 모드',
+};
 
 // ---------- 게임 종료 시 크리스탈 보상 ----------
 export function crystalReward(wave: number): number {

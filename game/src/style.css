@@ -342,6 +342,22 @@ b, strong { font-weight: 700; }
 }
 .lobby-nav button .ic { font-size: 26px; height: 30px; }
 .lobby-nav button:active { transform: translateY(2px); }
+/* 새로 열린 메뉴 표시 */
+.new-tag {
+  position: absolute; top: -4px; right: -6px;
+  background: var(--red); color: var(--cream); border: 2px solid var(--edge);
+  font-size: 9px; font-weight: 700; padding: 0 3px; line-height: 13px;
+  text-shadow: none; animation: bob 0.8s steps(2) infinite; z-index: 3;
+}
+.gear-btn {
+  flex: 0 0 auto;
+  width: 38px; height: 38px;
+  border: 0; background: none; cursor: pointer;
+  border-image: url('/ui/frame/btn_blue.png') 44 fill / 13px;
+  display: inline-flex; align-items: center; justify-content: center; padding-bottom: 3px;
+}
+.gear-btn .pi { width: 18px; height: 18px; }
+.gear-btn:active { border-image-source: url('/ui/frame/btn_blue_down.png'); padding: 3px 0 0; }
 .dot {
   position: absolute; top: 2px; right: 4px;
   width: 12px; height: 12px;

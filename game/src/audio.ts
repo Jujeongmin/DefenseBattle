@@ -5,7 +5,9 @@
 //  파일 음량은 tools/normalize_audio.py 가 맞춰 둔다 (효과음끼리 같은 체감 음량, BGM 은 곡끼리 같게).
 //  그래서 여기서는 효과음마다 볼륨을 따로 주지 않는다 - 튀는 소리가 생기지 않게.
 // ============================================================
-const MUTE_KEY = 'randomdefense.muted.v1';
+const MUTE_KEY = 'randomdefense.muted.v1';     // 전투 화면 스피커 버튼 (전체)
+const BGM_KEY = 'randomdefense.bgm.v1';        // 설정: 배경음악
+const SFX_KEY = 'randomdefense.sfx.v1';        // 설정: 효과음
 
 type Sfx =
   | 'button' | 'coin' | 'summon' | 'mythic' | 'unlock' | 'merge' | 'arrow' | 'magic' | 'sword'
@@ -29,15 +31,34 @@ class AudioManager {
   private bgm: HTMLAudioElement | null = null;
   private track: BgmTrack | null = null;
 
+  private bgmOff: boolean;
+  private sfxOff: boolean;
+
   constructor() {
     this.muted = localStorage.getItem(MUTE_KEY) === '1';
+    this.bgmOff = localStorage.getItem(BGM_KEY) === '0';
+    this.sfxOff = localStorage.getItem(SFX_KEY) === '0';
+  }
+
+  isBgmOn(): boolean { return !this.bgmOff; }
+  isSfxOn(): boolean { return !this.sfxOff; }
+  setBgm(on: boolean): void {
+    this.bgmOff = !on;
+    localStorage.setItem(BGM_KEY, on ? '1' : '0');
+    if (!this.bgm) return;
+    if (on && !this.muted) void this.bgm.play().catch(() => {});
+    else this.bgm.pause();
+  }
+  setSfx(on: boolean): void {
+    this.sfxOff = !on;
+    localStorage.setItem(SFX_KEY, on ? '1' : '0');
   }
 
   // 첫 사용자 입력에서 오디오 해제 (브라우저 자동재생 정책). 그 전에 요청된 BGM 도 이때 재생.
   installUnlock(): void {
     const unlock = () => {
       this.ensure();
-      if (this.bgm && this.bgm.paused && !this.muted) void this.bgm.play().catch(() => {});
+      if (this.bgm && this.bgm.paused && !this.muted && !this.bgmOff) void this.bgm.play().catch(() => {});
     };
     window.addEventListener('pointerdown', unlock, { once: true });
     window.addEventListener('keydown', unlock, { once: true });
@@ -71,7 +92,7 @@ class AudioManager {
 
   /** minGap: 같은 소리가 너무 촘촘히 겹치지 않게 하는 최소 간격(ms) */
   private play(name: Sfx, opts: { rate?: number; minGap?: number } = {}): void {
-    if (this.muted || !this.ctx || !this.master) return;
+    if (this.muted || this.sfxOff || !this.ctx || !this.master) return;
     const buf = this.buffers.get(name);
     if (!buf) return;
     const now = performance.now();
@@ -93,7 +114,7 @@ class AudioManager {
     localStorage.setItem(MUTE_KEY, this.muted ? '1' : '0');
     if (this.master) this.master.gain.value = this.muted ? 0 : 1;
     if (this.bgm) {
-      if (this.muted) this.bgm.pause();
+      if (this.muted || this.bgmOff) this.bgm.pause();
       else void this.bgm.play().catch(() => {});
     }
     return this.muted;
@@ -138,7 +159,7 @@ class AudioManager {
     a.loop = true;
     a.volume = BGM_VOL;
     this.bgm = a;
-    if (!this.muted) void a.play().catch(() => { /* 첫 입력 전이면 installUnlock 에서 재생 */ });
+    if (!this.muted && !this.bgmOff) void a.play().catch(() => { /* 첫 입력 전이면 installUnlock 에서 재생 */ });
   }
   stopBgm(): void {
     if (this.bgm) { this.bgm.pause(); this.bgm.src = ''; }

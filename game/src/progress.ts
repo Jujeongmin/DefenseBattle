@@ -94,6 +94,15 @@ export function featureUnlocked(f: Feature): boolean {
 export function featureHint(f: Feature): string {
   return `스테이지 ${FEATURE_UNLOCK[f]} 클리어 시 해금`;
 }
+/** 해금됐지만 아직 로비에서 눌러 보지 않은 기능 (NEW 표시) */
+export function featureNew(f: Feature): boolean {
+  return featureUnlocked(f) && !meta.seenFeatures.includes(f);
+}
+export function markFeatureSeen(f: Feature): void {
+  if (meta.seenFeatures.includes(f)) return;
+  meta.seenFeatures.push(f);
+  saveMeta();
+}
 
 // ---------- 유닛 ----------
 export function unitUnlocked(job: Job): boolean {

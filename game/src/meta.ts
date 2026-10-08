@@ -2,7 +2,7 @@
 //  글로벌(계정) 상태 - localStorage 영구 저장
 //  크리스탈, 연구소 레벨, 퀘스트/업적 진행도
 // ============================================================
-import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS } from './config';
+import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS, FEATURE_UNLOCK } from './config';
 import { getPlatform } from './platform';
 import type { MetaData, ResearchKey, QuestStat, AchievementDef, ItemKey } from './types';
 
@@ -40,6 +40,7 @@ function freshMeta(): MetaData {
     deck: ['archer', 'wizard', 'warrior'],
     stages: {},
     tutorial: 0,
+    seenFeatures: [],
     nick: `용사${Math.floor(1000 + Math.random() * 9000)}`,
     adRemoved: false,
   };
@@ -61,6 +62,10 @@ function load(): MetaData {
   m.oneTime = m.oneTime || {};
   m.units = Object.assign(fresh.units, m.units || {});
   m.stages = m.stages || {};
+  // 이 필드가 생기기 전 저장본: 이미 열린 메뉴에 NEW 가 갑자기 뜨지 않게 해금된 것은 본 것으로 둔다
+  if (!Array.isArray(m.seenFeatures)) {
+    m.seenFeatures = Object.entries(FEATURE_UNLOCK).filter(([, st]) => (m.stages[st] || 0) > 0).map(([f]) => f);
+  }
   if (!Array.isArray(m.deck) || !m.deck.length) m.deck = fresh.deck;
   m.deck = m.deck.filter((j) => m.units[j]); // 미해금 유닛 제거
   m.grantedPurchases = Array.isArray(m.grantedPurchases) ? m.grantedPurchases : [];

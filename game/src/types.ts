@@ -213,6 +213,8 @@ export interface MetaData {
   stages: Record<string, number>;
   /** 튜토리얼 완료 단계 */
   tutorial: number;
+  /** 로비에서 이미 확인한(NEW 표시를 지운) 기능 */
+  seenFeatures: string[];
   nick: string;
   adRemoved: boolean;
 }
