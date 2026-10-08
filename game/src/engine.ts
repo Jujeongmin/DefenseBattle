@@ -88,6 +88,7 @@ export const DEFAULT_OPTIONS: GameOptions = {
   unitLevels: {},
   waves: 0,
   hpMult: 1,
+  atkMult: 1,
 };
 
 // PvP 상대 화면 미니맵용 상태 요약
@@ -662,6 +663,7 @@ export class Game {
       dmg *= 1 + (m - 1) * perkMult(this.collectionLevel(u.job));
     }
     dmg *= 1 + this.res('atk') * RESEARCH_PER.atk;
+    dmg *= this.opts.atkMult;
     if (mob.boss) dmg *= 1 + this.res('boss') * RESEARCH_PER.boss;
     return dmg;
   }

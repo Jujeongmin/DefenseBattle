@@ -6,7 +6,7 @@
 import { Game } from '../game/src/engine';
 import { meta } from '../game/src/meta';
 import { aiStep, thinkInterval } from '../game/src/ai';
-import { botSkill, botDeck } from '../game/src/pvp';
+import { botSkill, botDeck, botAttackDeck, botAtkMult } from '../game/src/pvp';
 import { PVP, PLAY_SPEED, TROPHY_ROAD } from '../game/src/config';
 if (process.env.PVP_HPM) (PVP as { hpMult: number }).hpMult = Number(process.env.PVP_HPM);
 import type { BoardSnapshot } from '../game/src/engine';
@@ -22,7 +22,8 @@ function match(playerSkill: number, bot: number, levels = 1): { won: boolean; se
   const seed = Math.floor(Math.random() * 2 ** 31);
   const bDeck = botDeck(meta.pvp.trophies);
   const a = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: DECK, unitLevels: Object.fromEntries(DECK.map((j) => [j, levels])) });
-  const b = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: bDeck, unitLevels: Object.fromEntries(bDeck.map((j) => [j, levels])) });
+  const b = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: bDeck, atkMult: botAtkMult(bot),
+    attackDeck: botAttackDeck(meta.pvp.trophies), unitLevels: Object.fromEntries(bDeck.map((j) => [j, levels])) });
   a.on('attack', (p) => b.receiveAttack(p));
   b.on('attack', (p) => a.receiveAttack(p));
   let snapA: BoardSnapshot | null = null, snapB: BoardSnapshot | null = null;
@@ -46,7 +47,7 @@ const player = Number(process.argv[3]) || 0.55;
 console.log(`\n=== 플레이어 실력 ${player} vs 봇 (트로피별, 각 ${runs}판) ===`);
 console.log('trophies  botSkill  win%   avgMin');
 for (const tr of [0, 200, 400, 700, 1000, 1500, 2000]) {
-  meta.pvp = { trophies: tr, wins: 0, losses: 0, streak: 0, lossStreak: 0 };
+  meta.pvp = { trophies: tr, wins: 10, losses: 10, streak: 0, lossStreak: 0 }; // 첫 3판 규칙 제외
   const sk = botSkill();
   let w = 0, sec = 0;
   for (let i = 0; i < runs; i++) { const r = match(player, sk); if (r.won) w++; sec += r.sec; }

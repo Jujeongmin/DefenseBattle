@@ -177,6 +177,8 @@ export interface GameOptions {
   /** 웨이브 수 (0 = 기본 50, PvP 는 무한) */
   waves: number;
   /** 몹 체력 배수 (스테이지 난이도) */
+  /** 유닛 공격력 배수 (봇 핸디캡 - 사람보다 손이 정확한 봇을 공정하게) */
+  atkMult: number;
   hpMult: number;
   /** 등장 종족 제한 (없으면 전체) */
   races?: Race[];

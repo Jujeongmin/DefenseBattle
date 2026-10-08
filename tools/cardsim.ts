@@ -6,7 +6,7 @@
 import { Game } from '../game/src/engine';
 import { meta } from '../game/src/meta';
 import { aiStep, thinkInterval } from '../game/src/ai';
-import { botSkill, botDeck } from '../game/src/pvp';
+import { botSkill, botDeck, botAtkMult } from '../game/src/pvp';
 import { PVP, PLAY_SPEED, ATTACKS, STARTER_ATTACKS } from '../game/src/config';
 import type { BoardSnapshot } from '../game/src/engine';
 import type { Job } from '../game/src/types';
@@ -14,14 +14,14 @@ import type { Job } from '../game/src/types';
 const DECK: Job[] = ['archer', 'wizard', 'warrior', 'ranger'];
 const runs = Number(process.argv[2]) || 12;
 const trophies = Number(process.argv[3]) || 300;
-meta.pvp = { trophies, wins: 0, losses: 0, streak: 0, lossStreak: 0 };
+meta.pvp = { trophies, wins: 10, losses: 10, streak: 0, lossStreak: 0 };
 const skill = botSkill();
 
 function match(card: (typeof ATTACKS)[number]['key']): { botWon: boolean; sec: number; sent: number } {
   const seed = Math.floor(Math.random() * 2 ** 31);
   const bDeck = botDeck(trophies);
   const a = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: DECK, attackDeck: [...STARTER_ATTACKS] });
-  const b = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: bDeck, attackDeck: [card] });
+  const b = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: bDeck, attackDeck: [card], atkMult: botAtkMult(skill) });
   a.on('attack', (p) => b.receiveAttack(p));
   b.on('attack', (p) => a.receiveAttack(p));
   let snapA: BoardSnapshot | null = null, snapB: BoardSnapshot | null = null;

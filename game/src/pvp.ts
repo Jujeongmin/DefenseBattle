@@ -192,10 +192,16 @@ export function createBotSession(): PvpSession {
  *  연승하면 조금 세게, 연패하면 확실히 약하게 (매스마켓: 지기만 하는 판이 이어지지 않게). tools/pvpsim.ts */
 export function botSkill(): number {
   const p = meta.pvp;
-  if (p.wins + p.losses < 3) return 0.1; // 첫 3판은 가장 약한 봇 - 처음 대전에서 이기는 경험
-  const base = 0.2 + p.trophies / 1000;
+  if (p.wins + p.losses < 3) return 0.05; // 첫 3판은 가장 약한 봇 - 처음 대전에서 이기는 경험
+  // 사람 손은 봇보다 느리고 실수도 많다 → 천천히 강해진다 (300 트로피 ≈ 0.3, 900 ≈ 0.7)
+  const base = 0.1 + p.trophies / 1500;
   const adj = Math.min(4, p.streak) * 0.05 - Math.min(3, p.lossStreak ?? 0) * 0.1;
-  return Math.max(0.1, Math.min(0.75, base + adj));
+  return Math.max(0.05, Math.min(0.7, base + adj));
+}
+
+/** 봇 유닛 공격력 배수: 약한 봇일수록 낮다 (0.05 → 0.62, 0.3 → 0.75, 0.7 → 0.95) */
+export function botAtkMult(skill: number): number {
+  return 0.6 + skill * 0.5;
 }
 
 /** 봇 덱: 그 트로피에서 열려 있을 유닛만 (기본 3종 + 트로피 로드로 열린 유닛) */
@@ -243,7 +249,7 @@ class BotSession implements PvpSession {
     const lv = unitLevels();
     const vals = Object.values(lv) as number[];
     const avg = Math.max(1, Math.round(vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.length)));
-    const game = new Game({ mode: 'pvp', seed: this.match.seed, useResearch: false, track: false, deck,
+    const game = new Game({ mode: 'pvp', seed: this.match.seed, useResearch: false, track: false, deck, atkMult: botAtkMult(skill),
       attackDeck: botAttackDeck(this.match.opponent.trophies), unitLevels: Object.fromEntries(deck.map((j) => [j, avg])) });
     this.game = game;
     game.on('attack', (p) => h.onAttack(p));
