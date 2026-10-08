@@ -4,14 +4,16 @@
 import {
   JOB_KR, RACE_KR, GRADES, DMG_MULT, ECONOMY, WAVE, PVP, GRADE_INDEX, MERGE_COUNT, PLAY_SPEED,
 } from './config';
-import { MAP, Game, type BoardSnapshot } from './engine';
+import { MAP, Game, pathPosNear, type BoardSnapshot } from './engine';
 import { mobPortraitSrc, unitIconUrl } from './assets';
 import { meta, useItem } from './meta';
 import { audio } from './audio';
 import { $, toast, spriteIcon } from './dom';
 import { icon } from './icons';
 import { OppRenderer } from './oppRender';
-import type { Job, Race, GradeKey } from './types';
+import type { Job, Race, GradeKey, AttackPayload } from './types';
+
+type AttackTier = AttackPayload['tier'];
 
 
 export interface UIContext {
@@ -69,7 +71,7 @@ export class UI {
     $('btn-speed').textContent = '1x';
     $('btn-pause').innerHTML = icon('pause');
     $('stage-label').textContent = ctx.kind === 'stage' ? `스테이지 ${ctx.stageId}` : ctx.kind === 'endless' ? '무한 모드' : 'PvP';
-    PVP.attacks.forEach((a, i) => { $(`btn-attack-${i}`).querySelector('span')!.innerHTML = `${icon('coin')}${a.cost}`; });
+    if (pvp) this.buildAttackCards();
     $('sell-panel').classList.add('hidden');
     $('coach').classList.add('hidden');
     $('countdown').classList.add('hidden');
@@ -102,11 +104,6 @@ export class UI {
       $('btn-mute').innerHTML = icon(muted ? 'mute' : 'sound');
     };
     $('btn-mute').innerHTML = icon(audio.isMuted() ? 'mute' : 'sound');
-    ([0, 1] as const).forEach((tier) => {
-      $(`btn-attack-${tier}`).onclick = () => {
-        if (!this.game.sendAttack(tier)) this.flashGold();
-      };
-    });
     this.bindDebug();
     this.setupDrag();
   }
@@ -165,7 +162,14 @@ export class UI {
 
     ($('btn-summon') as HTMLButtonElement).disabled = g.gold < ECONOMY.summonCost || g.over;
     if (g.isPvp) {
-      ([0, 1] as const).forEach((t) => { ($(`btn-attack-${t}`) as HTMLButtonElement).disabled = g.gold < g.attackCost(t) || g.over; });
+      document.querySelectorAll<HTMLButtonElement>('#attack-row .attack-card').forEach((b) => {
+        const t = Number(b.dataset.tier) as AttackTier;
+        const cd = g.attackCooldown(t);
+        b.disabled = g.gold < g.attackCost(t) || cd > 0 || g.over;
+        const label = cd > 0 ? String(Math.ceil(cd / PLAY_SPEED)) : '';
+        const cdEl = b.querySelector('.cd')!;
+        if (cdEl.textContent !== label) cdEl.textContent = label;
+      });
     }
     // 합성 가능 상태가 바뀌면 카드/점 갱신 (매 프레임 DOM 재생성 방지)
     const mk = g.mergeable().map((m) => m.job + m.grade).join(',');
@@ -187,6 +191,57 @@ export class UI {
     el.style.transform = 'scale(1.3)';
     el.style.color = '#ff5252';
     setTimeout(() => { el.style.transform = ''; el.style.color = ''; }, 150);
+  }
+
+  // ---------- PvP 몹 던지기: 카드를 위쪽 상대 전장으로 끌어다 놓는다 ----------
+  private buildAttackCards(): void {
+    const row = $('attack-row');
+    row.innerHTML = PVP.attacks.map((a, i) => `<button class="attack-card c${i}" data-tier="${i}">
+      ${icon(a.icon)}<b>${a.kr}</b><span>${icon('coin')}${a.cost}</span><i class="cd"></i></button>`).join('');
+    const opp = $<HTMLCanvasElement>('opp-canvas');
+    // 손가락 위치 → 상대 길 위치 (상대 전장 밖이면 null)
+    const posAt = (x: number, y: number): number | null => {
+      const r = opp.getBoundingClientRect();
+      if (x < r.left || x > r.right || y < r.top || y > r.bottom) return null;
+      return pathPosNear(((x - r.left) / r.width) * MAP.size, ((y - r.top) / r.height) * MAP.size);
+    };
+    row.querySelectorAll<HTMLButtonElement>('.attack-card').forEach((card) => {
+      const tier = Number(card.dataset.tier) as AttackTier;
+      let ghost: HTMLElement | null = null;
+      let x0 = 0, y0 = 0;
+      const move = (e: PointerEvent) => {
+        if (!ghost) return;
+        ghost.style.left = `${e.clientX}px`;
+        ghost.style.top = `${e.clientY}px`;
+        this.opp?.setAim(posAt(e.clientX, e.clientY));
+      };
+      const end = () => { ghost?.remove(); ghost = null; this.opp?.setAim(null); };
+      card.onpointerdown = (e) => {
+        if (card.disabled) { this.flashGold(); return; }
+        e.preventDefault();
+        try { card.setPointerCapture(e.pointerId); } catch { /* 합성 이벤트 등 */ }
+        x0 = e.clientX; y0 = e.clientY;
+        ghost = document.createElement('div');
+        ghost.className = 'throw-ghost';
+        ghost.innerHTML = icon(PVP.attacks[tier].icon);
+        document.body.appendChild(ghost);
+        move(e);
+      };
+      card.onpointermove = move;
+      card.onpointerup = (e) => {
+        if (!ghost) return;
+        const pos = posAt(e.clientX, e.clientY);
+        const moved = Math.hypot(e.clientX - x0, e.clientY - y0);
+        end();
+        if (pos !== null) {
+          if (this.game.sendAttack(tier, pos)) this.opp?.markThrow(pos);
+          else this.flashGold();
+        } else if (moved < 12) {
+          toast(`카드를 위쪽 <b>상대 전장</b>으로 끌어다 던지세요`);
+        }
+      };
+      card.onpointercancel = end;
+    });
   }
 
   // ---------- 소환권 (일반 모드 전용) ----------

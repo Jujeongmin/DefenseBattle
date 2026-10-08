@@ -81,6 +81,19 @@ describe('PvP 룸', () => {
     expect(lb.me.wins).toBe(1);
   });
 
+  test('몹 던지기: 경기 전엔 거부, 경기 중엔 카드 4종·범위 밖 값도 받아서 중계', async (server) => {
+    await server.simulateJoin('r3', 'p5');
+    await server.simulateJoin('r3', 'p6');
+    server.connect({ account: 'p5', roomId: 'r3' });
+    await server.pvpReady({});
+    expect(await server.pvpAttack({ tier: 0, wave: 1, pos: 0.5 })).toBe(false);
+    server.connect({ account: 'p6', roomId: 'r3' });
+    await server.pvpReady({});
+    expect(await server.pvpAttack({ tier: 3, wave: 5, pos: 0.25 })).toBe(true);
+    expect(await server.pvpAttack({ tier: 9, wave: -1, pos: 7 })).toBe(true);
+    expect(await server.pvpAttack({ tier: 1, wave: 2 })).toBe(true);
+  });
+
   test('경기 중 이탈하면 상대 승리', async (server) => {
     await server.simulateJoin('r2', 'p3');
     await server.simulateJoin('r2', 'p4');

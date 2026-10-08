@@ -188,10 +188,14 @@ export const MERGE_COUNT = 3;
 
 // ---------- PvP ----------
 export const PVP = {
-  // 몹 보내기: [몹 무리, 정예 몹]
+  // 몹 던지기 카드 4종 - 서로 다른 유닛이 카운터 (상대 덱을 보고 약점을 고르는 판단)
+  //   무리: 약한 몹 여럿 ↔ 범위 공격(마법사·폭격수)   질주: 빠른 몹 ↔ 둔화(빙결술사·전사)
+  //   거인: 체력 큰 한 마리 ↔ 처형·보스 특화(암살자·성기사)   정예: 비싸고 강함, 쿨타임
   attacks: [
-    { kr: '몹 무리', cost: 40, count: 6, hpMult: 0.9 },
-    { kr: '정예 몹', cost: 160, count: 1, hpMult: 14 },
+    { key: 'swarm', kr: '무리', icon: 'skull', cost: 40, count: 8, hpMult: 0.55, kind: 'sent', cooldown: 0 },
+    { key: 'rush', kr: '질주', icon: 'bolt', cost: 50, count: 4, hpMult: 0.6, kind: 'rush', cooldown: 0 },
+    { key: 'giant', kr: '거인', icon: 'hammer', cost: 80, count: 1, hpMult: 7, kind: 'giant', cooldown: 0 },
+    { key: 'elite', kr: '정예', icon: 'crown', cost: 160, count: 1, hpMult: 14, kind: 'elite', cooldown: 20 },
   ],
   reportInterval: 0.5,   // 상태 보고 주기(초)
   matchTimeout: 25,      // 매칭 대기 최대(초) → 초과 시 AI 대전 제안

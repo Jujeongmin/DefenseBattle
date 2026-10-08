@@ -60,7 +60,7 @@ export interface Unit {
   _newZone?: number;
 }
 
-export type MobKind = 'normal' | 'fast' | 'tank' | 'sent' | 'elite';
+export type MobKind = 'normal' | 'fast' | 'tank' | 'sent' | 'rush' | 'giant' | 'elite';
 
 export interface Mob {
   id: number;
@@ -177,8 +177,9 @@ export interface GameOptions {
 
 // PvP: 상대에게 보내는 공격 묶음
 export interface AttackPayload {
-  tier: 0 | 1;      // 0=몹 무리, 1=정예 몹
-  wave: number;     // 보낸 쪽 웨이브 (체력 기준)
+  tier: 0 | 1 | 2 | 3; // PVP.attacks 순서: 0=무리 1=질주 2=거인 3=정예
+  wave: number;        // 보낸 쪽 웨이브 (체력 기준)
+  pos?: number;        // 던진 위치: 길(사각 링) 둘레 비율 0~1 (출발점=0, 반시계)
 }
 
 // 소모성/영구 아이템 인벤토리 (결제·보상으로 획득)

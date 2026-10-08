@@ -31,6 +31,31 @@ export const PATH = {
   ] as { x: number; y: number }[],
   width: 44,
 };
+/** 길 둘레 비율(0~1) → 좌표와 다음 목표 모서리. 0=출발점(좌상), 반시계 순서로 한 바퀴 */
+export function pathAt(pos: number): { x: number; y: number; next: number } {
+  const c = PATH.corners;
+  const d = (((pos % 1) + 1) % 1) * c.length;
+  const seg = Math.floor(d) % c.length;
+  const t = d - Math.floor(d);
+  const a = c[seg], b = c[(seg + 1) % c.length];
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, next: (seg + 1) % c.length };
+}
+/** 전장 좌표에서 가장 가까운 길 위치(둘레 비율) - 몹을 던진 지점을 길에 붙인다 */
+export function pathPosNear(x: number, y: number): number {
+  const c = PATH.corners;
+  let best = 0, bestD = Infinity;
+  for (let i = 0; i < c.length; i++) {
+    const a = c[i], b = c[(i + 1) % c.length];
+    const vx = b.x - a.x, vy = b.y - a.y;
+    const t = Math.max(0, Math.min(1, ((x - a.x) * vx + (y - a.y) * vy) / (vx * vx + vy * vy)));
+    const d = Math.hypot(a.x + vx * t - x, a.y + vy * t - y);
+    if (d < bestD) { bestD = d; best = (i + t) / c.length; }
+  }
+  return best;
+}
+/** 길의 각 변(seg) 앞에 있는 유닛 구역: 0=좌변→좌(3), 1=하변→하(2), 2=우변→우(1), 3=상변→상(0) */
+export const SEG_ZONE = [3, 2, 1, 0] as const;
+
 const INNER = 118; // 유닛 배치 사각형 여백
 const O = MAP.size / 2;
 
@@ -130,7 +155,7 @@ export class Game {
   time = 0;                       // 게임 경과 시간(배속 반영)
   sentCount = 0;                  // PvP: 보낸 공격 수
   peakMobs = 0;                   // 필드 몹 최대치 (별 판정)
-  private pending: { kind: MobKind; hp: number; delay: number }[] = []; // PvP: 도착 대기 몹
+  private pending: { kind: MobKind; hp: number; delay: number; pos?: number }[] = []; // PvP: 도착 대기 몹
   private rng: () => number = Math.random;
   private _listeners: { [K in EventName]?: Listener<K>[] } = {};
 
@@ -183,6 +208,7 @@ export class Game {
     this.sentCount = 0;
     this.peakMobs = 0;
     this.pending = [];
+    this.attackReadyAt = [0, 0, 0, 0];
     this._listeners = {};
   }
 
@@ -244,7 +270,7 @@ export class Game {
     this.addMob(kind, this.waveHp() * (k ? k.hpMult : 1), false);
   }
 
-  private addMob(kind: MobKind, hp: number, boss: boolean): Mob {
+  private addMob(kind: MobKind, hp: number, boss: boolean, pos = 0): Mob {
     let size = 44;
     let speedMult = 1;
     if (boss) size = 44 * WAVE.bossSizeMult;
@@ -254,16 +280,23 @@ export class Game {
     } else if (kind === 'elite') {
       size *= 1.5;
       speedMult = 0.85;
+    } else if (kind === 'giant') {
+      size *= 1.7;
+      speedMult = 0.55;
+    } else if (kind === 'rush') {
+      size *= 0.8;
+      speedMult = 1.9;
     } else if (kind === 'sent') {
       speedMult = 1.1;
     }
+    const start = pathAt(pos);
     const m: Mob = {
       id: nextId++,
       race: this.currentRace,
       kind,
-      x: PATH.corners[0].x,
-      y: PATH.corners[0].y,
-      seg: 0,
+      x: start.x,
+      y: start.y,
+      seg: start.next,
       pause: 0,
       hp, maxHp: hp,
       boss,
@@ -280,28 +313,33 @@ export class Game {
   }
 
   // ---------------- PvP: 몹 보내기 / 받기 ----------------
-  attackCost(tier: 0 | 1): number { return PVP.attacks[tier].cost; }
+  attackCost(tier: AttackPayload['tier']): number { return PVP.attacks[tier].cost; }
+  /** 남은 쿨타임(초, 게임 시간) - 정예처럼 쿨타임이 있는 카드 */
+  attackCooldown(tier: AttackPayload['tier']): number { return Math.max(0, this.attackReadyAt[tier] - this.time); }
+  private attackReadyAt = [0, 0, 0, 0];
 
-  sendAttack(tier: 0 | 1): boolean {
+  /** 몹 던지기. pos = 상대 길 위치(둘레 비율 0~1) */
+  sendAttack(tier: AttackPayload['tier'], pos = 0): boolean {
     if (!this.isPvp || this.over) return false;
-    const cost = this.attackCost(tier);
-    if (this.gold < cost) return false;
-    this.gold -= cost;
+    const def = PVP.attacks[tier];
+    if (this.gold < def.cost || this.attackCooldown(tier) > 0) return false;
+    this.gold -= def.cost;
+    this.attackReadyAt[tier] = this.time + def.cooldown;
     this.sentCount += 1;
-    const payload: AttackPayload = { tier, wave: Math.max(1, this.wave) };
-    this.pushLog(`${icon('sword')} 상대에게 ${PVP.attacks[tier].kr} 전송!`);
+    const payload: AttackPayload = { tier, wave: Math.max(1, this.wave), pos };
+    this.pushLog(`${icon(def.icon)} ${def.kr} 던짐!`);
     this.emit('attack', payload);
     return true;
   }
 
   receiveAttack(p: AttackPayload): void {
     if (this.over) return;
-    const def = PVP.attacks[p.tier];
+    const def = PVP.attacks[p.tier] ?? PVP.attacks[0];
     const hp = this.baseHp(p.wave) * def.hpMult;
-    const kind: MobKind = p.tier === 1 ? 'elite' : 'sent';
-    for (let i = 0; i < def.count; i++) this.pending.push({ kind, hp, delay: i * 0.25 });
-    this.pushLog(`${icon('warning')} 상대가 ${def.kr}을(를) 보냈습니다!`);
-    if (p.tier === 1) this.shake = Math.max(this.shake, 6);
+    const pos = Number.isFinite(p.pos) ? (p.pos as number) : 0;
+    for (let i = 0; i < def.count; i++) this.pending.push({ kind: def.kind, hp, delay: i * 0.25, pos });
+    this.pushLog(`${icon('warning')} 상대의 ${def.kr}!`);
+    if (p.tier >= 2) this.shake = Math.max(this.shake, 6);
     this.emit('incoming', p);
   }
 
@@ -311,7 +349,7 @@ export class Game {
     const ready = this.pending.filter((p) => p.delay <= 0);
     if (!ready.length) return;
     this.pending = this.pending.filter((p) => p.delay > 0);
-    for (const p of ready) this.addMob(p.kind, p.hp, false);
+    for (const p of ready) this.addMob(p.kind, p.hp, false, p.pos ?? 0);
   }
 
   // PvP 상대 미니맵/상태 보고용 요약
@@ -319,7 +357,7 @@ export class Game {
     const q = (v: number) => Math.max(0, Math.min(255, Math.round((v / MAP.size) * 255)));
     const mobs: number[] = [];
     for (const m of this.mobs.slice(0, 120)) {
-      const kind = m.boss ? SNAP_KIND.boss : m.kind === 'sent' || m.kind === 'elite' ? SNAP_KIND.sent : SNAP_KIND.normal;
+      const kind = m.boss ? SNAP_KIND.boss : m.kind === 'sent' || m.kind === 'elite' || m.kind === 'rush' || m.kind === 'giant' ? SNAP_KIND.sent : SNAP_KIND.normal;
       mobs.push(m.id, q(m.x), q(m.y), RACES.indexOf(m.race) | (kind << 2) | (m.dir << 4), Math.round(m.size));
     }
     const units: number[] = [];
@@ -582,7 +620,7 @@ export class Game {
     dmg *= UNIT_BY_ID[u.job].atkMult * (1 + (this.collectionLevel(u.job) - 1) * UNIT_LEVEL_ATK);
     dmg *= DMG_MULT[u.job][mob.race];
     // 성기사: 보스/정예 특화
-    if (u.job === 'paladin' && u.gradeIndex >= SKILL_FROM_INDEX && (mob.boss || mob.kind === 'elite')) {
+    if (u.job === 'paladin' && u.gradeIndex >= SKILL_FROM_INDEX && (mob.boss || mob.kind === 'elite' || mob.kind === 'giant')) {
       const m = u.gradeIndex >= FULL_RANGE_FROM_INDEX ? SKILLS.paladin.bossMultHigh : SKILLS.paladin.bossMult;
       dmg *= 1 + (m - 1) * perkMult(this.collectionLevel(u.job));
     }
@@ -835,7 +873,7 @@ export class Game {
     if (m.dead) return;
     m.dead = true; // 배열 제거는 전투 루프 끝에서 일괄 처리
     const goldMult = 1 + this.res('goldGain') * RESEARCH_PER.goldGain;
-    const base = m.boss ? ECONOMY.bossGold : m.kind === 'elite' ? ECONOMY.bossGold / 4 : ECONOMY.killGold;
+    const base = m.boss ? ECONOMY.bossGold : m.kind === 'elite' ? ECONOMY.bossGold / 4 : m.kind === 'giant' ? ECONOMY.bossGold / 8 : ECONOMY.killGold;
     const gained = Math.round(base * goldMult);
     this.gold += gained;
     this.kills += 1;

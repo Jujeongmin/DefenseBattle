@@ -2,7 +2,7 @@
 //  PvP 상대 전장 렌더러 - 상대가 보내는 스냅샷(0.5초 간격)으로 상대 필드를 그린다.
 //  몹은 id 로 이전 스냅샷과 짝지어 그 사이를 보간한다 (한 주기 늦게 보여 주는 대신 부드럽게).
 // ============================================================
-import { MAP, SNAP_KIND, type BoardSnapshot } from './engine';
+import { MAP, SNAP_KIND, pathAt, type BoardSnapshot } from './engine';
 import { unitSprite, mobSprite } from './assets';
 import { GRADES, JOBS, RACES, PLAY_SPEED } from './config';
 import { fieldBackground, FRAME, WALK_SEQ, JOB_TINT } from './render';
@@ -43,6 +43,11 @@ export class OppRenderer {
   private ctx: CanvasRenderingContext2D;
   private prev: SnapFrame | null = null;
   private cur: SnapFrame | null = null;
+  private aim: number | null = null;              // 드래그 중인 던질 위치
+  private throws: { pos: number; at: number }[] = []; // 방금 던진 자리 (잠깐 표시)
+
+  setAim(pos: number | null): void { this.aim = pos; }
+  markThrow(pos: number): void { this.throws.push({ pos, at: performance.now() }); }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -68,9 +73,10 @@ export class OppRenderer {
     if (bg) ctx.drawImage(bg, 0, 0);
     else { ctx.fillStyle = '#6c9a3a'; ctx.fillRect(0, 0, MAP.size, MAP.size); }
 
+    const now = performance.now();
+    this.drawThrowMarks(ctx, now);
     const cur = this.cur;
     if (!cur) return;
-    const now = performance.now();
     const prev = this.prev;
     const span = prev ? Math.max(1, cur.at - prev.at) : 1;
     const a = prev ? Math.min(1, Math.max(0, (now - cur.at) / span)) : 1;
@@ -117,5 +123,32 @@ export class OppRenderer {
         ctx.fillRect(u.x - 8, u.y - 8, 16, 16);
       }
     }
+  }
+
+  // 조준 중인 길 위치(진행 방향 화살표 포함)와 방금 던진 자리
+  private drawThrowMarks(ctx: CanvasRenderingContext2D, now: number): void {
+    this.throws = this.throws.filter((t) => now - t.at < 900);
+    for (const t of this.throws) {
+      const p = pathAt(t.pos);
+      const k = (now - t.at) / 900;
+      ctx.strokeStyle = `rgba(255, 90, 61, ${1 - k})`;
+      ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 30 + k * 60, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (this.aim === null) return;
+    const p = pathAt(this.aim);
+    const n = pathAt(this.aim + 0.03); // 몹이 갈 방향
+    const pulse = 1 + Math.sin(now / 90) * 0.12;
+    ctx.fillStyle = 'rgba(255, 90, 61, 0.35)';
+    ctx.strokeStyle = '#ff5a3d';
+    ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 46 * pulse, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    const ang = Math.atan2(n.y - p.y, n.x - p.x);
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(ang);
+    ctx.fillStyle = '#fff2a8';
+    ctx.beginPath(); ctx.moveTo(78, 0); ctx.lineTo(50, -20); ctx.lineTo(50, 20); ctx.closePath(); ctx.fill();
+    ctx.restore();
   }
 }

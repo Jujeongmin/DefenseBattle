@@ -845,6 +845,34 @@ b, strong { font-weight: 700; }
   min-height: 0;
 }
 #attack-row { display: flex; gap: 8px; }
+/* 몹 던지기 카드: 끌어서 위쪽 상대 전장에 놓는다 */
+.attack-card {
+  flex: 1; position: relative; min-width: 0;
+  border: 0; background: none; cursor: grab; touch-action: none;
+  border-image: url('/ui/frame/btn_red.png') 44 fill / 13px;
+  padding: 4px 2px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  color: var(--cream); text-shadow: var(--outline-thin); font-weight: 700;
+}
+.attack-card.c1 { border-image-source: url('/ui/frame/btn_blue.png'); }
+.attack-card.c2 { border-image-source: url('/ui/frame/btn_green.png'); }
+.attack-card.c3 { border-image-source: url('/ui/frame/btn_purple.png'); }
+.attack-card .pi { width: 22px; height: 22px; }
+.attack-card b { font-size: 12px; }
+.attack-card span { font-size: 11px; display: flex; align-items: center; gap: 1px; }
+.attack-card span .pi { width: 12px; height: 12px; }
+.attack-card:disabled { filter: grayscale(0.85); opacity: 0.6; }
+.attack-card .cd {
+  position: absolute; inset: 4px 4px 8px; display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-style: normal; color: var(--cream); background: rgba(26, 18, 12, 0.55);
+}
+.attack-card .cd:empty { display: none; }
+.throw-ghost {
+  position: fixed; z-index: 99; pointer-events: none;
+  transform: translate(-50%, -70%) scale(1.4);
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.5));
+}
+.throw-ghost .pi { width: 40px; height: 40px; }
 .attack-btn {
   flex: 1; border: 0; background: none; cursor: pointer;
   border-image: url('/ui/frame/btn_red.png') 44 fill / 15px;

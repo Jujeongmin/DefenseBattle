@@ -192,12 +192,15 @@ export class Server {
   }
 
   /** 몹 보내기 중계 */
-  async pvpAttack(payload: { tier: number; wave: number }): Promise<boolean> {
-    const tier = payload?.tier === 1 ? 1 : 0;
+  async pvpAttack(payload: { tier: number; wave: number; pos?: number }): Promise<boolean> {
+    // 카드 4종(0=무리 1=질주 2=거인 3=정예) + 던진 길 위치(둘레 비율 0~1)
+    const tier = Math.max(0, Math.min(3, Math.floor(Number(payload?.tier) || 0)));
     const wave = Math.max(1, Math.min(999, Math.floor(Number(payload?.wave) || 1)));
+    const p = Number(payload?.pos);
+    const pos = Number.isFinite(p) ? Math.max(0, Math.min(1, p)) : 0;
     const room = await $room.getRoomState(['status']);
     if (room.status !== 'playing') return false;
-    $room.broadcastToRoom('pvpAttack', { from: $sender.account, payload: { tier, wave } });
+    $room.broadcastToRoom('pvpAttack', { from: $sender.account, payload: { tier, wave, pos } });
     return true;
   }
 

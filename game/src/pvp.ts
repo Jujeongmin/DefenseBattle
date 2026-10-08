@@ -160,6 +160,7 @@ class BotSession implements PvpSession {
   private timer: ReturnType<typeof setInterval> | null = null;
   private handlers: PvpHandlers | null = null;
   private done = false;
+  private opp: BoardSnapshot | null = null; // 플레이어 필드 (봇이 약점을 노릴 때 사용)
   constructor(readonly match: MatchInfo) {}
 
   async ready(h: PvpHandlers): Promise<void> {
@@ -188,7 +189,7 @@ class BotSession implements PvpSession {
       const dt = real * PLAY_SPEED;
       for (let left = dt; left > 0; left -= 0.05) game.update(Math.min(left, 0.05));
       acc += dt; snapAcc += real; // AI 판단은 게임 시간, 스냅샷 전송은 실시간 기준
-      if (acc >= 0.35) { acc = 0; aiStep(game, skill); }
+      if (acc >= 0.35) { acc = 0; aiStep(game, skill, this.opp); }
       if (snapAcc >= PVP.reportInterval) { snapAcc = 0; h.onSnapshot(game.snapshot()); }
     }, 50);
   }
@@ -201,7 +202,7 @@ class BotSession implements PvpSession {
     this.handlers?.onResult({ won: playerWon, reason: 'defeat', trophyDelta: 0, trophies: meta.pvp.trophies });
   }
 
-  sendSnapshot(): void { /* 봇은 상대 화면을 보지 않음 */ }
+  sendSnapshot(s: BoardSnapshot): void { this.opp = s; }
   sendAttack(p: AttackPayload): void { this.game?.receiveAttack(p); }
   reportDefeat(): void { this.finish(false); }
   leave(): void {
