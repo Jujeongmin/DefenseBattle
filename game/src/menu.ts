@@ -623,6 +623,8 @@ export class Menu {
 
   // ======================= PvP =======================
   openPvp(tab: 'battle' | 'pass' | 'rank' = 'battle'): void {
+    // v1: 로비 '랭킹' 버튼 → 랭킹만 (대전은 로비의 '대전 시작' 버튼으로 한다)
+    const rankOnly = V1 && tab === 'rank';
     const draw = async () => {
       const p = meta.pvp;
       const tier = pvpTier(p.trophies);
@@ -658,11 +660,11 @@ export class Menu {
         body = '<div class="fine">불러오는 중...</div>';
       }
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
-        <h2>PvP 아레나</h2>
-        <div class="tab-row">
+        <h2>${rankOnly ? '랭킹' : 'PvP 아레나'}</h2>
+        ${rankOnly ? '' : `<div class="tab-row">
           <button data-act="tab" data-t="battle" class="${tab === 'battle' ? 'active' : ''}">대전</button>
           ${V1 ? '' : `<button data-act="tab" data-t="pass" class="${tab === 'pass' ? 'active' : ''}">시즌 패스${this.seasonClaimable() ? ' •' : ''}</button>`}
-          <button data-act="tab" data-t="rank" class="${tab === 'rank' ? 'active' : ''}">랭킹</button></div>
+          <button data-act="tab" data-t="rank" class="${tab === 'rank' ? 'active' : ''}">랭킹</button></div>`}
         <div id="pvp-body">${body}</div></div>`, () => this.render());
       bindActions(el, {
         tab: (b) => { tab = b.dataset.t as typeof tab; void draw(); },
