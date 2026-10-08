@@ -5,13 +5,15 @@
 // ============================================================
 import { Game } from '../game/src/engine';
 import { meta } from '../game/src/meta';
-import { WAVE, ECONOMY, RESEARCH_PER } from '../game/src/config';
-import type { ResearchKey } from '../game/src/types';
+import { WAVE, ECONOMY, RESEARCH_PER, GRADE_INDEX, STAGES, UNITS, starsFor } from '../game/src/config';
+import type { ResearchKey, GameOptions, Job } from '../game/src/types';
 
 // 실험용 런타임 오버라이드 (config 는 as const 지만 런타임 객체는 가변)
 const W = WAVE as { hpGrowthPerWave: number };
 const E = ECONOMY as { upgradePerLevel: number };
-const BASE_HP_GROWTH = WAVE.hpGrowthPerWave;
+// 환경변수로 HP 성장률 실험: SIM_HPG=0.12 npx tsx tools/simulate.ts
+if (process.env.SIM_HPG) W.hpGrowthPerWave = Number(process.env.SIM_HPG);
+const BASE_HP_GROWTH = W.hpGrowthPerWave;
 const BASE_UP = ECONOMY.upgradePerLevel;
 
 // 연구 효과 강도 스케일 적용 (atk/goldGain/startGold/boss 를 배수만큼 강화)
@@ -45,8 +47,17 @@ function tryUpgrade(game: Game): boolean {
   return false;
 }
 
+// 합성 가능한 조합이 있으면 합성 (낮은 등급부터)
+const MERGE = process.env.SIM_MERGE !== '0';
+function tryMerge(game: Game): boolean {
+  if (!MERGE) return false;
+  const m = game.mergeable().sort((a, b) => GRADE_INDEX[a.grade] - GRADE_INDEX[b.grade])[0];
+  return !!(m && game.merge(m.job, m.grade));
+}
+
 function autoPlay(game: Game, armyTarget: number): void {
   const SUMMON = 20;
+  if (tryMerge(game)) return;
   if (game.units.length < armyTarget) {
     if (game.gold >= SUMMON) game.summon();
     return;
@@ -57,9 +68,13 @@ function autoPlay(game: Game, armyTarget: number): void {
   }
 }
 
-function runOnce(profile: Profile, armyTarget = 18): number {
+function runOnce(profile: Profile, armyTarget = 18, opts: Partial<GameOptions> = {}): number {
+  return runGame(profile, armyTarget, opts).wave;
+}
+
+function runGame(profile: Profile, armyTarget = 18, opts: Partial<GameOptions> = {}): Game {
   setResearch(profile);
-  const game = new Game();
+  const game = new Game({ track: false, ...opts });
   game.speed = 1;
   const dt = 1 / 20;
   const actionEvery = 0.2;
@@ -75,7 +90,36 @@ function runOnce(profile: Profile, armyTarget = 18): number {
       autoPlay(game, armyTarget);
     }
   }
-  return game.wave;
+  return game;
+}
+
+// 캠페인 스테이지별 클리어율/별 (연구 진척 × 유닛 레벨 프로필)
+// 덱: 해당 스테이지 시점에 해금된 유닛 중 4종 (최근 해금 우선)
+function stageSweep(runs = 8, filter?: string): void {
+  const profiles: [string, Profile, number][] = [
+    ['none', {}, 1],
+    ['quarter', { atk: 5, startGold: 5, goldGain: 5, rare: 2, boss: 5 }, 3],
+    ['half', { atk: 10, startGold: 10, goldGain: 10, rare: 5, boss: 10 }, 5],
+    ['3/4', { atk: 15, startGold: 15, goldGain: 15, rare: 7, boss: 15 }, 7],
+  ];
+  const order = STAGES.map((s) => s.id);
+  console.log(`\n=== 스테이지 클리어율% / 평균별 (각 ${runs}회) ===`);
+  console.log('stage  waves hpX   ' + profiles.map(([n]) => n.padStart(11)).join(''));
+  for (const st of STAGES) {
+    if (filter && !st.id.startsWith(filter)) continue;
+    const unlocked: Job[] = UNITS.filter((u) => !u.unlockStage || order.indexOf(u.unlockStage) < order.indexOf(st.id)).map((u) => u.id);
+    const deck = unlocked.slice(-4);
+    const cells = profiles.map(([, prof, lv]) => {
+      const levels = Object.fromEntries(deck.map((j) => [j, lv]));
+      let clears = 0, stars = 0;
+      for (let i = 0; i < runs; i++) {
+        const g = runGame(prof, 18, { stageId: st.id, waves: st.waves, hpMult: st.hpMult, races: st.races, deck, unitLevels: levels });
+        if (g.cleared) { clears++; stars += starsFor(g.peakMobs); }
+      }
+      return `${Math.round((clears / runs) * 100)}%/${clears ? (stars / clears).toFixed(1) : '-'}`.padStart(11);
+    });
+    console.log(st.id.padEnd(6), String(st.waves).padStart(5), String(st.hpMult).padEnd(5), cells.join(''));
+  }
 }
 
 function stats(xs: number[]): { avg: number; min: number; max: number; clearRate: number } {
@@ -195,7 +239,8 @@ function search(runs = 25): void {
 }
 
 const mode = process.argv[2] || 'sweep';
-if (mode === 'army') armySweep(Number(process.argv[3]) || 20);
+if (mode === 'stages') stageSweep(Number(process.argv[3]) || 8, process.argv[4]);
+else if (mode === 'army') armySweep(Number(process.argv[3]) || 20);
 else if (mode === 'tune') tuneSweep(Number(process.argv[3]) || 20);
 else if (mode === 'search') search(Number(process.argv[3]) || 20);
 else sweep(Number(process.argv[2]) || 30);

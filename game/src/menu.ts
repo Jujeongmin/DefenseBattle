@@ -1,517 +1,559 @@
 // ============================================================
-//  메인 화면 - 게임시작 / 상점 / 연구소 (게임 밖 메타 화면)
+//  로비(메인 화면) - 스테이지 / 유닛·덱 / 연구 / 퀘스트 / 상점 / PvP(시즌패스·랭킹)
 // ============================================================
 import {
-  DAILY_QUESTS, ACHIEVEMENTS,
-  CRYSTAL_PACKAGES, SPEED_3X_UNLOCK_PRODUCT_ID, AD_SHOP_REWARD_GEMS,
-  GACHA, GRADES, GRADE_BY_KEY, GRADE_INDEX, JOBS, JOB_SPRITE, starUpCost,
-  rollJob, rollGachaGrade, rollGachaMythicPlus,
+  RESEARCH, researchCost, DAILY_QUESTS, ACHIEVEMENTS, PRODUCTS, ITEM_KR,
+  UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, UNIT_PERK_LEVELS, unitUpgradeCost, SKILL_DESC, SKILL_KR,
+  DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, STAGES_PER_CHAPTER, RACE_KR,
+  SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, PVP,
 } from './config';
-import {
-  meta, saveMeta, collectionCount, collectionLevelOf, addToCollection,
-  gachaPityRemaining, resetProgress,
-} from './meta';
+import { meta, saveMeta, researchLevel, currentSeasonId } from './meta';
 import { getPlatform } from './platform';
 import { audio } from './audio';
-import { t, jobName, gradeName } from './i18n';
-import { openProbabilityPanel } from './probabilityPanel';
-import { openRankPanel } from './rankPanel';
-import { adManager } from './ad';
-import { buyItem, getItemPrice, setOnCatalogUpdated, setOnPurchaseSettled } from './vxshop';
-import type { AchievementDef, Job, GradeKey } from './types';
+import { unitIconUrl } from './assets';
+import {
+  stageStars, stageUnlocked, nextStageId, chapterStars, chapterUnlocked, CHAPTER_STAR_GOALS,
+  chapterStarReward, starRewardClaimed, claimStarReward, featureUnlocked, featureHint,
+  unitUnlocked, unitLevel, buyUnit, canUpgradeUnit, upgradeUnit, toggleDeck,
+} from './progress';
+import {
+  purchase, productOwned, monthlyActive, monthlyDaysLeft, canClaimMonthly, claimMonthly,
+  seasonTier, claimSeasonReward, rewardText,
+} from './shop';
+import { freeTicketAdsLeft, watchForTickets, rewardedAvailable, FREE_TICKET_AMOUNT } from './ads';
+import { onlineAvailable, findOnlineMatch, createBotSession, MatchTimeout, type PvpSession } from './pvp';
+import { $, toast, openOverlay, closeOverlay, bindActions, spriteIcon, confirmModal } from './dom';
+import type { Job, ResearchKey } from './types';
 
-const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
-  document.getElementById(id) as T;
+export type Launch =
+  | { kind: 'stage'; stageId: string; goldBooster: boolean }
+  | { kind: 'endless'; goldBooster: boolean }
+  | { kind: 'pvp'; session: PvpSession };
+
+const RACE_ICON: Record<string, string> = { troll: '🧌', orc: '👹', undead: '💀' };
 
 export class Menu {
-  private onStart: () => void;
+  private onLaunch: (l: Launch) => void;
+  private selectedChapter = 1;
 
-  constructor(onStart: () => void) {
-    this.onStart = onStart;
-    $('menu-start').onclick = () => { audio.button(); this.onStart(); };
-    $('menu-shop').onclick = () => { audio.button(); this.openShop(); };
-    $('menu-lab').onclick = () => { audio.button(); this.openLab(); };
-    $('menu-rank').onclick = () => { audio.button(); this.openRank(); };
-    $('menu-reset').onclick = () => { audio.button(); this.openResetConfirm(); };
-  }
-
-  private openRank(): void {
-    openRankPanel();
-  }
-
-  private openResetConfirm(): void {
-    const panel = $('confirm-panel');
-    panel.innerHTML = `
-      <div class="dialog">
-        <h2>${t('set.resetTitle')}</h2>
-        <div class="d" style="color:#bbb;text-align:center">${t('set.resetBody')}</div>
-        <div class="confirm-btns">
-          <button class="cancel">${t('common.cancel')}</button>
-          <button class="danger">${t('set.resetBtn')}</button>
-        </div>
-      </div>`;
-    (panel.querySelector('.cancel') as HTMLElement).onclick = () => {
-      audio.button();
-      panel.classList.add('hidden');
-    };
-    (panel.querySelector('.danger') as HTMLElement).onclick = () => {
-      audio.button();
-      resetProgress();
-      this.refresh();
-      panel.classList.add('hidden');
-    };
-    panel.classList.remove('hidden');
+  constructor(onLaunch: (l: Launch) => void) {
+    this.onLaunch = onLaunch;
   }
 
   show(): void {
     $('main-menu').classList.remove('hidden');
-    this.refresh();
+    this.selectedChapter = STAGE_BY_ID[nextStageId()].chapter;
+    this.render();
+    audio.switchBgm('menu');
   }
   hide(): void {
     $('main-menu').classList.add('hidden');
   }
+  /** 결과 화면 → 스테이지 정보(시작 전) 바로 열기 */
+  openStage(id: string): void { this.openStageInfo(id); }
+  openPvpPanel(): void { this.openPvp(); }
+
   refresh(): void {
-    $('menu-crystal-amount').textContent = String(meta.crystals);
-    $('menu-best').textContent = String(meta.bestWave || 0);
+    if (!$('main-menu').classList.contains('hidden')) this.render();
   }
 
-  // ---------- 연구소 (연구 + 퀘스트) ----------
-  private openLab(): void {
-    const panel = $('lab-panel');
-    let tab: 'collection' | 'quest' = 'collection';
-    let jobTab: Job = JOBS[0]; // 컬렉션 탭: 직업별로 나눠 스크롤 없이 6등급만 표시
-    // keepScroll: 스타업/보상수령 후 재렌더 시 스크롤 위치 유지 (탭 전환은 맨 위로)
-    const render = (keepScroll = false) => {
-      const prevScroll = keepScroll ? (panel.querySelector<HTMLElement>('.dialog')?.scrollTop ?? 0) : 0;
-      const body = tab === 'collection' ? this.collectionHtml(jobTab) : this.questHtml();
-      panel.innerHTML = `
-        <div class="dialog drag-scroll">
-          <h2>${t('lab.title')} <span class="crystal"><span class="gem"></span> ${meta.crystals}</span></h2>
-          <div class="tab-row">
-            <button data-tab="collection" class="${tab === 'collection' ? 'active' : ''}">${t('lab.tabUnits')}</button>
-            <button data-tab="quest" class="${tab === 'quest' ? 'active' : ''}">${t('lab.tabQuest')}</button>
-          </div>
-          ${body}
-          <button class="close">${t('common.close')}</button>
-        </div>`;
-      panel.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => {
-        b.onclick = () => { tab = b.dataset.tab as typeof tab; render(); };
-      });
-      panel.querySelectorAll<HTMLButtonElement>('[data-job]').forEach((b) => {
-        b.onclick = () => { jobTab = b.dataset.job as Job; audio.button(); render(); };
-      });
-      this.bindCollectionButtons(panel, render);
-      this.bindQuestButtons(panel, render);
-      this.bindDragScroll(panel.querySelector<HTMLElement>('.dialog'));
-      (panel.querySelector('.close') as HTMLElement).onclick = () => {
-        panel.classList.add('hidden');
-        this.refresh();
-      };
-      const dlg = panel.querySelector<HTMLElement>('.dialog');
-      if (dlg && prevScroll) dlg.scrollTop = prevScroll;
-    };
-    render();
-    panel.classList.remove('hidden');
-  }
-
-  // 유닛 컬렉션 탭: 직업 서브탭으로 나눠 한 화면에 6등급만 표시 (스크롤 불필요)
-  private collectionHtml(jobTab: Job): string {
-    const jobBtns = JOBS.map((j) => {
-      const sprite = `sprites/${JOB_SPRITE[j]}_${GRADES[0].spriteIndex}.png`;
-      return `<button data-job="${j}" class="job-tab ${j === jobTab ? 'active' : ''}">
-        <span class="frame-sprite" style="background-image:url(${sprite})"></span>${jobName(j)}
-      </button>`;
-    }).join('');
-    let html = `<div class="d" style="color:#bbb;font-size:12px;margin-bottom:6px">${t('lab.hint')}</div>
-      <div class="job-tab-row">${jobBtns}</div>`;
-    for (const grade of GRADES) {
-      const lv = collectionLevelOf(jobTab, grade.key);
-      const have = collectionCount(jobTab, grade.key);
-      const maxed = lv >= GACHA.maxLevel;
-      const need = starUpCost(lv);
-      const bonusNow = Math.round(lv * GACHA.bonusPerLevel * 100);
-      const canUp = !maxed && have >= need;
-      html += `<div class="row">
-        <div class="info" style="display:flex;align-items:center;gap:8px">
-          <div class="frame-sprite" style="width:34px;height:34px;flex:0 0 34px;background-image:url(sprites/${JOB_SPRITE[jobTab]}_${grade.spriteIndex}.png)"></div>
-          <div>
-            <div class="t" style="color:${grade.color}">${gradeName(grade.key)} <span style="color:#ffd54f">★${lv}</span> <span style="color:#7ee87e;font-size:11px">${t('lab.atkBonus', { n: bonusNow })}</span></div>
-            <div class="d">${maxed ? t('lab.ownedMax', { have }) : t('lab.owned', { have, need })}</div>
-          </div>
+  // ======================= 로비 =======================
+  private render(): void {
+    const root = $('main-menu');
+    const tier = pvpTier(meta.pvp.trophies);
+    const next = STAGE_BY_ID[nextStageId()];
+    const ch = CHAPTERS[next.chapter - 1];
+    const chCleared = STAGES.filter((s) => s.chapter === next.chapter && stageStars(s.id) > 0).length;
+    const allCleared = STAGES.every((s) => stageStars(s.id) > 0);
+    const vx = getPlatform().getVX();
+    const parade = meta.deck.map((j) => spriteIcon(unitIconUrl(j, Math.min(5, unitLevel(j) >> 1)))).join('');
+    const pvpOn = featureUnlocked('pvp');
+    const endlessOn = featureUnlocked('endless');
+    const notices: string[] = [];
+    if (canClaimMonthly()) notices.push(`<div class="notice">📅 월정액 오늘의 보석 <button class="btn small green" data-act="monthly">받기 💎</button></div>`);
+    const seasonReady = this.seasonClaimable();
+    root.innerHTML = `
+      <div class="lobby-top">
+        <div class="profile-chip" data-act="profile" style="color:${tier.color}">
+          <div class="tier-badge">🏆</div>
+          <div><div class="nm" style="color:var(--text)">${esc(meta.nick)}</div><div class="tr">${tier.kr} · ${meta.pvp.trophies}</div></div>
         </div>
-        <button data-star="${jobTab}_${grade.key}" ${canUp ? '' : 'disabled'}>${maxed ? t('common.max') : t('lab.starUp')}</button>
-      </div>`;
+        <div class="res-chip" data-act="shop"><span class="crystal">💎 ${meta.crystals.toLocaleString()}</span><span class="plus">+</span></div>
+        ${vx !== null ? `<div class="res-chip" data-act="shop"><span class="trophy">VX ${vx.toLocaleString()}</span></div>` : ''}
+      </div>
+      <div class="lobby-body">
+        <h1 class="game-title">랜덤 디펜스</h1>
+        <div class="game-sub">소환 · 합성 · 배치로 막아내라!</div>
+        <div class="parade">${parade}</div>
+        ${notices.join('')}
+        <div class="play-card">
+          <div class="chap"><span>CHAPTER ${ch.n} · <b>${ch.kr}</b></span><span>${chCleared}/${STAGES_PER_CHAPTER}</span></div>
+          <div class="chap-bar"><div style="width:${(chCleared / STAGES_PER_CHAPTER) * 100}%"></div></div>
+          <button class="btn red play-btn" data-act="play">▶ ${allCleared ? '스테이지 선택' : `스테이지 ${next.id}`}
+            <small>${next.waves}웨이브 · ${next.unlocks ? `클리어 시 ${UNIT_BY_ID[next.unlocks].kr} 해금` : `보상 💎${stageStars(next.id) ? next.replayReward : next.firstReward}`}</small></button>
+          <button class="btn small blue" data-act="stages">🗺 스테이지 맵</button>
+        </div>
+        <div class="mode-row">
+          <button class="mode-card pvp ${pvpOn ? '' : 'locked'}" data-act="pvp">
+            <div class="ic">⚔️</div><div class="t">PvP 대전</div><div class="d">실시간 1:1 · ${tier.kr}</div>
+            ${pvpOn ? '' : `<div class="lock">🔒 ${featureHint('pvp')}</div>`}
+            ${seasonReady ? '<span class="dot"></span>' : ''}
+          </button>
+          <button class="mode-card endless ${endlessOn ? '' : 'locked'}" data-act="endless">
+            <div class="ic">♾️</div><div class="t">무한 모드</div><div class="d">최고 ${meta.bestWave || 0}웨이브</div>
+            ${endlessOn ? '' : `<div class="lock">🔒 ${featureHint('endless')}</div>`}
+          </button>
+        </div>
+      </div>
+      <nav class="lobby-nav">
+        <button data-act="shop"><span class="ic">🛒</span>상점${PRODUCTS.some((p) => p.id === 'starter_pack') && !productOwned('starter_pack') ? '<span class="dot"></span>' : ''}</button>
+        <button data-act="units"><span class="ic">🧙</span>유닛${UNITS.some((u) => canUpgradeUnit(u.id)) ? '<span class="dot"></span>' : ''}</button>
+        <button data-act="research"><span class="ic">🔬</span>연구</button>
+        <button data-act="quests"><span class="ic">📜</span>퀘스트${this.questClaimable() ? '<span class="dot"></span>' : ''}</button>
+        <button data-act="pvp"><span class="ic">🏆</span>시즌</button>
+      </nav>`;
+    bindActions(root, {
+      profile: () => this.openProfile(),
+      shop: () => this.openShop(),
+      units: () => this.openUnits(),
+      research: () => this.openResearch(),
+      quests: () => this.openQuests(),
+      stages: () => this.openStages(),
+      play: () => (allCleared ? this.openStages() : this.openStageInfo(next.id)),
+      pvp: () => (pvpOn ? this.openPvp() : toast(`🔒 ${featureHint('pvp')}`)),
+      endless: () => (endlessOn ? this.openEndless() : toast(`🔒 ${featureHint('endless')}`)),
+      monthly: () => { const n = claimMonthly(); if (n) { audio.coin(); toast(`월정액 보석 +${n} 💎`); this.render(); } },
+    });
+    root.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => audio.button(), { capture: true }));
+  }
+
+  private questClaimable(): boolean {
+    return DAILY_QUESTS.some((q) => (meta.daily.progress[q.key] || 0) >= q.goal && !meta.daily.claimed[q.key]);
+  }
+  private seasonClaimable(): boolean {
+    const t = seasonTier();
+    for (let i = 1; i <= t; i++) {
+      if (!meta.season.claimedFree.includes(i)) return true;
+      if (meta.season.premium && !meta.season.claimedPremium.includes(i)) return true;
     }
-    return html;
+    return false;
   }
 
-  private bindCollectionButtons(panel: HTMLElement, render: (keepScroll?: boolean) => void): void {
-    panel.querySelectorAll<HTMLButtonElement>('[data-star]').forEach((b) => {
-      b.onclick = () => {
-        const [job, grade] = (b.dataset.star as string).split('_') as [Job, GradeKey];
-        const key = `${job}_${grade}`;
-        const lv = collectionLevelOf(job, grade);
-        const need = starUpCost(lv);
-        if (lv < GACHA.maxLevel && (meta.collection[key] || 0) >= need) {
-          meta.collection[key] -= need;              // 스타업: 개수 소모
-          meta.collectionLevel[key] = lv + 1;
-          saveMeta();
-          audio.button();
-          render(true); // 스크롤 위치 유지
-        }
-      };
+  // ======================= 프로필 =======================
+  private openProfile(): void {
+    const p = meta.pvp;
+    const tier = pvpTier(p.trophies);
+    const stars = STAGES.reduce((n, s) => n + stageStars(s.id), 0);
+    const el = openOverlay('panel', `<div class="dialog"><button class="close-x">✕</button>
+      <h2>프로필</h2>
+      <div class="row"><div class="info"><div class="t">닉네임</div><div class="d">PvP 상대와 랭킹에 표시됩니다</div></div>
+        <input id="nick-input" maxlength="12" value="${esc(meta.nick)}" style="width:120px;padding:8px;border-radius:8px;border:none;font-family:inherit;font-size:15px"></div>
+      <div class="row"><div class="info"><div class="t" style="color:${tier.color}">🏆 ${tier.kr} · ${p.trophies}</div><div class="d">${p.wins}승 ${p.losses}패 · 연승 ${p.streak}</div></div></div>
+      <div class="row"><div class="info"><div class="t">⭐ 캠페인 별 ${stars} / ${STAGES.length * 3}</div><div class="d">무한 모드 최고 ${meta.bestWave}웨이브</div></div></div>
+      <button class="btn green close" data-act="save">저장</button></div>`, () => this.render());
+    bindActions(el, {
+      save: () => {
+        const v = ($('nick-input') as HTMLInputElement).value.trim().slice(0, 12);
+        if (v) { meta.nick = v; saveMeta(); }
+        closeOverlay('panel');
+      },
     });
   }
 
-  private questHtml(): string {
-    const daily = DAILY_QUESTS.map((q) => {
-      const prog = Math.min(q.goal, meta.daily.progress[q.key] || 0);
-      const done = prog >= q.goal;
-      const claimed = meta.daily.claimed[q.key];
-      return `<div class="row">
-        <div class="info"><div class="t">${t(`q.${q.key}`)}</div><div class="d">${prog}/${q.goal}</div></div>
-        <button data-daily="${q.key}" ${!done || claimed ? 'disabled' : ''}>${claimed ? t('quest.done') : done ? `<span class="gem"></span> ${q.reward}` : t('quest.inProgress')}</button></div>`;
-    }).join('');
-    const ach = ACHIEVEMENTS.map((a: AchievementDef) => {
-      const done = meta.achievements[a.key];
-      return `<div class="row">
-        <div class="info"><div class="t">${t(`a.${a.key}`)}</div><div class="d">${t('quest.rewardPre')} <span class="gem"></span> ${a.reward}</div></div>
-        <button disabled>${done ? t('quest.unlocked') : t('quest.locked')}</button></div>`;
-    }).join('');
-    return `<div style="font-weight:700;margin:4px 0 6px">${t('quest.daily')}</div>${daily}
-            <div style="font-weight:700;margin:10px 0 6px">${t('quest.achievements')}</div>${ach}`;
-  }
-
-  private bindQuestButtons(panel: HTMLElement, render: (keepScroll?: boolean) => void): void {
-    panel.querySelectorAll<HTMLButtonElement>('[data-daily]').forEach((b) => {
-      b.onclick = () => {
-        const key = b.dataset.daily as string;
-        const q = DAILY_QUESTS.find((x) => x.key === key)!;
-        const prog = meta.daily.progress[key] || 0;
-        if (prog >= q.goal && !meta.daily.claimed[key]) {
-          meta.daily.claimed[key] = true;
-          meta.crystals += q.reward;
-          saveMeta();
-          render(true); // 스크롤 위치 유지
-        }
-      };
-    });
-  }
-
-  private bindDragScroll(el: HTMLElement | null): void {
-    if (!el) return;
-    let pointerId = -1;
-    let startY = 0;
-    let startScrollTop = 0;
-
-    el.onpointerdown = (ev) => {
-      if ((ev.target as HTMLElement).closest('button')) return;
-      pointerId = ev.pointerId;
-      startY = ev.clientY;
-      startScrollTop = el.scrollTop;
-      el.classList.add('dragging');
-      el.setPointerCapture(pointerId);
-    };
-
-    el.onpointermove = (ev) => {
-      if (ev.pointerId !== pointerId) return;
-      const dy = ev.clientY - startY;
-      if (Math.abs(dy) > 2) ev.preventDefault();
-      el.scrollTop = startScrollTop - dy;
-    };
-
-    const stop = (ev: PointerEvent) => {
-      if (ev.pointerId !== pointerId) return;
-      if (el.hasPointerCapture(pointerId)) el.releasePointerCapture(pointerId);
-      pointerId = -1;
-      el.classList.remove('dragging');
-    };
-
-    el.onpointerup = stop;
-    el.onpointercancel = stop;
-  }
-
-  // ---------- 상점 (VX 로 보석 구매 / 광고제거 패키지) ----------
-  private shopAdHtml(): string {
-    const cd = adManager.getShopAdCooldownRemaining();
-    const available = cd <= 0;
-    const removed = adManager.isAdRemoved();
-
-    const btnLabel = !available
-      ? t('shop.adCooldownBtn', { time: this.formatCooldown(cd) })
-      : removed
-        ? `${t('shop.adFreeBtn')} <span class="gem"></span> ${AD_SHOP_REWARD_GEMS}`
-        : `${t('shop.adWatchBtn')} <span class="gem"></span> ${AD_SHOP_REWARD_GEMS}`;
-
-    const infoText = removed ? t('shop.adRemovedInfo') : t('shop.adInfo');
-
-    // 광고 미지원 환경이면 눌러도 아무 일이 없으므로 버튼을 비활성화하고 이유를 알려준다.
-    // (예전엔 버튼이 멀쩡히 활성화된 채 클릭 핸들러만 안 붙어서 "눌러도 무반응" 이었다.)
-    const supported = adManager.isRewardAvailable();
-    return `
-      <div class="shop-section" style="margin-top:14px;">${t('shop.adSection')}</div>
-      <div class="shop-ad-box">
-        <div class="shop-ad-info">${supported ? infoText : t('shop.adUnsupported')}</div>
-        <button id="btn-shop-ad" class="wood-btn shop-ad-btn" ${available && supported ? '' : 'disabled'}>
-          ${btnLabel}
-        </button>
-        <div id="shop-ad-status" class="shop-ad-status"></div>
-      </div>`;
-  }
-
-  private formatCooldown(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return t('shop.minSec', { m, s });
-  }
-
-  private refreshShopAdCooldown(btn: HTMLButtonElement): void {
-    const update = () => {
-      const cd = adManager.getShopAdCooldownRemaining();
-      if (cd <= 0) {
-        btn.disabled = false;
-        btn.innerHTML = `${t('shop.adWatchBtn')} <span class="gem"></span> ${AD_SHOP_REWARD_GEMS}`;
-        return;
-      }
-      btn.disabled = true;
-      btn.innerHTML = t('shop.adCooldownBtn', { time: this.formatCooldown(cd) });
-      setTimeout(update, 1000);
-    };
-    update();
-  }
-
-  private openShop(): void {
-    const panel = $('shop-panel');
-    const plat = getPlatform();
-    let prePurchaseCrystals = meta.crystals;
-    let prePurchaseAdRemoved = meta.adRemoved || false;
-    let isPurchasing = false;
-
-    const recordPrePurchase = () => {
-      prePurchaseCrystals = meta.crystals;
-      prePurchaseAdRemoved = meta.adRemoved || false;
-      isPurchasing = true;
-    };
-
-    const showPurchaseToast = () => {
-      const el = document.createElement('div');
-      el.textContent = t('shop.purchaseSuccess');
-      el.style.cssText = `position:fixed;left:50%;top:45%;transform:translate(-50%,-50%);
-        background:rgba(0,0,0,0.9);color:#4caf50;padding:12px 28px;border-radius:12px;
-        font-weight:800;z-index:200;font-size:16px;border:2px solid rgba(76,175,80,0.4);`;
-      document.body.appendChild(el);
-      setTimeout(() => el.remove(), 2000);
-    };
-
-    const render = () => {
-      const owned = plat.isAdRemoved();
-      const vxPrice = (productId: string): string => {
-        const price = getItemPrice(productId);
-        return price === undefined ? 'VX …' : `VX ${price.toLocaleString()}`;
-      };
-      const pkgs = CRYSTAL_PACKAGES.map((p) => `
-        <div class="row">
-          <div class="info">
-            <div class="t"><span class="gem"></span> ${t('shop.gemPack', { n: p.crystals.toLocaleString() })}${p.bonus ? ` <span style="color:#7ee87e">+${p.bonus}%</span>` : ''}</div>
-            <div class="d">${vxPrice(p.id)}</div>
-          </div>
-          <button data-pkg-id="${p.id}">${vxPrice(p.id)}</button>
-        </div>`).join('');
-      panel.innerHTML = `
-        <div class="dialog shop-dialog">
-          <div class="shop-head">
-            <div>
-              <h2>${t('shop.title')}</h2>
-              <div class="shop-balance">
-                <span class="crystal"><span class="gem"></span> ${meta.crystals.toLocaleString()}</span>
-              </div>
-            </div>
-            <button class="close-x" aria-label="${t('common.close')}">×</button>
-          </div>
-          <div class="shop-scroll drag-scroll">
-            <div class="gacha-hero">
-              <div class="gacha-hero-top">
-                <div class="chest big"></div>
-                <div class="gacha-hero-info">
-                  <div class="gh-title">${t('shop.gachaTitle')}</div>
-                  <div class="gh-desc">${t('shop.gachaDesc')}</div>
-                </div>
-              </div>
-              <div class="gacha-hero-btns">
-                <button id="gacha-1" ${meta.crystals < GACHA.singleCost ? 'disabled' : ''}>
-                  ${t('shop.pull1')}<br><span class="gh-cost"><span class="gem"></span> ${GACHA.singleCost}</span>
-                </button>
-                <button id="gacha-10" class="best" ${meta.crystals < GACHA.tenCost ? 'disabled' : ''}>
-                  ${t('shop.pull10')} <span class="gh-sale">10%↓</span><br><span class="gh-cost"><span class="gem"></span> ${GACHA.tenCost}</span>
-                </button>
-              </div>
-              <div class="gacha-pity">${
-                gachaPityRemaining() <= 0 ? t('shop.pityReady') : t('shop.pityHint', { rem: gachaPityRemaining() })
-              }</div>
-              <button id="btn-prob-info-shop" class="prob-info-link">${t('hud.probInfo')}</button>
-            </div>
-            <div class="shop-section">${t('shop.buyGems')}</div>
-            ${pkgs}
-            <div class="shop-section">${t('shop.packages')}</div>
-            <div class="row">
-              <div class="info">
-                <div class="t">${t('shop.adTitle')}</div>
-                <div class="d">${t('shop.adDesc', { n: vxPrice(SPEED_3X_UNLOCK_PRODUCT_ID).replace('VX ', '') })}</div>
-              </div>
-              <button id="buy-adremove" ${owned ? 'disabled' : ''}>${owned ? t('shop.owned') : vxPrice(SPEED_3X_UNLOCK_PRODUCT_ID)}</button>
-            </div>
-            <div class="d shop-vx-note">
-              ${t('shop.vxNote')}
-            </div>
-            ${this.shopAdHtml()}
-          </div>
-        </div>`;
-
-      // 보석 패키지: 결제창을 띄우고 onClose.purchased 성공 시 아래 콜백에서 지급한다.
-      panel.querySelectorAll<HTMLButtonElement>('[data-pkg-id]').forEach((b) => {
-        b.onclick = () => { audio.button(); if (!isPurchasing) { recordPrePurchase(); buyItem(b.dataset.pkgId as string); } };
-      });
-
-      // 유닛 가챠 (크리스탈 차감 → 컬렉션 적립)
-      const g1 = panel.querySelector('#gacha-1') as HTMLButtonElement | null;
-      const g10 = panel.querySelector('#gacha-10') as HTMLButtonElement | null;
-      if (g1) g1.onclick = () => { if (this.pullGacha(1)) render(); };
-      if (g10) g10.onclick = () => { if (this.pullGacha(10)) render(); };
-      const probBtn = panel.querySelector('#btn-prob-info-shop') as HTMLButtonElement | null;
-      if (probBtn) probBtn.onclick = () => openProbabilityPanel('gacha');
-
-      // 3배속 패키지: 결제창을 띄우고 onClose.purchased 성공 시 아래 콜백에서 지급한다.
-      const buy = panel.querySelector('#buy-adremove') as HTMLButtonElement | null;
-      if (buy && !owned) buy.onclick = () => { audio.button(); if (!isPurchasing) { recordPrePurchase(); buyItem(SPEED_3X_UNLOCK_PRODUCT_ID); } };
-
-      this.bindDragScroll(panel.querySelector<HTMLElement>('.shop-scroll'));
-
-      // 상점 보상형 광고 버튼
-      const shopAdBtn = panel.querySelector('#btn-shop-ad') as HTMLButtonElement | null;
-      const shopAdStatus = panel.querySelector('#shop-ad-status') as HTMLElement | null;
-      if (shopAdBtn && adManager.isRewardAvailable()) {
-        this.refreshShopAdCooldown(shopAdBtn);
-        const say = (msg: string, color: string) => {
-          if (shopAdStatus) { shopAdStatus.textContent = msg; shopAdStatus.style.color = color; }
-        };
-        shopAdBtn.onclick = async () => {
-          audio.button();
-          shopAdBtn.disabled = true;
-          say(t('shop.adLoading'), '#ffd54f');
-          try {
-            const res = await adManager.watchShopRewardedAd();
-            if (res.ok) {
-              meta.crystals += AD_SHOP_REWARD_GEMS;
-              saveMeta();
-              this.refresh();
-              render();
-              // render() 가 패널을 다시 그리므로 새 노드에서 성공 문구를 표시한다.
-              const s = panel.querySelector('#shop-ad-status') as HTMLElement | null;
-              if (s) { s.textContent = t('shop.adGranted', { n: AD_SHOP_REWARD_GEMS }); s.style.color = '#4caf50'; }
-              return;
-            }
-            // 실패는 조용히 넘기지 않고 사유를 그대로 알려준다.
-            if (res.reason === 'dismissed') say(t('shop.adDismissed'), '#ff5252');
-            else if (res.reason === 'unsupported') say(t('shop.adUnsupported'), '#8892b0');
-            else if (res.reason === 'cooldown' || res.reason === 'busy') say('', '#8892b0');
-            else say(t('shop.adNoFill'), '#ff5252');
-          } catch (err) {
-            console.warn('[shop] rewarded ad error:', err);
-            say(t('shop.adNoFill'), '#ff5252');
-          }
-          shopAdBtn.disabled = false;
-          this.refreshShopAdCooldown(shopAdBtn);
-        };
-      }
-
-      (panel.querySelector('.close-x') as HTMLElement).onclick = () => {
-        panel.classList.add('hidden');
-        isPurchasing = false;
-        setOnPurchaseSettled(null);
-        setOnCatalogUpdated(null);
-        this.refresh();
-      };
-    };
-    // 결제창이 닫히면 성공한 상품을 즉시 지급·저장하고 상점을 다시 그린다.
-    setOnPurchaseSettled((result) => {
-      isPurchasing = false;
-      if (result.purchased) {
-        const purchasedPackage = CRYSTAL_PACKAGES.find((p) => p.id === result.productId);
-        if (purchasedPackage) {
-          meta.crystals += purchasedPackage.crystals;
-          saveMeta();
-        } else if (result.productId === SPEED_3X_UNLOCK_PRODUCT_ID) {
-          meta.adRemoved = true;
-          saveMeta();
-        }
-      }
-      this.refresh();
-      render();
-      if (meta.crystals > prePurchaseCrystals || ((meta.adRemoved || false) && !prePurchaseAdRemoved)) {
-        showPurchaseToast();
-      }
-    });
-    setOnCatalogUpdated(() => {
-      if (!panel.classList.contains('hidden')) render();
-    });
-    render();
-    panel.classList.remove('hidden');
-  }
-
-  // ---------- 유닛 가챠 ----------
-  // 확률은 config.GACHA_GRADE_RATES (게임 내 20골드 소환과는 분리된 전용 표).
-  // 천장: 신화 이상이 GACHA.mythicPityCount 회 연속 안 나오면 다음 뽑기 신화 이상 확정
-  //       (확정 시 신화:태초 = 4:1 = 신화 80% / 태초 20%).
-  private pullGacha(n: number): boolean {
-    const cost = n === 1 ? GACHA.singleCost : GACHA.tenCost;
-    if (meta.crystals < cost) return false;
-    meta.crystals -= cost;
-
-    const results: { job: Job; grade: GradeKey }[] = [];
-    for (let i = 0; i < n; i++) {
-      meta.gachaPity = (meta.gachaPity || 0) + 1;
-      let grade: GradeKey;
-      if (meta.gachaPity >= GACHA.mythicPityCount) {
-        grade = rollGachaMythicPlus();
-        meta.gachaPity = 0;
-      } else {
-        grade = rollGachaGrade();
-        if (GRADE_INDEX[grade] >= GRADE_INDEX['mythic']) meta.gachaPity = 0;
-      }
-      results.push({ job: rollJob(), grade });
-    }
-    for (const r of results) addToCollection(r.job, r.grade);
-    saveMeta();
-
-    // 최고 등급에 맞춰 사운드
-    const best = Math.max(...results.map((r) => GRADE_INDEX[r.grade]));
-    audio.summon(best >= GRADE_INDEX['mythic']);
-    this.showGacha(results);
-    this.refresh();
-    return true;
-  }
-
-  private showGacha(results: { job: Job; grade: GradeKey }[]): void {
-    const panel = $('gacha-panel');
-    const cards = results
-      .slice()
-      .sort((a, b) => GRADE_INDEX[b.grade] - GRADE_INDEX[a.grade])
-      .map((r) => {
-        const g = GRADE_BY_KEY[r.grade];
-        const shiny = GRADE_INDEX[r.grade] >= GRADE_INDEX['legendary'] ? ' shiny' : '';
-        return `<div class="gacha-card${shiny}" style="border-color:${g.color}">
-          <div class="frame-sprite" style="background-image:url(sprites/${JOB_SPRITE[r.job]}_${g.spriteIndex}.png)"></div>
-          <div class="gc-grade" style="color:${g.color}">${gradeName(r.grade)}</div>
-          <div class="gc-job">${jobName(r.job)}</div>
-        </div>`;
+  // ======================= 스테이지 =======================
+  private openStages(): void {
+    const draw = () => {
+      const c = this.selectedChapter;
+      const chStars = chapterStars(c);
+      const nodes = STAGES.filter((s) => s.chapter === c).map((s) => {
+        const st = stageStars(s.id);
+        const open = stageUnlocked(s.id);
+        const isNext = open && st === 0;
+        const unlockIc = s.unlocks && !unitUnlocked(s.unlocks) ? spriteIcon(unitIconUrl(s.unlocks), 'frame-sprite unlock-ic') : '';
+        return `<button class="stage-node ${open ? '' : 'locked'} ${isNext ? 'next' : ''} ${s.id.endsWith('-10') ? 'boss' : ''}" data-act="stage" data-id="${s.id}">
+          ${s.id}<span class="st">${open ? '★'.repeat(st) + '☆'.repeat(3 - st) : '🔒'}</span>${unlockIc}</button>`;
       }).join('');
-    panel.innerHTML = `
-      <div class="dialog">
-        <h2><span class="chest"></span> ${t('gacha.got')}</h2>
-        <div class="gacha-grid">${cards}</div>
-        <button class="close">${t('common.confirm')}</button>
-      </div>`;
-    (panel.querySelector('.close') as HTMLElement).onclick = () => panel.classList.add('hidden');
-    panel.classList.remove('hidden');
+      const goals = CHAPTER_STAR_GOALS.map((g, i) => {
+        const claimed = starRewardClaimed(c, i);
+        const ready = chStars >= g && !claimed;
+        return `<button class="btn small ${ready ? 'gold' : ''}" data-act="starGoal" data-i="${i}" ${ready ? '' : 'disabled'}>⭐${g} ${claimed ? '✓' : `💎${chapterStarReward(i)}`}</button>`;
+      }).join('');
+      const el = openOverlay('panel', `<div class="dialog"><button class="close-x">✕</button>
+        <h2>스테이지</h2>
+        <div class="tab-row">${CHAPTERS.map((ch) => `<button data-act="chap" data-n="${ch.n}" class="${ch.n === c ? 'active' : ''}">${chapterUnlocked(ch.n) ? '' : '🔒 '}${ch.n}. ${ch.kr}</button>`).join('')}</div>
+        <div class="fine" style="margin:-4px 0 10px">${CHAPTERS[c - 1].desc} · 스테이지당 ${CHAPTERS[c - 1].waves}웨이브</div>
+        <div class="stage-grid">${nodes}</div>
+        <div class="section-title"><span>챕터 별 보상</span><span>⭐ ${chStars}/30</span></div>
+        <div class="star-goals">${goals}</div></div>`, () => this.render());
+      bindActions(el, {
+        chap: (b) => { this.selectedChapter = Number(b.dataset.n); draw(); },
+        stage: (b) => {
+          const id = b.dataset.id!;
+          if (!stageUnlocked(id)) { toast('이전 스테이지를 먼저 클리어하세요'); return; }
+          this.openStageInfo(id);
+        },
+        starGoal: (b) => {
+          const n = claimStarReward(c, Number(b.dataset.i));
+          if (n) { audio.coin(); toast(`별 보상 💎 +${n}`); draw(); }
+        },
+      });
+    };
+    draw();
   }
+
+  private openStageInfo(id: string): void {
+    const st = STAGE_BY_ID[id];
+    const stars = stageStars(id);
+    let booster = false;
+    const draw = () => {
+      const races = (st.races ?? ['troll', 'orc', 'undead']).map((r) => `${RACE_ICON[r]} ${RACE_KR[r as keyof typeof RACE_KR]}`).join(' · ');
+      const deck = meta.deck.map((j) => `<div class="deck-slot filled">${spriteIcon(unitIconUrl(j))}<div>${UNIT_BY_ID[j].kr}</div></div>`).join('')
+        + Array.from({ length: DECK_SIZE - meta.deck.length }, () => '<div class="deck-slot">빈 슬롯</div>').join('');
+      const el = openOverlay('modal', `<div class="dialog"><button class="close-x">✕</button>
+        <h2>스테이지 ${id}</h2>
+        <div style="text-align:center;font-size:30px;margin:-6px 0 6px">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+        <div class="row"><div class="ic">🌊</div><div class="info"><div class="t">${st.waves}웨이브 · 마지막 보스</div><div class="d">등장: ${races}</div></div></div>
+        <div class="row"><div class="ic">🎁</div><div class="info"><div class="t">${stars ? `반복 보상 💎${st.replayReward}` : `첫 클리어 💎${st.firstReward}`}</div>
+          <div class="d">★★★: 필드 몹 40마리 이하 유지 · ★★: 70마리 이하</div></div></div>
+        ${st.unlocks && !unitUnlocked(st.unlocks) ? `<div class="row" style="border:2px solid var(--gold)">${spriteIcon(unitIconUrl(st.unlocks), 'frame-sprite', 'width:40px;height:40px')}<div class="info"><div class="t">클리어 시 ${UNIT_BY_ID[st.unlocks].kr} 해금!</div><div class="d">${SKILL_DESC[st.unlocks]}</div></div></div>` : ''}
+        <div class="section-title"><span>출전 덱</span><button class="btn small blue" data-act="editDeck">덱 편집</button></div>
+        <div class="deck-row">${deck}</div>
+        ${meta.items.goldBooster > 0 ? `<label class="row" style="cursor:pointer"><div class="ic">💰</div><div class="info"><div class="t">골드 부스터 사용</div><div class="d">시작 골드 2배 · 보유 ${meta.items.goldBooster}</div></div><input type="checkbox" id="booster-chk" ${booster ? 'checked' : ''} style="width:22px;height:22px"></label>` : ''}
+        <button class="btn red close" style="font-size:22px" data-act="go">⚔ 전투 시작</button></div>`);
+      const chk = el.querySelector('#booster-chk') as HTMLInputElement | null;
+      if (chk) chk.onchange = () => { booster = chk.checked; };
+      bindActions(el, {
+        editDeck: () => { closeOverlay('modal'); this.openUnits(() => this.openStageInfo(id)); },
+        go: () => {
+          closeOverlay('modal');
+          closeOverlay('panel');
+          this.onLaunch({ kind: 'stage', stageId: id, goldBooster: booster });
+        },
+      });
+    };
+    draw();
+  }
+
+  private openEndless(): void {
+    let booster = false;
+    const el = openOverlay('modal', `<div class="dialog"><button class="close-x">✕</button>
+      <h2>♾️ 무한 모드</h2>
+      <div class="row"><div class="ic">🌊</div><div class="info"><div class="t">50웨이브 생존 도전</div><div class="d">최고 기록 ${meta.bestWave}웨이브 · 도달 웨이브만큼 보석 획득</div></div></div>
+      <div class="deck-row">${meta.deck.map((j) => `<div class="deck-slot filled">${spriteIcon(unitIconUrl(j))}<div>${UNIT_BY_ID[j].kr}</div></div>`).join('')}</div>
+      ${meta.items.goldBooster > 0 ? `<label class="row"><div class="ic">💰</div><div class="info"><div class="t">골드 부스터 사용</div><div class="d">보유 ${meta.items.goldBooster}</div></div><input type="checkbox" id="booster-chk2" style="width:22px;height:22px"></label>` : ''}
+      <button class="btn red close" data-act="go">⚔ 시작</button></div>`);
+    const chk = el.querySelector('#booster-chk2') as HTMLInputElement | null;
+    if (chk) chk.onchange = () => { booster = chk.checked; };
+    bindActions(el, { go: () => { closeOverlay('modal'); this.onLaunch({ kind: 'endless', goldBooster: booster }); } });
+  }
+
+  // ======================= 유닛 / 덱 =======================
+  private openUnits(after?: () => void): void {
+    const draw = () => {
+      const deck = meta.deck.map((j) => `<div class="deck-slot filled" data-act="toggle" data-job="${j}">${spriteIcon(unitIconUrl(j))}<div>${UNIT_BY_ID[j].kr}</div></div>`).join('')
+        + Array.from({ length: DECK_SIZE - meta.deck.length }, () => '<div class="deck-slot">빈 슬롯</div>').join('');
+      const cards = UNITS.map((u) => {
+        const lv = unitLevel(u.id);
+        const unlocked = lv > 0;
+        const inDeck = meta.deck.includes(u.id);
+        const pips = Array.from({ length: UNIT_MAX_LEVEL }, (_, i) =>
+          `<i class="${i < lv ? 'on' : ''} ${UNIT_PERK_LEVELS.includes(i + 1) ? 'perk' : ''}"></i>`).join('');
+        let acts: string;
+        if (!unlocked) {
+          acts = `<button class="btn small gold" data-act="buy" data-job="${u.id}" ${meta.crystals < (u.unlockCrystals || 0) ? 'disabled' : ''}>💎${u.unlockCrystals} 해금</button>`;
+        } else {
+          const maxed = lv >= UNIT_MAX_LEVEL;
+          acts = `<button class="btn small ${inDeck ? 'red' : 'blue'}" data-act="toggle" data-job="${u.id}">${inDeck ? '덱 해제' : '덱 편성'}</button>
+            <button class="btn small green" data-act="up" data-job="${u.id}" ${canUpgradeUnit(u.id) ? '' : 'disabled'}>${maxed ? 'MAX' : `💎${unitUpgradeCost(lv)}`}</button>`;
+        }
+        return `<div class="unit-card ${inDeck ? 'in-deck' : ''} ${unlocked ? '' : 'locked'}">
+          <div class="head">${spriteIcon(unitIconUrl(u.id, unlocked ? Math.min(5, lv >> 1) : 0))}
+            <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : u.unlockStage ? `🔒 ${u.unlockStage} 클리어` : '🔒'}</div><div class="role">${u.role}</div></div></div>
+          <div class="lv-pips">${pips}</div>
+          <div class="sk"><b>${SKILL_KR[u.id]}</b> · ${SKILL_DESC[u.id]}</div>
+          <div class="acts">${acts}</div></div>`;
+      }).join('');
+      const el = openOverlay('panel', `<div class="dialog"><button class="close-x">✕</button>
+        <h2>유닛 <span class="crystal" style="font-size:16px">💎 ${meta.crystals}</span></h2>
+        <div class="fine" style="margin:-6px 0 8px">덱 ${meta.deck.length}/${DECK_SIZE} · 소환 시 덱에서 무작위로 등장 · 4구역에 1종씩 배치</div>
+        <div class="deck-row">${deck}</div>
+        <div class="fine" style="margin-bottom:8px">레벨당 공격력 +8% · Lv5/Lv10 스킬 강화(퍽)</div>
+        <div class="unit-grid">${cards}</div></div>`, () => { this.render(); after?.(); });
+      bindActions(el, {
+        toggle: (b) => {
+          if (!toggleDeck(b.dataset.job as Job)) toast(meta.deck.length >= DECK_SIZE ? '덱이 가득 찼어요 (최대 4)' : '덱에 최소 1종은 있어야 해요');
+          else audio.button();
+          draw();
+        },
+        up: (b) => { if (upgradeUnit(b.dataset.job as Job)) { audio.merge(); draw(); } },
+        buy: async (b) => {
+          const j = b.dataset.job as Job;
+          if (await confirmModal('유닛 해금', `${UNIT_BY_ID[j].kr}을(를) 💎${UNIT_BY_ID[j].unlockCrystals}로 해금할까요?`)) {
+            if (buyUnit(j)) { audio.fanfareUnlock(); toast(`${UNIT_BY_ID[j].kr} 해금!`); }
+          }
+          draw();
+        },
+      });
+    };
+    draw();
+  }
+
+  // ======================= 연구 =======================
+  private openResearch(): void {
+    if (!featureUnlocked('research')) { toast(`🔒 ${featureHint('research')}`); return; }
+    const draw = () => {
+      const rows = RESEARCH.map((r) => {
+        const lv = researchLevel(r.key);
+        const maxed = lv >= r.max;
+        const cost = researchCost(lv);
+        return `<div class="row"><div class="info"><div class="t">${r.kr} <span class="trophy">Lv.${lv}/${r.max}</span></div>
+          <div class="d">${r.desc}</div><div class="lv-pips" style="margin-top:4px">${Array.from({ length: r.max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</div></div>
+          <button class="btn small green" data-act="res" data-key="${r.key}" ${maxed || meta.crystals < cost ? 'disabled' : ''}>${maxed ? 'MAX' : `💎 ${cost}`}</button></div>`;
+      }).join('');
+      const el = openOverlay('panel', `<div class="dialog"><button class="close-x">✕</button>
+        <h2>연구소 <span class="crystal" style="font-size:16px">💎 ${meta.crystals}</span></h2>
+        <div class="fine" style="margin:-6px 0 10px">캠페인·무한 모드에 적용 (PvP 는 공정성을 위해 미적용)</div>
+        ${rows}</div>`, () => this.render());
+      bindActions(el, {
+        res: (b) => {
+          const key = b.dataset.key as ResearchKey;
+          const lv = researchLevel(key);
+          const r = RESEARCH.find((x) => x.key === key)!;
+          const cost = researchCost(lv);
+          if (lv < r.max && meta.crystals >= cost) {
+            meta.crystals -= cost;
+            meta.research[key] = lv + 1;
+            saveMeta();
+            audio.merge();
+            draw();
+          }
+        },
+      });
+    };
+    draw();
+  }
+
+  // ======================= 퀘스트 =======================
+  private openQuests(): void {
+    const draw = () => {
+      const daily = DAILY_QUESTS.map((q) => {
+        const prog = Math.min(q.goal, meta.daily.progress[q.key] || 0);
+        const done = prog >= q.goal;
+        const claimed = meta.daily.claimed[q.key];
+        return `<div class="row"><div class="info"><div class="t">${q.kr}</div>
+          <div class="chap-bar" style="margin-top:4px"><div style="width:${(prog / q.goal) * 100}%"></div></div><div class="d">${prog}/${q.goal}</div></div>
+          <button class="btn small ${done && !claimed ? 'gold' : ''}" data-act="daily" data-key="${q.key}" ${!done || claimed ? 'disabled' : ''}>${claimed ? '완료' : `💎 ${q.reward}`}</button></div>`;
+      }).join('');
+      const adLeft = freeTicketAdsLeft();
+      const adRow = rewardedAvailable()
+        ? `<div class="row"><div class="ic">📺</div><div class="info"><div class="t">광고 보고 소환권 ${FREE_TICKET_AMOUNT}장</div><div class="d">오늘 ${adLeft}회 남음</div></div>
+            <button class="btn small blue" data-act="adTicket" ${adLeft ? '' : 'disabled'}>받기</button></div>` : '';
+      const ach = ACHIEVEMENTS.map((a) => `<div class="row"><div class="info"><div class="t">${a.kr}</div><div class="d">보상 💎 ${a.reward}</div></div>
+        <span class="${meta.achievements[a.key] ? 'trophy' : 'fine'}">${meta.achievements[a.key] ? '달성 ✓' : '미달성'}</span></div>`).join('');
+      const el = openOverlay('panel', `<div class="dialog"><button class="close-x">✕</button>
+        <h2>퀘스트</h2>
+        <div class="section-title">일일 퀘스트 <span class="fine">매일 0시(UTC) 초기화</span></div>${daily}${adRow}
+        <div class="section-title">업적</div>${ach}</div>`, () => this.render());
+      bindActions(el, {
+        daily: (b) => {
+          const key = b.dataset.key!;
+          const q = DAILY_QUESTS.find((x) => x.key === key)!;
+          if ((meta.daily.progress[key] || 0) >= q.goal && !meta.daily.claimed[key]) {
+            meta.daily.claimed[key] = true;
+            meta.crystals += q.reward;
+            saveMeta();
+            audio.coin();
+            draw();
+          }
+        },
+        adTicket: async () => {
+          if (await watchForTickets()) { audio.coin(); toast(`소환권 +${FREE_TICKET_AMOUNT} 🎟️`); }
+          draw();
+        },
+      });
+    };
+    draw();
+  }
+
+  // ======================= 상점 =======================
+  openShop(): void {
+    const plat = getPlatform();
+    const price = (id: string) => plat.priceOf(id) ?? 0;
+    const draw = () => {
+      const vx = plat.getVX();
+      const card = (id: string, hot = false) => {
+        const p = PRODUCTS.find((x) => x.id === id)!;
+        const owned = productOwned(id);
+        let extra = '';
+        if (id === 'monthly_pass' && monthlyActive()) extra = ` <span class="badge green">${monthlyDaysLeft()}일 남음</span>`;
+        return `<div class="shop-card ${hot ? 'hot' : ''}"><div class="ic">${p.icon}</div>
+          <div class="info"><div class="t">${p.kr}${p.badge ? ` <span class="badge">${p.badge}</span>` : ''}${extra}</div><div class="d">${p.desc}</div></div>
+          <button class="btn small ${owned ? '' : 'gold'}" data-act="buy" data-id="${id}" ${owned ? 'disabled' : ''}>${owned ? '보유 ✓' : `VX ${price(id)}`}</button></div>`;
+      };
+      const gems = PRODUCTS.filter((p) => p.category === 'crystal').map((p) => `<div class="gem-card">
+        ${p.badge ? `<span class="badge">${p.badge}</span>` : ''}<div class="ic">💎</div><div>${p.kr}</div>
+        <button class="btn small gold" data-act="buy" data-id="${p.id}">VX ${price(p.id)}</button></div>`).join('');
+      const items = Object.entries(meta.items).map(([k, n]) => `${ITEM_KR[k as keyof typeof ITEM_KR].icon}${n}`).join(' · ');
+      const el = openOverlay('panel', `<div class="dialog"><button class="close-x">✕</button>
+        <h2>상점</h2>
+        <div class="balance"><span class="crystal">💎 ${meta.crystals.toLocaleString()}</span>${vx !== null ? `<span class="vx-badge">VX ${vx.toLocaleString()}</span>` : ''}</div>
+        <div class="fine" style="margin:-4px 0 6px">보유: ${items}</div>
+        <div class="section-title">추천 패키지</div>
+        ${!productOwned('starter_pack') ? card('starter_pack', true) : ''}
+        ${card('monthly_pass', true)}
+        ${card('ad_remove')}
+        <div class="section-title">PvP 시즌 패스</div>${card('season_premium')}
+        <div class="section-title">부스터 <span class="fine">일반 모드 전용</span></div>
+        ${card('summon_ticket_30')}${card('mythic_ticket')}${card('gold_booster_5')}
+        <div class="section-title">보석</div><div class="gem-grid">${gems}</div>
+        <div class="fine">${vx !== null ? '* 로컬 개발 환경: 데모 VX 로 결제를 흉내냅니다.' : '* 결제는 Verse8 VX 로 진행되며, 결제 완료 후 자동 지급됩니다.'}</div></div>`, () => this.render());
+      bindActions(el, {
+        buy: async (b) => {
+          const id = b.dataset.id!;
+          (b as HTMLButtonElement).disabled = true;
+          const got = await purchase(id);
+          if (got.length) {
+            audio.fanfareUnlock();
+            toast(`구매 완료: ${got.map((g) => PRODUCTS.find((p) => p.id === g)?.kr).join(', ')}`);
+          } else {
+            toast('결제가 완료되지 않았어요');
+          }
+          draw();
+        },
+      });
+    };
+    draw();
+  }
+
+  // ======================= PvP =======================
+  private openPvp(tab: 'battle' | 'pass' | 'rank' = 'battle'): void {
+    const draw = async () => {
+      const p = meta.pvp;
+      const tier = pvpTier(p.trophies);
+      let body = '';
+      if (tab === 'battle') {
+        const online = onlineAvailable();
+        body = `<div style="text-align:center;margin:6px 0 10px">
+            <div style="font-size:46px">🏆</div>
+            <div style="font-size:22px;color:${tier.color}">${tier.kr}</div>
+            <div class="trophy" style="font-size:18px">${p.trophies} 트로피</div>
+            <div class="fine">${p.wins}승 ${p.losses}패 · 연승 ${p.streak}</div></div>
+          <div class="row"><div class="ic">⚔️</div><div class="info"><div class="t">실시간 1:1 대결</div>
+            <div class="d">같은 웨이브를 동시에 막으며 몹을 보내 상대를 무너뜨리세요. 먼저 몹 100마리가 쌓이면 패배!</div></div></div>
+          <div class="row"><div class="ic">📏</div><div class="info"><div class="d">연구 미적용(공정) · 유닛 레벨 적용 · 배속 1x 고정<br>승리 🏆+${PVP.trophyWin} 💎${PVP.rewardWin} · 패배 🏆-${PVP.trophyLoss} 💎${PVP.rewardLoss}</div></div></div>
+          <button class="btn red close" style="font-size:20px" data-act="match" ${online ? '' : 'disabled'}>⚔ 실시간 매칭</button>
+          <button class="btn blue close" data-act="bot">🤖 AI 연습전 (트로피 변동 없음)</button>
+          ${online ? '' : '<div class="fine">실시간 매칭은 Verse8 환경(게임서버 연결)에서 활성화됩니다.</div>'}`;
+      } else if (tab === 'pass') {
+        const t = seasonTier();
+        const inTier = meta.season.xp % SEASON_XP_PER_TIER;
+        const rows = SEASON_TIERS.map((def, i) => {
+          const n = i + 1;
+          const reached = n <= t;
+          const fDone = meta.season.claimedFree.includes(n);
+          const pDone = meta.season.claimedPremium.includes(n);
+          const fCls = fDone ? 'done' : reached ? 'ready' : 'lock';
+          const pCls = pDone ? 'done' : reached && meta.season.premium ? 'ready' : 'lock';
+          return `<div class="pass-row"><div class="n ${reached ? 'on' : ''}">${n}</div>
+            <button class="pass-cell ${fCls}" data-act="claim" data-n="${n}" data-p="0">${rewardText(def.free)}</button>
+            <button class="pass-cell prem ${pCls}" data-act="claim" data-n="${n}" data-p="1">${meta.season.premium ? '' : '🔒'}${rewardText(def.premium)}</button></div>`;
+        }).join('');
+        body = `<div class="pass-head"><div class="lvl">${t}</div><div style="flex:1">
+            <div class="fine" style="text-align:left">시즌 ${currentSeasonId().slice(1)} · 다음 단계까지 ${SEASON_XP_PER_TIER - inTier} XP</div>
+            <div class="pass-bar"><div style="width:${t >= SEASON_TIERS.length ? 100 : (inTier / SEASON_XP_PER_TIER) * 100}%"></div></div></div></div>
+          <div class="fine" style="margin-bottom:8px">PvP 승리 +${PVP.seasonXpWin}XP · 패배 +${PVP.seasonXpLoss}XP · 캠페인 클리어 +30XP</div>
+          ${meta.season.premium ? '' : `<button class="btn gold close" data-act="buyPass" style="margin:0 0 10px">🏆 프리미엄 패스 구매</button>`}
+          <div class="pass-row"><div></div><div class="fine">무료</div><div class="fine trophy">프리미엄</div></div>${rows}`;
+      } else {
+        body = '<div class="fine">불러오는 중...</div>';
+      }
+      const el = openOverlay('panel', `<div class="dialog"><button class="close-x">✕</button>
+        <h2>PvP 아레나</h2>
+        <div class="tab-row">
+          <button data-act="tab" data-t="battle" class="${tab === 'battle' ? 'active' : ''}">대전</button>
+          <button data-act="tab" data-t="pass" class="${tab === 'pass' ? 'active' : ''}">시즌 패스${this.seasonClaimable() ? ' •' : ''}</button>
+          <button data-act="tab" data-t="rank" class="${tab === 'rank' ? 'active' : ''}">랭킹</button></div>
+        <div id="pvp-body">${body}</div></div>`, () => this.render());
+      bindActions(el, {
+        tab: (b) => { tab = b.dataset.t as typeof tab; void draw(); },
+        match: () => this.startMatchmaking(),
+        bot: () => this.launchPvp(createBotSession()),
+        claim: (b) => {
+          const ok = claimSeasonReward(Number(b.dataset.n), b.dataset.p === '1');
+          if (ok) { audio.coin(); toast('시즌 보상 획득!'); void draw(); }
+        },
+        buyPass: async () => {
+          const got = await purchase('season_premium');
+          if (got.length) { audio.fanfareUnlock(); toast('프리미엄 시즌 패스 활성화!'); }
+          void draw();
+        },
+      });
+      if (tab === 'rank') await this.drawRanking();
+    };
+    void draw();
+  }
+
+  private async drawRanking(): Promise<void> {
+    const body = $('pvp-body');
+    if (!onlineAvailable()) {
+      body.innerHTML = `<div class="fine">랭킹은 Verse8 환경(게임서버 연결)에서 표시됩니다.</div>
+        <div class="rank-row me"><span class="r">-</span><span>${esc(meta.nick)}</span><span class="trophy">🏆 ${meta.pvp.trophies}</span></div>`;
+      return;
+    }
+    try {
+      const net = await import('./net/server');
+      const res = await net.callGlobal<{ top: { account: string; nick: string; trophies: number }[]; me: { trophies: number } }>('pvpLeaderboard');
+      const mine = net.myAccount();
+      body.innerHTML = res.top.length
+        ? res.top.map((r, i) => `<div class="rank-row ${r.account === mine ? 'me' : ''}"><span class="r">${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</span>
+            <span>${esc(r.nick)} <span class="fine">${pvpTier(r.trophies).kr}</span></span><span class="trophy">🏆 ${r.trophies}</span></div>`).join('')
+        : '<div class="fine">아직 기록이 없습니다. 첫 승리를 차지하세요!</div>';
+    } catch {
+      body.innerHTML = '<div class="fine">랭킹을 불러오지 못했어요.</div>';
+    }
+  }
+
+  private startMatchmaking(): void {
+    const signal = { cancelled: false };
+    const el = openOverlay('modal', `<div class="dialog matching"><h2>상대를 찾는 중...</h2>
+      <div class="spinner"></div><div id="mm-time" class="fine">0초</div>
+      <div class="fine">🏆 ${meta.pvp.trophies} 근처의 상대를 찾고 있어요</div>
+      <button class="btn close" data-act="cancel">취소</button></div>`, () => { signal.cancelled = true; });
+    bindActions(el, { cancel: () => closeOverlay('modal') });
+    findOnlineMatch((sec) => { const t = document.getElementById('mm-time'); if (t) t.textContent = `${Math.floor(sec)}초`; }, signal)
+      .then((session) => { if (!signal.cancelled) this.launchPvp(session); })
+      .catch(async (e) => {
+        if (signal.cancelled) return;
+        closeOverlay('modal');
+        if (e instanceof MatchTimeout) {
+          if (await confirmModal('상대를 찾지 못했어요', '지금은 대기 중인 상대가 없어요.<br>AI 연습전으로 플레이할까요?', 'AI 연습전', '닫기')) {
+            this.launchPvp(createBotSession());
+          }
+        } else {
+          console.warn(e);
+          toast('서버 연결에 실패했어요');
+        }
+      });
+  }
+
+  private launchPvp(session: PvpSession): void {
+    const m = session.match;
+    const myTier = pvpTier(meta.pvp.trophies);
+    const opTier = pvpTier(m.opponent.trophies);
+    openOverlay('modal', `<div class="dialog matching"><h2>${m.bot ? 'AI 연습전' : '매칭 완료!'}</h2>
+      <div class="vs"><div class="p"><div class="nm">${esc(meta.nick)}</div><div style="color:${myTier.color}">🏆 ${meta.pvp.trophies}</div></div>
+      <div class="x">VS</div>
+      <div class="p"><div class="nm">${esc(m.opponent.nick)}${m.bot ? ' 🤖' : ''}</div><div style="color:${opTier.color}">🏆 ${m.opponent.trophies}</div></div></div>
+      <div class="fine">곧 전투가 시작됩니다</div></div>`);
+    audio.sendAttack();
+    setTimeout(() => {
+      closeOverlay('modal');
+      closeOverlay('panel');
+      this.onLaunch({ kind: 'pvp', session });
+    }, 1400);
+  }
+}
+
+function esc(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 }

@@ -1,22 +1,15 @@
 // ============================================================
-//  DOM UI - 상단바/소환/강화/판매/연구소/퀘스트/드래그
+//  게임 화면 DOM UI - 상단바/소환/강화/합성·판매/소환권/PvP HUD/결과/튜토리얼
 // ============================================================
 import {
-  JOBS, GRADES, JOB_SPRITE, DMG_MULT, ECONOMY, WAVE, crystalReward,
+  JOB_KR, RACE_KR, GRADES, DMG_MULT, ECONOMY, WAVE, PVP, SKILL_KR, GRADE_INDEX, MERGE_COUNT,
 } from './config';
-import { MAP, Game } from './engine';
-import { mobPortraitSrc } from './assets';
-import { meta, saveMeta } from './meta';
-import { getPlatform } from './platform';
+import { MAP, Game, type BoardSnapshot } from './engine';
+import { mobPortraitSrc, unitIconUrl } from './assets';
+import { meta, useItem } from './meta';
 import { audio } from './audio';
-import { GRADE_INDEX } from './config';
-import { t, jobName, gradeName, raceName } from './i18n';
-import { openProbabilityPanel } from './probabilityPanel';
-import { openSettingsPanel } from './settingsPanel';
-import { GameServer } from '@agent8/gameserver';
-import { getLocalNickname, setLocalNickname } from './rankPanel';
-import { adManager } from './ad';
-import type { Job, Race, GradeKey, GameOverData } from './types';
+import { $, toast, spriteIcon } from './dom';
+import type { Job, Race, GradeKey } from './types';
 
 // 상성 % 색상
 function pctColor(pct: number): string {
@@ -25,113 +18,120 @@ function pctColor(pct: number): string {
   return '#ff7b7b';
 }
 
-const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
-  document.getElementById(id) as T;
+export interface UIContext {
+  kind: 'stage' | 'endless' | 'pvp';
+  stageId?: string;
+  onExit: () => void;
+}
+
+export interface ResultView {
+  win: boolean;
+  title: string;
+  sub: string;
+  stars?: number;
+  rewards: string[];
+  unlocked?: Job;
+  extraHtml?: string;
+  buttons: { label: string; cls: string; action: () => void; id?: string }[];
+}
 
 export class UI {
   private game: Game;
-  private onExit: () => void;
+  private ctx: UIContext;
   private speeds: number[];
   private speedIdx = 0;
   private lastRace: Race | null = null;
-  private lastUpgradeGold = -1;
-  private summonHoldTimer: number | null = null;
+  private lastMergeKey = '';
+  private lastTickets = '';
+  private sellOpen: (() => void) | null = null;
+  private coachTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(game: Game, onExit: () => void) {
+  constructor(game: Game, ctx: UIContext) {
     this.game = game;
-    this.onExit = onExit;
-    // 3배속은 광고제거 패키지 보유 시 해금 (상점)
-    this.speeds = getPlatform().isAdRemoved() ? [1, 2, 3] : [1, 2];
+    this.ctx = ctx;
+    const pvp = ctx.kind === 'pvp';
+    // 3배속은 광고제거 패키지 보유 시 해금 (상점). PvP 는 1배속 고정
+    this.speeds = pvp ? [1] : meta.adRemoved ? [1, 2, 3] : [1, 2];
     this.bind();
-    game.on('roster', () => this.renderStacks());
-    game.on('gameover', (d) => this.showGameOver(d));
-    game.on('achievement', (a) => this.toast(t('toast.achievement', { name: t(`a.${a.key}`), n: a.reward })));
-    // 사운드
-    game.on('shoot', () => audio.attack());
+    game.on('roster', () => { this.renderStacks(); this.sellOpen?.(); });
+    game.on('achievement', (a) => toast(`🏅 업적 달성: ${a.kr} (+${a.reward}💎)`));
+    game.on('shoot', (job) => audio.attack(job === 'archer' || job === 'ranger' ? 'archer' : job === 'wizard' || job === 'frost' || job === 'bomber' ? 'wizard' : 'warrior'));
     game.on('kill', (boss) => audio.kill(boss));
-    game.on('bossSpawn', () => audio.boss());
-    game.on('gameover', (d) => audio.gameEnd(d.cleared));
+    game.on('bossSpawn', () => { audio.boss(); if (!pvp) audio.switchBgm('boss'); });
+    game.on('wave', () => { if (!pvp && !game.isBossWave) audio.switchBgm('battle'); });
+    game.on('merge', () => audio.merge());
+    game.on('attack', () => audio.sendAttack());
+    game.on('incoming', () => audio.incoming());
+
+    $('pvp-hud').classList.toggle('hidden', !pvp);
+    $('attack-row').classList.toggle('hidden', !pvp);
+    $('btn-speed').classList.toggle('hidden', pvp);
+    $('btn-pause').classList.toggle('hidden', pvp);
+    $('btn-speed').textContent = '1x';
+    $('btn-pause').textContent = '❚❚';
+    $('stage-label').textContent = ctx.kind === 'stage' ? `스테이지 ${ctx.stageId}` : ctx.kind === 'endless' ? '무한 모드' : 'PvP';
+    PVP.attacks.forEach((a, i) => { $(`btn-attack-${i}`).querySelector('span')!.textContent = `🪙${a.cost}`; });
+    $('sell-panel').classList.add('hidden');
+    $('coach').classList.add('hidden');
+    $('countdown').classList.add('hidden');
+    this.renderStacks();
+    this.renderTickets();
   }
 
   private bind(): void {
-    this.bindHoldSummon();
-    $('btn-prob-info-game').onclick = () => openProbabilityPanel('summon');
+    $('btn-summon').onclick = () => {
+      const u = this.game.summon();
+      if (u) audio.summon(u.gradeIndex >= GRADE_INDEX['mythic']);
+      else if (this.game.gold < ECONOMY.summonCost) this.flashGold();
+    };
     $('btn-pause').onclick = () => {
       audio.button();
       this.game.paused = !this.game.paused;
-      $('btn-pause').innerHTML = this.game.paused
-        ? '<span class="ui-icon icon-play"></span>'
-        : '<span class="ui-icon icon-pause"></span>';
+      $('btn-pause').textContent = this.game.paused ? '▶' : '❚❚';
     };
     $('btn-speed').onclick = () => {
       audio.button();
+      if (this.speeds.length === 2 && this.speedIdx === 1 && !meta.adRemoved) toast('3배속은 광고 제거 패키지로 해금돼요');
       this.speedIdx = (this.speedIdx + 1) % this.speeds.length;
       this.game.speed = this.speeds[this.speedIdx];
       $('btn-speed').textContent = this.game.speed + 'x';
     };
-    $('btn-sell-panel').onclick = () => { audio.button(); this.openSell(); };
-    $('btn-menu').onclick = () => { audio.button(); this.openExitConfirm(); };
-    $('btn-settings').onclick = () => { audio.button(); openSettingsPanel(); };
-    // 상단바 버튼은 DOM 이 판마다 재사용되므로, 새 게임 시작 시 이전 판의 표시값을 초기화한다.
-    this.speedIdx = 0;
-    this.game.speed = this.speeds[this.speedIdx];
-    $('btn-speed').textContent = this.game.speed + 'x';
-    $('btn-pause').innerHTML = '<span class="ui-icon icon-pause"></span>';
+    $('btn-sell-panel').onclick = () => { audio.button(); this.openHeroes(); };
+    $('btn-menu').onclick = () => { audio.button(); this.ctx.onExit(); };
+    $('btn-mute').onclick = () => {
+      const muted = audio.toggleMute();
+      $('btn-mute').textContent = muted ? '🔇' : '🔊';
+    };
+    $('btn-mute').textContent = audio.isMuted() ? '🔇' : '🔊';
+    ([0, 1] as const).forEach((tier) => {
+      $(`btn-attack-${tier}`).onclick = () => {
+        if (!this.game.sendAttack(tier)) this.flashGold();
+      };
+    });
+    this.bindDebug();
     this.setupDrag();
   }
 
-  private bindHoldSummon(): void {
-    const btn = $('btn-summon') as HTMLButtonElement;
-    const summonOnce = (): boolean => {
-      const u = this.game.summon();
-      if (u) {
-        audio.summon(u.gradeIndex >= GRADE_INDEX['mythic']);
-        return true;
-      }
-      if (this.game.gold < ECONOMY.summonCost) this.flashGold();
-      return false;
-    };
-    const stop = () => {
-      if (this.summonHoldTimer !== null) {
-        window.clearTimeout(this.summonHoldTimer);
-        this.summonHoldTimer = null;
-      }
-      btn.classList.remove('holding');
-    };
-    // 꾹 누르고 있을수록 소환 간격이 점점 짧아진다(가속): 340ms → 최소 60ms
-    const HOLD_START_MS = 340, HOLD_MIN_MS = 60, HOLD_ACCEL_MS = 28;
-    const start = (ev: PointerEvent) => {
-      if (btn.disabled || this.summonHoldTimer !== null) return;
-      ev.preventDefault();
-      btn.setPointerCapture(ev.pointerId);
-      btn.classList.add('holding');
-      if (!summonOnce()) { stop(); return; }
-      let delay = HOLD_START_MS;
-      const tick = () => {
-        if (btn.disabled || !summonOnce()) { stop(); return; }
-        delay = Math.max(HOLD_MIN_MS, delay - HOLD_ACCEL_MS);
-        this.summonHoldTimer = window.setTimeout(tick, delay);
-      };
-      this.summonHoldTimer = window.setTimeout(tick, delay);
-    };
-    btn.onpointerdown = start;
-    btn.onpointerup = stop;
-    btn.onpointercancel = stop;
-    btn.onlostpointercapture = stop;
-    btn.oncontextmenu = (ev) => ev.preventDefault();
+  // 개발 서버에서만 노출되는 테스트용 버튼 (배포 빌드엔 표시 안 됨)
+  private bindDebug(): void {
+    if (!import.meta.env.DEV) return;
+    $('debug-panel').classList.remove('hidden');
+    $('debug-mythic').onclick = () => { if (this.game.summonFree('mythic')) audio.summon(true); };
+    $('debug-eternal').onclick = () => { if (this.game.summonFree('eternal')) audio.summon(true); };
+    $('debug-gold').onclick = () => { this.game.gold += 500; };
   }
 
   // ---------- 매 프레임 갱신 ----------
   update(): void {
     const g = this.game;
-    $('wave-label').textContent = t('hud.wave', { n: Math.max(1, g.wave) });
-    $('mob-race').textContent = raceName(g.currentRace);
+    const total = g.totalWaves;
+    $('wave-label').textContent = total === Infinity ? `Wave ${Math.max(1, g.wave)}` : `Wave ${Math.max(1, Math.min(g.wave, total))}/${total}`;
+    $('mob-race').textContent = RACE_KR[g.currentRace];
     const portrait = $('mob-portrait');
     if (portrait.dataset.race !== g.currentRace) {
       portrait.dataset.race = g.currentRace;
       portrait.style.backgroundImage = `url(${mobPortraitSrc(g.currentRace)})`;
     }
-    // 웨이브 몹 종족이 바뀌면 카드 상성 % 갱신
     if (this.lastRace !== g.currentRace) {
       this.lastRace = g.currentRace;
       this.renderStacks();
@@ -140,23 +140,15 @@ export class UI {
     $('gold-amount').textContent = String(Math.floor(g.gold));
 
     const pct = Math.min(100, (g.mobs.length / WAVE.gameOverMobCount) * 100);
-    $('mob-progress-fill').style.width = pct + '%';
+    const fill = $('mob-progress-fill');
+    fill.style.width = pct + '%';
+    fill.classList.toggle('warn', pct >= 70);
     $('mob-count-label').textContent = `${g.mobs.length} / ${WAVE.gameOverMobCount}`;
 
     const bt = $('boss-timer');
     if (g.waveState === 'waiting_boss' || (g.isBossWave && g.waveState === 'spawning')) {
-      // 보스 웨이브: 제한 시간(초과 시 게임오버) 표시
-      bt.classList.remove('hidden', 'rest');
-      bt.innerHTML = `<span class="ui-icon icon-timer"></span> ${g.bossTimer.toFixed(1)}s`;
-    } else if (g.waveState === 'spawning' || g.waveState === 'rest') {
-      // 일반 웨이브: 다음 웨이브 시작까지 남은 시간을 몹 생성 중에도 끊김 없이 계속 표시.
-      // (생성 중 = 남은 생성 시간 + 휴식 시간, 휴식 중 = 남은 휴식 시간)
-      const remain = g.waveState === 'rest'
-        ? g.restTimer
-        : g.spawnTimer + Math.max(0, g.spawnGoal - g.spawnedCount - 1) * WAVE.spawnInterval + WAVE.restBetween;
       bt.classList.remove('hidden');
-      bt.classList.add('rest');
-      bt.textContent = t('hud.nextWave', { s: Math.max(0, Math.ceil(remain)) });
+      bt.textContent = `⏱ ${g.bossTimer.toFixed(1)}s`;
     } else {
       bt.classList.add('hidden');
     }
@@ -171,11 +163,22 @@ export class UI {
       banner.classList.add('hidden');
     }
 
-    ($('btn-summon') as HTMLButtonElement).disabled = g.gold < ECONOMY.summonCost;
-    if (Math.floor(g.gold) !== this.lastUpgradeGold) {
-      this.lastUpgradeGold = Math.floor(g.gold);
-      this.updateUpgradeButtons();
+    ($('btn-summon') as HTMLButtonElement).disabled = g.gold < ECONOMY.summonCost || g.over;
+    if (g.isPvp) {
+      ([0, 1] as const).forEach((t) => { ($(`btn-attack-${t}`) as HTMLButtonElement).disabled = g.gold < g.attackCost(t) || g.over; });
     }
+    // 합성 가능 상태가 바뀌면 카드/점 갱신 (매 프레임 DOM 재생성 방지)
+    const mk = g.mergeable().map((m) => m.job + m.grade).join(',');
+    if (mk !== this.lastMergeKey) {
+      this.lastMergeKey = mk;
+      $('merge-dot').classList.toggle('hidden', !mk);
+      this.renderStacks();
+    }
+    // 강화 버튼 활성 상태는 골드에 따라 변하므로 가볍게 갱신
+    document.querySelectorAll<HTMLButtonElement>('#unit-stacks .up-btn').forEach((b) => {
+      const job = b.dataset.job as Job;
+      b.disabled = !g.units.some((u) => u.job === job) || g.gold < g.upgradeCost(job);
+    });
   }
 
   private flashGold(): void {
@@ -186,297 +189,234 @@ export class UI {
     setTimeout(() => { el.style.transform = ''; el.style.color = ''; }, 150);
   }
 
-  // ---------- 유닛 강화 패널 (하단, 직업 단위) ----------
-  // 소환 전에도 3직업 카드를 항상 표시(common 스프라이트). 유닛 0이면 강화 비활성.
-  renderStacks(): void {
-    const el = $('unit-stacks');
-    const order: Job[] = ['wizard', 'archer', 'warrior']; // 마법사/궁수/전사
-    const common = GRADES[0]; // 일반 등급 스프라이트/색
-    const pct = (job: Job) => Math.round(DMG_MULT[job][this.game.currentRace] * 100);
-    el.innerHTML = '';
-    for (const job of order) {
-      const count = this.game.units.reduce((n, u) => n + (u.job === job ? 1 : 0), 0);
-      const level = this.game.levels[job] || 1;
-      const cost = this.game.upgradeCost(job);
-      const p = pct(job);
-      const div = document.createElement('div');
-      div.className = 'stack';
-      div.style.borderColor = common.color;
-      div.innerHTML = `
-        <div class="count">${count}</div>
-        <div class="dmg-pct" style="color:${pctColor(p)}">${p}%</div>
-        <div class="frame-sprite" style="background-image:url(sprites/${JOB_SPRITE[job]}_${common.spriteIndex}.png)"></div>
-        <div class="name">${jobName(job)} Lv.${level}</div>
-        <button class="up-btn" data-upgrade-cost="${cost}" data-unit-count="${count}">${t('hud.upgrade')} <span class="coin"></span>${cost}</button>`;
-      const btn = div.querySelector('.up-btn') as HTMLButtonElement;
-      btn.disabled = count === 0 || this.game.gold < cost;
-      btn.onclick = () => { if (this.game.upgrade(job)) audio.button(); };
-      el.appendChild(div);
-    }
-    this.lastUpgradeGold = Math.floor(this.game.gold);
-  }
-
-  private updateUpgradeButtons(): void {
-    document.querySelectorAll<HTMLButtonElement>('[data-upgrade-cost]').forEach((btn) => {
-      const cost = Number(btn.dataset.upgradeCost);
-      const count = Number(btn.dataset.unitCount);
-      btn.disabled = count === 0 || this.game.gold < cost;
+  // ---------- 소환권 (일반 모드 전용) ----------
+  renderTickets(): void {
+    const row = $('ticket-row');
+    if (this.ctx.kind === 'pvp') { row.innerHTML = ''; return; }
+    const key = `${meta.items.summonTicket}:${meta.items.mythicTicket}`;
+    if (key === this.lastTickets) return;
+    this.lastTickets = key;
+    const chips: string[] = [];
+    if (meta.items.summonTicket > 0) chips.push(`<button class="ticket-chip" data-t="summonTicket">🎟️ 무료 소환 ×${meta.items.summonTicket}</button>`);
+    if (meta.items.mythicTicket > 0) chips.push(`<button class="ticket-chip mythic" data-t="mythicTicket">🌟 신화 확정 ×${meta.items.mythicTicket}</button>`);
+    row.innerHTML = chips.join('');
+    row.querySelectorAll<HTMLButtonElement>('[data-t]').forEach((b) => {
+      b.onclick = () => {
+        if (this.game.over) return;
+        const t = b.dataset.t as 'summonTicket' | 'mythicTicket';
+        if (!useItem(t)) return;
+        const u = this.game.summonFree(t === 'mythicTicket' ? 'mythic' : undefined);
+        if (u) audio.summon(u.gradeIndex >= GRADE_INDEX['mythic']);
+        this.renderTickets();
+      };
     });
   }
 
-  // ---------- 판매 패널 (영웅 판매) ----------
-  private openSell(): void {
+  // ---------- 하단 유닛 카드 (덱 순서, 직업 단위 강화) ----------
+  renderStacks(): void {
+    const el = $('unit-stacks');
+    const deck = this.game.opts.deck;
+    const merges = new Set(this.game.mergeable().map((m) => m.job));
+    el.innerHTML = '';
+    for (const job of deck) {
+      const units = this.game.units.filter((u) => u.job === job);
+      const count = units.length;
+      const top = units.reduce((g, u) => Math.max(g, u.gradeIndex), 0);
+      const level = this.game.levels[job] || 1;
+      const cost = this.game.upgradeCost(job);
+      const p = Math.round(DMG_MULT[job][this.game.currentRace] * 100);
+      const div = document.createElement('div');
+      div.className = `stack${count ? '' : ' empty'}`;
+      div.style.borderColor = count ? GRADES[top].color : '';
+      div.innerHTML = `
+        ${merges.has(job) ? '<div class="merge-tag">합성!</div>' : ''}
+        <div class="count">${count}</div>
+        <div class="dmg-pct" style="color:${pctColor(p)}">${p}%</div>
+        ${spriteIcon(unitIconUrl(job, top))}
+        <div class="name">${JOB_KR[job]} Lv.${level}</div>
+        <div class="skill">${SKILL_KR[job]}</div>
+        <button class="up-btn" data-job="${job}">강화 🪙${cost}</button>`;
+      const btn = div.querySelector('.up-btn') as HTMLButtonElement;
+      btn.disabled = count === 0 || this.game.gold < cost;
+      btn.onclick = () => { if (this.game.upgrade(job)) audio.button(); };
+      div.onclick = (e) => { if (e.target !== btn && merges.has(job)) this.openHeroes(job, 'merge'); };
+      el.appendChild(div);
+    }
+  }
+
+  // ---------- 영웅 관리 (합성 / 판매) ----------
+  private openHeroes(startJob?: Job, startMode?: 'merge' | 'sell'): void {
     const panel = $('sell-panel');
-    let job: Job = JOBS[0];
-    let qty = 1; // 1 | 10 | Infinity(ALL)
-    let firstOpen = true; // 처음 열 때만 슬라이드업
+    const g = this.game;
+    const jobs = (): Job[] => {
+      const set = new Set<Job>(g.opts.deck);
+      for (const u of g.units) set.add(u.job);
+      return [...set];
+    };
+    let job: Job = startJob ?? g.mergeable()[0]?.job ?? jobs()[0];
+    let mode: 'merge' | 'sell' = startMode ?? (g.mergeable().length ? 'merge' : 'sell');
+    let qty = 1; // 판매 수량 1 | 10 | Infinity(ALL)
+    let firstOpen = true;
     const render = () => {
-      const cards = GRADES.map((gr) => {
-        const cnt = this.game.countOf(job, gr.key);
+      const mergeJobs = new Set(g.mergeable().map((m) => m.job));
+      const cards = GRADES.map((gr, gi) => {
+        const cnt = g.countOf(job, gr.key);
+        if (mode === 'merge') {
+          const can = g.canMerge(job, gr.key);
+          const isTop = gi === GRADES.length - 1;
+          return `<div class="grade-card${can ? ' ready' : ''}${cnt === 0 ? ' empty' : ''}" data-grade="${gr.key}">
+            <div class="gc-name" style="color:${gr.color}">${gr.kr}</div>
+            ${spriteIcon(unitIconUrl(job, gi))}
+            <div class="gc-count">${cnt}/${MERGE_COUNT}</div>
+            <div class="gc-gold" style="color:${isTop ? '#888' : GRADES[gi + 1].color}">${isTop ? '최고' : `→${GRADES[gi + 1].kr}`}</div>
+          </div>`;
+        }
         const sellQty = qty === Infinity ? cnt : Math.min(qty, cnt);
-        const gold = sellQty * gr.sellGold;
         return `<div class="grade-card${cnt === 0 ? ' empty' : ''}" data-grade="${gr.key}">
-          <div class="gc-name" style="color:${gr.color}">${gradeName(gr.key)}</div>
-          <div class="frame-sprite" style="background-image:url(sprites/${JOB_SPRITE[job]}_${gr.spriteIndex}.png)"></div>
+          <div class="gc-name" style="color:${gr.color}">${gr.kr}</div>
+          ${spriteIcon(unitIconUrl(job, gi))}
           <div class="gc-count">${cnt}</div>
-          <div class="gc-gold">+${gold}</div>
+          <div class="gc-gold">+${sellQty * gr.sellGold}</div>
         </div>`;
       }).join('');
       panel.innerHTML = `
         <div class="dialog sell-dialog${firstOpen ? ' anim' : ''}">
           <button class="close-x">✕</button>
-          <div class="sell-hint">${t('sell.hint')}</div>
           <div class="sell-head">
-            <h2>${t('sell.title')}</h2>
-            <div class="qty-row">
+            <h2>영웅 관리</h2>
+            ${mode === 'sell' ? `<div class="qty-row">
               <button data-qty="1" class="${qty === 1 ? 'active' : ''}">1</button>
               <button data-qty="10" class="${qty === 10 ? 'active' : ''}">10</button>
-              <button data-qty="all" class="${qty === Infinity ? 'active' : ''}">${t('sell.all')}</button>
-            </div>
+              <button data-qty="all" class="${qty === Infinity ? 'active' : ''}">ALL</button></div>` : ''}
           </div>
+          <div class="mode-tabs">
+            <button data-mode="merge" class="merge ${mode === 'merge' ? 'active' : ''}">🔨 합성${mergeJobs.size ? ' •' : ''}</button>
+            <button data-mode="sell" class="sell ${mode === 'sell' ? 'active' : ''}">🪙 판매</button>
+          </div>
+          <div class="sell-hint">${mode === 'merge' ? `같은 유닛·등급 ${MERGE_COUNT}개 → 상위 등급 1개 (카드를 탭)` : '골드가 급할 때 판매해 소환/강화에 투자하세요'}</div>
           <div class="grade-row">${cards}</div>
           <div class="job-tabs">
-            ${JOBS.map((j) => `<button data-job="${j}" class="${j === job ? 'active' : ''}">${jobName(j)}</button>`).join('')}
+            ${jobs().map((j) => `<button data-job="${j}" class="${j === job ? 'active' : ''}">${JOB_KR[j]}${mergeJobs.has(j) ? '<span class="dot"></span>' : ''}</button>`).join('')}
           </div>
         </div>`;
-      firstOpen = false; // 이후 재렌더(탭/수량 전환)에는 애니메이션 미적용
+      firstOpen = false;
       panel.querySelectorAll<HTMLButtonElement>('[data-qty]').forEach((b) => {
         b.onclick = () => { const v = b.dataset.qty; qty = v === 'all' ? Infinity : Number(v); render(); };
+      });
+      panel.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((b) => {
+        b.onclick = () => { mode = b.dataset.mode as 'merge' | 'sell'; render(); };
       });
       panel.querySelectorAll<HTMLButtonElement>('[data-job]').forEach((b) => {
         b.onclick = () => { job = b.dataset.job as Job; render(); };
       });
       panel.querySelectorAll<HTMLElement>('[data-grade]').forEach((b) => {
         b.onclick = () => {
-          if (this.game.sellMany(job, b.dataset.grade as GradeKey, qty) > 0) audio.button();
+          const gk = b.dataset.grade as GradeKey;
+          if (mode === 'merge') {
+            if (!g.merge(job, gk)) toast(`같은 등급 ${MERGE_COUNT}개가 필요해요`);
+          } else if (g.sellMany(job, gk, qty) > 0) {
+            audio.coin();
+          }
           render();
         };
       });
-      (panel.querySelector('.close-x') as HTMLElement).onclick = () => panel.classList.add('hidden');
+      (panel.querySelector('.close-x') as HTMLElement).onclick = close;
     };
+    const close = () => { panel.classList.add('hidden'); this.sellOpen = null; };
+    this.sellOpen = render;
     render();
-    // 배경(바텀 시트 바깥) 탭 시 닫기
-    panel.onclick = (e) => { if (e.target === panel) panel.classList.add('hidden'); };
+    panel.onclick = (e) => { if (e.target === panel) close(); };
     panel.classList.remove('hidden');
   }
 
-  // ---------- 메인으로 나가기 확인 ----------
-  private openExitConfirm(): void {
-    const panel = $('confirm-panel');
-    const wasPaused = this.game.paused;
-    this.game.paused = true; // 결정하는 동안 웨이브가 계속 진행되지 않도록 일시정지
-    panel.innerHTML = `
-      <div class="dialog">
-        <h2>${t('exit.title')}</h2>
-        <div class="d" style="color:#bbb;text-align:center">
-          ${t('exit.body', { n: Math.max(1, this.game.wave) })}
-        </div>
-        <div class="confirm-btns">
-          <button class="cancel">${t('common.continue')}</button>
-          <button class="danger">${t('common.leave')}</button>
-        </div>
-      </div>`;
-    const close = () => {
-      panel.classList.add('hidden');
-      this.game.paused = wasPaused;
-    };
-    (panel.querySelector('.cancel') as HTMLElement).onclick = () => { audio.button(); close(); };
-    (panel.querySelector('.danger') as HTMLElement).onclick = () => {
-      audio.button();
-      panel.classList.add('hidden'); // 메인화면으로 전환된 뒤에도 이 패널이 남아있지 않도록 직접 닫는다.
-      this.onExit();
-    };
-    panel.classList.remove('hidden');
+  // ---------- PvP: 상대 상태 ----------
+  setOpponentInfo(nick: string, trophies: number, bot: boolean): void {
+    $('opp-nick').textContent = nick + (bot ? ' 🤖' : '');
+    $('opp-trophy').textContent = `🏆${trophies}`;
   }
 
-  // ---------- 게임 오버 ----------
-  private showGameOver(d: GameOverData): void {
-    const panel = $('gameover-panel');
-    const baseReward = crystalReward(d.wave);
-    // 기본 보상은 패널이 뜨는 즉시 지급한다. 예전엔 '2배 받기'/'그냥 받기' 를 눌러야
-    // 지급돼서, 안 누르고 메인으로 나가면 그 판 보상이 통째로 사라졌다.
-    // (engine.finish 는 this.over 가드로 판당 한 번만 emit 하므로 중복 지급되지 않는다.)
-    meta.crystals += baseReward;
-    saveMeta();
-
-    // 광고 보상은 이미 받은 기본 보상 위에 1배를 더해 총 2배로 만든다.
-    let bonusClaimed = false;
-    const grantBonus = () => {
-      if (bonusClaimed) return;
-      bonusClaimed = true;
-      meta.crystals += baseReward;
-      saveMeta();
-      const earned = panel.querySelector('.reward .crystal');
-      if (earned) earned.innerHTML = `<span class="gem"></span> ${baseReward * 2}`;
-      const owned = panel.querySelector('.owned-count');
-      if (owned) owned.innerHTML = `<span class="gem"></span> ${meta.crystals}`;
-    };
-
-    const currentNick = getLocalNickname();
-
-    panel.innerHTML = `
-      <div class="dialog big-result" style="max-height: 90vh; overflow-y: auto; padding: 20px;">
-        <h2>${d.cleared ? t('over.clear') : t('over.gameover')}</h2>
-        <div class="d" style="color:#bbb; margin-bottom: 8px;">${d.reason}</div>
-        <div class="wave-big" style="font-size: 32px; font-weight: 800; color: #ffcf3f; margin-bottom: 12px;">${t('hud.wave', { n: d.wave })}</div>
-        <div class="reward" style="margin-bottom: 4px;">${t('over.reward')} <span class="crystal"><span class="gem"></span> ${baseReward}</span></div>
-        <div class="d" style="color:#bbb; margin-bottom: 16px;">${t('over.owned')} <span class="owned-count"><span class="gem"></span> ${meta.crystals}</span></div>
-
-        <!-- 2배 보상 광고 카드 -->
-        <div style="background: rgba(100, 255, 218, 0.05); border: 1px solid rgba(100, 255, 218, 0.2); border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; text-align: center;">
-          <div style="font-weight: 800; font-size: 14px; color: #64ffda; margin-bottom: 6px;">${t('over.doubleAdTitle')}</div>
-          <div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">${t('over.doubleAdDesc', { n: baseReward * 2 })}</div>
-          <div style="display: flex; justify-content: center; max-width: 280px; margin: 0 auto;">
-            <button id="btn-double-reward" class="wood-btn" style="flex:1; padding: 0 12px; font-size: 13px; font-weight: 800; border-radius: 0;">${t('over.doubleBtn')}</button>
-          </div>
-          <div id="double-reward-status" style="font-size: 11px; color: #8892b0; margin-top: 6px; min-height: 16px;"></div>
-        </div>
-
-        <!-- 랭킹 등록 카드 -->
-        <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; text-align: center;">
-          <div style="font-weight: 800; font-size: 14px; color: #ffcf3f; margin-bottom: 6px;">${t('over.rankTitle')}</div>
-          <div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">${t('over.rankDesc', { n: d.wave })}</div>
-          <div style="display: flex; gap: 8px; justify-content: center; align-items: stretch; height: 38px; max-width: 280px; margin: 0 auto;">
-            <input type="text" id="gameover-nickname" value="${currentNick}" style="flex: 1; min-width: 0; padding: 6px 12px; border: 1px solid #555; background: #222; color: #fff; border-radius: 8px; font-size: 13px; text-align: center;" maxLength="15" />
-            <button id="btn-submit-rank" class="wood-btn" style="padding: 0 16px; font-size: 13px; font-weight: 800; border-radius: 0;">${t('over.rankSubmitBtn')}</button>
-          </div>
-          <div id="gameover-submit-status" style="font-size: 11px; color: #8892b0; margin-top: 6px; min-height: 16px;"></div>
-        </div>
-
-        <button class="close" id="btn-restart" style="width: 100%; max-width: 280px; margin: 0 auto;">${t('over.toMain')}</button>
-      </div>`;
-
-    const submitBtn = panel.querySelector('#btn-submit-rank') as HTMLButtonElement;
-    const nickInput = panel.querySelector('#gameover-nickname') as HTMLInputElement;
-    const statusDiv = panel.querySelector('#gameover-submit-status') as HTMLDivElement;
-
-    // 2배 보상 광고 버튼
-    const doubleBtn = panel.querySelector('#btn-double-reward') as HTMLButtonElement;
-    const doubleStatus = panel.querySelector('#double-reward-status') as HTMLDivElement;
-
-    // 기본 보상은 이미 지급됐다는 사실을 먼저 알린다.
-    doubleStatus.textContent = t('over.baseAutoGranted', { n: baseReward });
-    doubleStatus.style.color = '#8892b0';
-
-    if (adManager.isAdRemoved()) {
-      // 광고제거 상태: 바로 2배 지급, 버튼 숨김
-      grantBonus();
-      doubleBtn.style.display = 'none';
-      doubleStatus.textContent = t('over.adRemovedAutoDouble');
-      doubleStatus.style.color = '#4caf50';
+  setOpponent(s: BoardSnapshot): void {
+    const pct = Math.min(100, (s.mobCount / WAVE.gameOverMobCount) * 100);
+    $('opp-fill').style.width = pct + '%';
+    $('opp-count').textContent = `${s.mobCount} / ${WAVE.gameOverMobCount}`;
+    $('opp-sub').textContent = `Wave ${s.wave} · 유닛 ${s.unitCount}${s.bossHp >= 0 ? ` · 보스 ${Math.round(s.bossHp * 100)}%` : ''}`;
+    // 미니맵: 흙길 링 + 몹 점 + 유닛 구역 표시
+    const c = $<HTMLCanvasElement>('opp-canvas');
+    const ctx = c.getContext('2d')!;
+    const W = c.width;
+    ctx.fillStyle = '#4f7a2e';
+    ctx.fillRect(0, 0, W, W);
+    ctx.strokeStyle = '#b8935f';
+    ctx.lineWidth = 6;
+    const inset = (70 / MAP.size) * W;
+    ctx.strokeRect(inset, inset, W - inset * 2, W - inset * 2);
+    const zoneCenters = [[0.5, 0.3], [0.7, 0.5], [0.5, 0.7], [0.3, 0.5]];
+    for (let i = 0; i + 1 < s.units.length; i += 2) {
+      const [zx, zy] = zoneCenters[s.units[i]] ?? [0.5, 0.5];
+      ctx.fillStyle = GRADES[s.units[i + 1]]?.color ?? '#fff';
+      ctx.fillRect(zx * W - 2 + ((i * 7) % 9) - 4, zy * W - 2 + ((i * 3) % 9) - 4, 3, 3);
     }
+    ctx.fillStyle = '#ff4a4a';
+    for (let i = 0; i + 1 < s.mobs.length; i += 2) {
+      ctx.fillRect((s.mobs[i] / 255) * W - 1.5, (s.mobs[i + 1] / 255) * W - 1.5, 3, 3);
+    }
+  }
 
-    doubleBtn.onclick = async () => {
-      audio.button();
-      doubleBtn.disabled = true;
-      doubleStatus.textContent = t('over.adLoading');
-      doubleStatus.style.color = '#ffd54f';
-
-      try {
-        const ok = await adManager.watchRewardedAd('double-reward');
-        if (ok) {
-          // grantBonus 가 크리스탈 지급과 화면 숫자 갱신을 함께 처리한다.
-          grantBonus();
-          doubleStatus.textContent = t('over.doubleGranted', { n: baseReward });
-          doubleStatus.style.color = '#4caf50';
-          doubleBtn.style.display = 'none';
-        } else {
-          doubleBtn.disabled = false;
-          doubleStatus.textContent = t('over.adIncomplete');
-          doubleStatus.style.color = '#ff5252';
-        }
-      } catch {
-        doubleBtn.disabled = false;
-        doubleStatus.textContent = t('over.adLoadFailed');
-        doubleStatus.style.color = '#ff5252';
-      }
-    };
-
-    submitBtn.onclick = async () => {
-      audio.button();
-      const nick = nickInput.value.trim();
-      if (nick.length < 1) {
-        statusDiv.textContent = t('rank.nicknameEmpty');
-        statusDiv.style.color = '#ff5252';
+  // ---------- 카운트다운 ----------
+  countdown(startAt: number, onGo: () => void): void {
+    const el = $('countdown');
+    el.classList.remove('hidden');
+    const tick = () => {
+      const left = (startAt - Date.now()) / 1000;
+      if (left <= 0) {
+        el.innerHTML = 'GO!';
+        audio.sendAttack();
+        onGo();
+        setTimeout(() => el.classList.add('hidden'), 500);
         return;
       }
-      if (nick.length > 15) {
-        statusDiv.textContent = t('rank.nicknameTooLong');
-        statusDiv.style.color = '#ff5252';
-        return;
-      }
-
-      setLocalNickname(nick);
-      submitBtn.disabled = true;
-      nickInput.disabled = true;
-      statusDiv.textContent = t('over.rankRegistering');
-      statusDiv.style.color = '#ffd54f';
-
-      try {
-        const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error(t('rank.serverTimeout'))), ms));
-        const server = GameServer.getInstance();
-        if (!server.connected) {
-          await Promise.race([server.connect(), timeout(5000)]);
-        }
-        if (!server.connected) {
-          throw new Error(t('rank.serverUnavailable'));
-        }
-        const res = await Promise.race([
-          server.remoteFunction('submitWave', [d.wave, nick]),
-          timeout(5000)
-        ]);
-        // 서버는 구조값만 반환 → 플레이어 언어로 문구를 조립
-        statusDiv.textContent = !res.updated
-          ? t('rank.resNotBeaten', { n: res.bestWave })
-          : res.isFirst
-            ? t('rank.resFirst', { n: res.bestWave })
-            : t('rank.resNewBest', { prev: res.previousWave });
-        statusDiv.style.color = res.updated ? '#4caf50' : '#8892b0';
-      } catch (e: any) {
-        console.error(e);
-        statusDiv.textContent = t('over.rankSubmitFailed', { msg: e.message || t('over.networkError') });
-        statusDiv.style.color = '#ff5252';
-        submitBtn.disabled = false;
-        nickInput.disabled = false;
-      }
+      el.innerHTML = `${Math.ceil(left)}<small>${this.ctx.kind === 'pvp' ? '몹을 보내 상대를 무너뜨리세요!' : ''}</small>`;
+      setTimeout(tick, 100);
     };
+    tick();
+  }
 
-    $('btn-restart').onclick = () => {
-      audio.button();
-      panel.classList.add('hidden');
-      this.onExit();
-    };
+  // ---------- 튜토리얼 코치 ----------
+  coach(text: string | null, targetId?: string): void {
+    document.querySelectorAll('.coach-target').forEach((e) => e.classList.remove('coach-target'));
+    const el = $('coach');
+    if (this.coachTimer) { clearTimeout(this.coachTimer); this.coachTimer = null; }
+    if (!text) { el.classList.add('hidden'); return; }
+    el.innerHTML = text;
+    el.classList.remove('hidden');
+    if (targetId) document.getElementById(targetId)?.classList.add('coach-target');
+  }
+
+  // ---------- 결과 ----------
+  showResult(v: ResultView): void {
+    this.coach(null);
+    $('sell-panel').classList.add('hidden');
+    const panel = $('gameover-panel');
+    const stars = v.stars !== undefined
+      ? `<div class="stars">${[0, 1, 2].map((i) => `<span class="${i < v.stars! ? '' : 'off'}">⭐</span>`).join('')}</div>` : '';
+    const unlock = v.unlocked ? `<div class="unlock">${spriteIcon(unitIconUrl(v.unlocked, 2))}
+      <div><div style="font-size:18px">🎉 새 유닛 해금: ${JOB_KR[v.unlocked]}</div><div class="fine" style="text-align:left">로비 → 유닛에서 덱에 편성하세요</div></div></div>` : '';
+    panel.innerHTML = `<div class="dialog result">
+      <h2 class="${v.win ? 'win' : 'lose'}">${v.title}</h2>
+      ${stars}
+      <div class="sub">${v.sub}</div>
+      <div class="rewards">${v.rewards.map((r) => `<div class="rw">${r}</div>`).join('')}</div>
+      ${unlock}${v.extraHtml ?? ''}
+      <div class="btns">${v.buttons.map((b, i) => `<button class="btn ${b.cls}" data-i="${i}" ${b.id ? `id="${b.id}"` : ''}>${b.label}</button>`).join('')}</div>
+    </div>`;
+    panel.querySelectorAll<HTMLButtonElement>('[data-i]').forEach((b) => {
+      b.onclick = () => { audio.button(); v.buttons[Number(b.dataset.i)].action(); };
+    });
     panel.classList.remove('hidden');
   }
 
-  private toast(msg: string): void {
-    const t = document.createElement('div');
-    t.textContent = msg;
-    t.style.cssText = `position:absolute;left:50%;top:12%;transform:translateX(-50%);
-      background:rgba(0,0,0,0.85);color:#ffd54f;padding:8px 16px;border-radius:10px;
-      font-weight:700;z-index:60;font-size:14px;`;
-    $('battlefield').appendChild(t);
-    setTimeout(() => t.remove(), 2500);
+  hideResult(): void {
+    $('gameover-panel').classList.add('hidden');
   }
 
   // ---------- 존 교환 드래그 ----------
@@ -504,12 +444,11 @@ export class UI {
       if (dx < 0 && Math.abs(dy) < Math.abs(dx)) return 3;
       return null;
     };
+    // 캔버스는 게임마다 재사용되므로 이전 핸들러를 덮어쓴다 (on* 프로퍼티)
     const down = (e: MouseEvent | TouchEvent) => {
       const p = toLogical(e);
       startZone = zoneAt(p);
-      if (startZone !== null) {
-        this.game.drag = { from: startZone, to: null, x: p.x, y: p.y };
-      }
+      if (startZone !== null) this.game.drag = { from: startZone, to: null, x: p.x, y: p.y };
     };
     const move = (e: MouseEvent | TouchEvent) => {
       if (startZone === null || !this.game.drag) return;
@@ -522,18 +461,18 @@ export class UI {
     const up = (e: MouseEvent | TouchEvent) => {
       if (startZone === null) return;
       const endZone = zoneAt(toLogical(e));
-      if (endZone !== null && endZone !== startZone) this.game.swapZones(startZone, endZone);
+      if (endZone !== null && endZone !== startZone) { this.game.swapZones(startZone, endZone); audio.button(); }
       startZone = null;
       this.game.drag = null;
     };
     const cancel = () => { startZone = null; this.game.drag = null; };
-    canvas.addEventListener('mousedown', down);
-    canvas.addEventListener('mousemove', move);
-    canvas.addEventListener('mouseup', up);
-    canvas.addEventListener('mouseleave', cancel);
-    canvas.addEventListener('touchstart', down, { passive: true });
-    canvas.addEventListener('touchmove', move, { passive: true });
-    canvas.addEventListener('touchend', up);
-    canvas.addEventListener('touchcancel', cancel);
+    canvas.onmousedown = down;
+    canvas.onmousemove = move;
+    canvas.onmouseup = up;
+    canvas.onmouseleave = cancel;
+    canvas.ontouchstart = down;
+    canvas.ontouchmove = move;
+    canvas.ontouchend = up;
+    canvas.ontouchcancel = cancel;
   }
 }

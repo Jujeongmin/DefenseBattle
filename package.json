@@ -10,16 +10,16 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "tsx": "^4.23.1",
+    "tsx": "^4.23.0",
     "typescript": "^6.0.3",
-    "vite": "^5.4.21"
+    "vite": "^5.4.0"
   },
   "allowScripts": {
     "esbuild@0.21.5": true,
     "esbuild@0.28.1": true
   },
   "dependencies": {
-    "@agent8/gameserver": "^1.10.2",
+    "@agent8/gameserver": "^2.0.1",
     "@verse8/ads": "^0.5.0",
     "@verse8/platform": "^2.1.0"
   }
