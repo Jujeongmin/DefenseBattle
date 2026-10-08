@@ -370,6 +370,7 @@ b, strong { font-weight: 700; }
   animation: dlgIn 0.16s ease-out;
 }
 @keyframes dlgIn { from { transform: scale(0.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.dialog.redraw { animation: none; } /* 열린 패널을 다시 그릴 때 (dom.ts openOverlay) */
 .dialog h2 {
   margin: 0 22px 14px;
   text-align: center;
@@ -870,6 +871,7 @@ b, strong { font-weight: 700; }
 /* ---------- 영웅 관리 (판매/합성 바텀 시트) ---------- */
 #sell-panel { align-items: flex-end; justify-content: center; padding: 0; background: rgba(26, 18, 12, 0.45); }
 #sell-panel .sell-dialog { width: 100%; max-width: 480px; max-height: 80%; }
+#sell-panel .sell-dialog { animation: none; } /* 버튼마다 다시 그려지므로 처음 열 때(.anim)만 움직인다 */
 #sell-panel .sell-dialog.anim { animation: sheetUp 0.22s ease; }
 @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .sell-head { display: flex; align-items: center; justify-content: space-between; margin: 0 28px 10px 0; gap: 8px; }

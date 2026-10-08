@@ -17,8 +17,16 @@ export function toast(msg: string, ms = 2200): void {
 /** 오버레이 패널 열기. 배경 탭/닫기 버튼(.close-x, [data-close])으로 닫힘 */
 export function openOverlay(id: string, html: string, onClose?: () => void): HTMLElement {
   const el = $(id);
+  // 이미 열린 패널을 다시 그리는 경우(버튼 클릭 후 갱신): 등장 애니메이션을 다시 틀지 않고
+  // 스크롤 위치도 유지한다. 그렇지 않으면 버튼마다 창이 새로 열리는 것처럼 보인다.
+  const redraw = !el.classList.contains('hidden') && !!el.firstElementChild;
+  const scroll = redraw ? (el.querySelector('.dialog')?.scrollTop ?? 0) : 0;
   el.innerHTML = html;
   el.classList.remove('hidden');
+  if (redraw) {
+    const dlg = el.querySelector<HTMLElement>('.dialog');
+    if (dlg) { dlg.classList.add('redraw'); dlg.scrollTop = scroll; }
+  }
   const close = () => { el.classList.add('hidden'); el.innerHTML = ''; onClose?.(); };
   el.onclick = (e) => { if (e.target === el) close(); };
   el.querySelectorAll<HTMLElement>('.close-x, [data-close]').forEach((b) => { b.onclick = close; });
