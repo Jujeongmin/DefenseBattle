@@ -4,7 +4,7 @@
 // ============================================================
 import { Game, type BoardSnapshot } from './engine';
 import { PVP, JOBS, PLAY_SPEED } from './config';
-import { aiStep } from './ai';
+import { aiStep, thinkInterval } from './ai';
 import { meta } from './meta';
 import { unitLevels } from './progress';
 import { isOnlineEnv } from './platform';
@@ -214,6 +214,7 @@ class BotSession implements PvpSession {
   async ready(h: PvpHandlers): Promise<void> {
     this.handlers = h;
     const skill = botSkill();
+    const think = thinkInterval(skill);
     if (onlineAvailable()) {
       // 트로피는 서버가 관리한다: 봇전 시작을 서버에 알리고 받은 id 로만 결과를 보고할 수 있다
       try {
@@ -242,8 +243,8 @@ class BotSession implements PvpSession {
       if (now < startAt || this.done) return;
       const dt = real * PLAY_SPEED;
       for (let left = dt; left > 0; left -= 0.05) game.update(Math.min(left, 0.05));
-      acc += dt; snapAcc += real; // AI 판단은 게임 시간, 스냅샷 전송은 실시간 기준
-      if (acc >= 0.35) { acc = 0; aiStep(game, skill, this.opp); }
+      acc += real; snapAcc += real; // 판단·스냅샷 모두 실시간 기준 (사람과 같은 손 속도)
+      if (acc >= think) { acc = 0; aiStep(game, skill, this.opp); }
       if (snapAcc >= PVP.reportInterval) { snapAcc = 0; h.onSnapshot(game.snapshot()); }
     }, 50);
   }

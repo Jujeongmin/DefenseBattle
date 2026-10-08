@@ -5,7 +5,7 @@
 // ============================================================
 import { Game } from '../game/src/engine';
 import { meta } from '../game/src/meta';
-import { aiStep } from '../game/src/ai';
+import { aiStep, thinkInterval } from '../game/src/ai';
 import { botSkill } from '../game/src/pvp';
 import { PVP, PLAY_SPEED, TROPHY_ROAD } from '../game/src/config';
 if (process.env.PVP_HPM) (PVP as { hpMult: number }).hpMult = Number(process.env.PVP_HPM);
@@ -26,11 +26,14 @@ function match(playerSkill: number, bot: number, levels = 1): { won: boolean; se
   a.on('attack', (p) => b.receiveAttack(p));
   b.on('attack', (p) => a.receiveAttack(p));
   let snapA: BoardSnapshot | null = null, snapB: BoardSnapshot | null = null;
-  let t = 0, act = 0, snap = 0;
+  let t = 0, actA = 0, actB = 0, snap = 0;
   while (!a.over && !b.over && t < 60 * 30) {
-    a.update(0.05); b.update(0.05); t += 0.05; act += 0.05; snap += 0.05;
+    a.update(0.05); b.update(0.05); t += 0.05; snap += 0.05;
     if (snap >= PVP.reportInterval * PLAY_SPEED) { snap = 0; snapA = a.snapshot(); snapB = b.snapshot(); }
-    if (act >= 0.35) { act = 0; aiStep(a, playerSkill, snapB); aiStep(b, bot, snapA); }
+    // 판단 간격은 실시간 기준 (게임 시간 = 실시간 x PLAY_SPEED). 플레이어는 사람 손 속도(0.7초)
+    actA += 0.05; actB += 0.05;
+    if (actA >= 0.7 * PLAY_SPEED) { actA = 0; aiStep(a, playerSkill, snapB); }
+    if (actB >= thinkInterval(bot) * PLAY_SPEED) { actB = 0; aiStep(b, bot, snapA); }
   }
   const won = b.over && !a.over ? true : a.over && !b.over ? false : a.mobs.length < b.mobs.length;
   return { won, sec: t / PLAY_SPEED };
