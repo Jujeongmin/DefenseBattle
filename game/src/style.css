@@ -779,7 +779,10 @@ b, strong { font-weight: 700; }
   font-weight: 700;
 }
 /* 나 vs 상대 몹 수 막대 (PvP) - 내 막대는 왼쪽에서, 상대 막대는 오른쪽에서 찬다 */
-.vs-hud { flex-direction: column; align-items: stretch; gap: 3px; padding: 5px 10px 6px; }
+.vs-hud { position: relative; flex-direction: column; align-items: stretch; gap: 3px; padding: 5px 100px 6px 10px; min-height: 92px; }
+.vs-deck { display: flex; align-items: center; gap: 6px; margin-top: 1px; }
+.vs-deck-label { font-size: 10px; color: var(--cream-2); white-space: nowrap; }
+@media (max-width: 350px) { .vs-deck-label { display: none; } } /* 좁은 폰: 상대 카드 8장이 미니맵 앞에서 끝나게 */
 .vs-names { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .vs-nick { min-width: 0; flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .vs-nick.opp { text-align: right; }
@@ -795,12 +798,12 @@ b, strong { font-weight: 700; }
 .vs-bar > div.warn { animation: warnBlink 0.6s steps(2) infinite; }
 .vs-bar span { position: absolute; inset: 0; text-align: center; font-size: 11px; line-height: 14px; }
 #game-frame.pvp #progress-row { display: none; } /* PvP 에선 위 VS 막대가 내 몹 수를 보여 준다 */
-/* 상대 전장: 평소엔 내 전장 오른쪽 위 작은 창, 몹 카드를 끄는 동안(.aiming) 크게 펼쳐 조준 */
+/* 상대 전장: 평소엔 VS 줄 오른쪽 끝 작은 창, 몹 카드를 끄는 동안(.aiming) 크게 펼쳐 조준 */
 #opp-canvas {
   position: absolute;
   z-index: 20;
-  top: 113px; right: 6px; /* VS 막대 아래 */
-  width: 112px; height: 112px;
+  top: 5px; right: 8px;
+  width: 82px; height: 82px;
   background: #6c9a3a;
   image-rendering: pixelated;
   border: 3px solid var(--edge);
@@ -808,18 +811,13 @@ b, strong { font-weight: 700; }
   transition: width 0.15s, height 0.15s, right 0.15s, top 0.15s;
 }
 #game-frame.aiming #opp-canvas {
-  width: min(330px, calc(100% - 24px)); height: min(330px, calc(100% - 24px));
+  width: min(330px, calc(100% - 24px)); height: auto; aspect-ratio: 1; /* 높이는 너비와 같게 (부모 VS 줄 높이를 따르지 않게) */
   right: calc((100% - min(330px, calc(100% - 24px))) / 2);
   box-shadow: 0 0 0 3px var(--red), 0 0 0 9999px rgba(10, 6, 4, 0.45);
 }
-.opp-label {
-  position: absolute; z-index: 21; top: 228px; right: 6px; width: 112px;
-  text-align: center; font-size: 10px; font-weight: 700; color: var(--cream); text-shadow: var(--outline-thin);
-  pointer-events: none;
-}
-#game-frame.aiming .opp-label { display: none; }
-#opp-deck .od-row { display: flex; justify-content: center; gap: 1px; margin-top: 2px; }
-#opp-deck .od-row .frame-sprite { width: 26px; height: 26px; background-color: rgba(26, 18, 12, 0.55); }
+#opp-deck { display: flex; gap: 6px; min-width: 0; }
+#opp-deck .od-row { display: flex; gap: 1px; }
+#opp-deck .od-row .frame-sprite { width: 22px; height: 22px; background-color: rgba(26, 18, 12, 0.55); }
 #opp-deck .od-row:first-child .frame-sprite { box-shadow: inset 0 0 0 2px var(--red); }
 #opp-canvas.hit { animation: opp-hit 0.35s; }
 @keyframes opp-hit {
@@ -849,7 +847,7 @@ b, strong { font-weight: 700; }
 }
 #game-frame.pvp { background: #3b2416; }
 #game-frame.pvp #battlefield { flex: 1 1 0; min-height: 0; aspect-ratio: auto; background: #3b2416; }
-#game-frame:not(.pvp) .opp-label { display: none; }
+
 #game-frame.pvp #controls { flex: 0 0 auto; }
 
 #battlefield {

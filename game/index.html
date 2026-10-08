@@ -48,10 +48,11 @@
               <div class="vs-bar me"><div id="my-fill"></div><span id="my-count">0/100</span></div>
               <div class="vs-bar opp"><div id="opp-fill"></div><span id="opp-count">0/100</span></div>
             </div>
+            <div class="vs-deck"><span class="vs-deck-label">상대 카드</span><div id="opp-deck"></div></div>
             <span id="opp-trophy" class="hidden"></span><span id="opp-sub" class="hidden"></span>
+            <!-- 상대 전장 미니맵: 이 줄 오른쪽 끝 (내 전장을 가리지 않음), 카드를 끄는 동안 크게 펼친다 -->
+            <canvas id="opp-canvas" width="72" height="72"></canvas>
           </div>
-          <canvas id="opp-canvas" width="72" height="72"></canvas>
-          <div class="opp-label">상대 전장<div id="opp-deck"></div></div>
         </div>
 
         <!-- 전장 -->
