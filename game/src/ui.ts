@@ -10,6 +10,7 @@ import { meta, useItem } from './meta';
 import { audio } from './audio';
 import { $, toast, spriteIcon } from './dom';
 import { icon } from './icons';
+import { OppRenderer } from './oppRender';
 import type { Job, Race, GradeKey } from './types';
 
 // 상성 % 색상
@@ -46,6 +47,7 @@ export class UI {
   private lastTickets = '';
   private sellOpen: (() => void) | null = null;
   private coachTimer: ReturnType<typeof setTimeout> | null = null;
+  private opp: OppRenderer | null = null; // PvP 상대 전장
 
   constructor(game: Game, ctx: UIContext) {
     this.game = game;
@@ -65,6 +67,8 @@ export class UI {
     game.on('incoming', () => audio.incoming());
 
     $('pvp-hud').classList.toggle('hidden', !pvp);
+    $('game-frame').classList.toggle('pvp', pvp);
+    this.opp = pvp ? new OppRenderer($<HTMLCanvasElement>('opp-canvas')) : null;
     $('attack-row').classList.toggle('hidden', !pvp);
     $('btn-speed').classList.toggle('hidden', pvp);
     $('btn-pause').classList.toggle('hidden', pvp);
@@ -125,6 +129,7 @@ export class UI {
   // ---------- 매 프레임 갱신 ----------
   update(): void {
     const g = this.game;
+    this.opp?.draw();
     const total = g.totalWaves;
     $('wave-label').textContent = total === Infinity ? `Wave ${Math.max(1, g.wave)}` : `Wave ${Math.max(1, Math.min(g.wave, total))}/${total}`;
     $('mob-race').textContent = RACE_KR[g.currentRace];
@@ -342,26 +347,7 @@ export class UI {
     $('opp-fill').style.width = pct + '%';
     $('opp-count').textContent = `${s.mobCount} / ${WAVE.gameOverMobCount}`;
     $('opp-sub').textContent = `Wave ${s.wave} · 유닛 ${s.unitCount}${s.bossHp >= 0 ? ` · 보스 ${Math.round(s.bossHp * 100)}%` : ''}`;
-    // 미니맵: 흙길 링 + 몹 점 + 유닛 구역 표시
-    const c = $<HTMLCanvasElement>('opp-canvas');
-    const ctx = c.getContext('2d')!;
-    const W = c.width;
-    ctx.fillStyle = '#4f7a2e';
-    ctx.fillRect(0, 0, W, W);
-    ctx.strokeStyle = '#b8935f';
-    ctx.lineWidth = 6;
-    const inset = (70 / MAP.size) * W;
-    ctx.strokeRect(inset, inset, W - inset * 2, W - inset * 2);
-    const zoneCenters = [[0.5, 0.3], [0.7, 0.5], [0.5, 0.7], [0.3, 0.5]];
-    for (let i = 0; i + 1 < s.units.length; i += 2) {
-      const [zx, zy] = zoneCenters[s.units[i]] ?? [0.5, 0.5];
-      ctx.fillStyle = GRADES[s.units[i + 1]]?.color ?? '#fff';
-      ctx.fillRect(zx * W - 2 + ((i * 7) % 9) - 4, zy * W - 2 + ((i * 3) % 9) - 4, 3, 3);
-    }
-    ctx.fillStyle = '#ff4a4a';
-    for (let i = 0; i + 1 < s.mobs.length; i += 2) {
-      ctx.fillRect((s.mobs[i] / 255) * W - 1.5, (s.mobs[i + 1] / 255) * W - 1.5, 3, 3);
-    }
+    this.opp?.push(s);
   }
 
   // ---------- 카운트다운 ----------

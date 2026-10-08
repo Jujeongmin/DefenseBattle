@@ -7,7 +7,7 @@ import {
   DMG_MULT, RACES, JOB_KR, FULL_RANGE_FROM_INDEX, RESEARCH_PER,
   MOB_KINDS, SKILLS, SKILL_FROM_INDEX, MERGE_COUNT, PVP, UNIT_BY_ID, STARTER_UNITS,
   UNIT_LEVEL_ATK, perkMult,
-  rollGrade, rollJob, makeRng,
+  rollGrade, rollJob, makeRng, JOBS,
 } from './config';
 import {
   meta, researchLevel, addDailyProgress, setDailyBestWave, unlockAchievement,
@@ -71,12 +71,17 @@ export interface BoardSnapshot {
   unitCount: number;
   topGrade: number;
   gold: number;
-  /** 몹 위치 (0~255 로 양자화한 x,y 쌍 평탄화) */
+  /** 몹 [id, x, y, code, size] 평탄화. x,y 는 0~255 양자화, code = 종족 | 종류<<2 | 방향<<4 */
   mobs: number[];
-  /** 유닛 (구역 id, 등급 index) 쌍 평탄화 */
+  /** 유닛 [직업 index, 등급 index, x, y] 평탄화 (x,y 는 0~255 양자화) */
   units: number[];
   bossHp: number; // 보스 체력 비율 (없으면 -1)
+  /** 형식 버전 - 2 부터 상대 전장을 스프라이트로 그릴 수 있다 */
+  v?: number;
 }
+
+/** 스냅샷 몹 code 의 종류 값 */
+export const SNAP_KIND = { normal: 0, sent: 1, boss: 2 } as const;
 
 // 이벤트 페이로드 타입
 interface EventMap {
@@ -312,9 +317,12 @@ export class Game {
   snapshot(): BoardSnapshot {
     const q = (v: number) => Math.max(0, Math.min(255, Math.round((v / MAP.size) * 255)));
     const mobs: number[] = [];
-    for (const m of this.mobs.slice(0, 120)) mobs.push(q(m.x), q(m.y));
+    for (const m of this.mobs.slice(0, 120)) {
+      const kind = m.boss ? SNAP_KIND.boss : m.kind === 'sent' || m.kind === 'elite' ? SNAP_KIND.sent : SNAP_KIND.normal;
+      mobs.push(m.id, q(m.x), q(m.y), RACES.indexOf(m.race) | (kind << 2) | (m.dir << 4), Math.round(m.size));
+    }
     const units: number[] = [];
-    for (const u of this.units.slice(0, 80)) units.push(u.zoneId, u.gradeIndex);
+    for (const u of this.units.slice(0, 80)) units.push(JOBS.indexOf(u.job), u.gradeIndex, q(u.x), q(u.y));
     const boss = this.mobs.find((m) => m.boss);
     return {
       wave: this.wave,
@@ -325,6 +333,7 @@ export class Game {
       mobs,
       units,
       bossHp: boss ? boss.hp / boss.maxHp : -1,
+      v: 2,
     };
   }
 

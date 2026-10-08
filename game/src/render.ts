@@ -6,14 +6,14 @@ import { unitSprite, mobSprite, tileSprite, uiSprite } from './assets';
 import { GRADES, UNIT_BY_ID } from './config';
 import type { Job, Mob } from './types';
 
-const JOB_TINT: Record<Job, string> = {
+export const JOB_TINT: Record<Job, string> = {
   archer: '#3fae4a', wizard: '#8e5bd8', warrior: '#c9a13b', ranger: '#3fa7c9',
   frost: '#7fe0ff', paladin: '#ffd54f', bomber: '#ff7a3d', assassin: '#a35bd8',
 };
 
 // 스프라이트 시트: 32x32 프레임, 3열(걷기) x 4행(하/좌/우/상)
-const FRAME = 32;
-const WALK_SEQ = [1, 0, 1, 2]; // 걷기 컬럼 순서 (1=정지 기준)
+export const FRAME = 32;
+export const WALK_SEQ = [1, 0, 1, 2]; // 걷기 컬럼 순서 (1=정지 기준)
 const ATTACK_SEQ = [1, 2, 0, 1]; // 공격 스윙 프레임 순서 (1=정지 기준)
 const ATTACK_ANIM_DUR = 0.1;     // engine.ts 의 u.flash 초기값과 동일해야 함
 
@@ -45,11 +45,81 @@ function hash2(a: number, b: number): number {
   return (h >>> 0) / 4294967295;
 }
 
+// 잔디 필드 + 흙길 링(오토타일) + 바깥 테두리 장식
+function drawTiles(ctx: CanvasRenderingContext2D): void {
+  const terrain = tileSprite('terrain');
+  const dirt = tileSprite('dirtpath');
+  const deco = tileSprite('deco');
+  const n = Math.ceil(MAP.size / TILE);
+  const o1 = PATH_INSET - BAND_HALF;         // 흙길 바깥 경계
+  const i1 = PATH_INSET + BAND_HALF;         // 흙길 안쪽 경계
+  const oFar = MAP.size - o1, iFar = MAP.size - i1;
+  const isPath = (gx: number, gy: number) => {
+    const cx = gx * TILE + TILE / 2, cy = gy * TILE + TILE / 2;
+    const inOuter = cx >= o1 && cx <= oFar && cy >= o1 && cy <= oFar;
+    const inInner = cx > i1 && cx < iFar && cy > i1 && cy < iFar;
+    return inOuter && !inInner;
+  };
+  for (let gy = 0; gy < n; gy++) {
+    for (let gx = 0; gx < n; gx++) {
+      if (terrain.ready) ctx.drawImage(terrain.img, SRC, SRC, SRC, SRC, gx * TILE, gy * TILE, TILE, TILE);
+      else { ctx.fillStyle = '#8bb04a'; ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE); }
+    }
+  }
+  for (let gy = 0; gy < n; gy++) {
+    for (let gx = 0; gx < n; gx++) {
+      if (!isPath(gx, gy)) continue;
+      if (!dirt.ready) { ctx.fillStyle = '#a9843f'; ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE); continue; }
+      const { cx, cy } = autoTile(isPath(gx, gy - 1), isPath(gx, gy + 1), isPath(gx - 1, gy), isPath(gx + 1, gy));
+      ctx.drawImage(dirt.img, cx * SRC, cy * SRC, SRC, SRC, gx * TILE, gy * TILE, TILE, TILE);
+    }
+  }
+  // 길 바깥 잔디에만 덤불/돌 (길 안쪽은 유닛 배치 구역이라 비워둔다)
+  if (!deco.ready) return;
+  for (let gy = 0; gy < n; gy++) {
+    for (let gx = 0; gx < n; gx++) {
+      if (isPath(gx, gy)) continue;
+      const cx = gx * TILE + TILE / 2, cy = gy * TILE + TILE / 2;
+      if (cx > o1 && cx < oFar && cy > o1 && cy < oFar) continue;
+      if (hash2(gx, gy) > 0.4) continue;
+      const idx = Math.floor(hash2(gx + 91, gy + 17) * DECO_COUNT);
+      ctx.drawImage(deco.img, idx * SRC, 0, SRC, SRC, gx * TILE, gy * TILE, TILE, TILE);
+    }
+  }
+}
+
+// 필드 비네트
+function decorate(cx: CanvasRenderingContext2D): void {
+  const S = MAP.size;
+  cx.save();
+  const g = cx.createRadialGradient(S / 2, S / 2, S * 0.25, S / 2, S / 2, S * 0.75);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.28)');
+  cx.fillStyle = g;
+  cx.fillRect(0, 0, S, S);
+  cx.restore();
+}
+
+// 타일 배경은 오프스크린에 한 번만 그려 재사용 (매 프레임 2백여 장 drawImage 방지).
+// 내 전장과 PvP 상대 전장이 함께 쓴다. 타일 로드 전이면 null.
+let bgCache: HTMLCanvasElement | null = null;
+export function fieldBackground(): HTMLCanvasElement | null {
+  if (bgCache) return bgCache;
+  if (!['terrain', 'dirtpath', 'deco'].every((n) => tileSprite(n).ready)) return null;
+  const c = document.createElement('canvas');
+  c.width = MAP.size; c.height = MAP.size;
+  const cx = c.getContext('2d')!;
+  cx.imageSmoothingEnabled = false;
+  drawTiles(cx);
+  decorate(cx);
+  bgCache = c;
+  return c;
+}
+
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private game: Game;
   private t = 0; // 애니메이션 시계(초)
-  private bg: HTMLCanvasElement | null = null; // 타일 배경 캐시 (매 프레임 2백여 장 drawImage 방지)
 
   constructor(canvas: HTMLCanvasElement, game: Game) {
     this.ctx = canvas.getContext('2d')!;
@@ -77,31 +147,10 @@ export class Renderer {
     this.drawBossBar();
   }
 
-  // 타일 배경은 오프스크린에 한 번만 그려 재사용 (타일 로드 완료 후 캐시)
   private drawBackground(): void {
-    if (this.bg) { this.ctx.drawImage(this.bg, 0, 0); return; }
-    const ready = ['terrain', 'dirtpath', 'deco'].every((n) => tileSprite(n).ready);
-    if (!ready) { this.drawTiles(this.ctx); return; }
-    const c = document.createElement('canvas');
-    c.width = MAP.size; c.height = MAP.size;
-    const cx = c.getContext('2d')!;
-    cx.imageSmoothingEnabled = false;
-    this.drawTiles(cx);
-    this.decorate(cx);
-    this.bg = c;
-    this.ctx.drawImage(c, 0, 0);
-  }
-
-  // 배경 장식: 필드 비네트
-  private decorate(cx: CanvasRenderingContext2D): void {
-    const S = MAP.size;
-    cx.save();
-    const g = cx.createRadialGradient(S / 2, S / 2, S * 0.25, S / 2, S / 2, S * 0.75);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, 'rgba(0,0,0,0.28)');
-    cx.fillStyle = g;
-    cx.fillRect(0, 0, S, S);
-    cx.restore();
+    const bg = fieldBackground();
+    if (bg) this.ctx.drawImage(bg, 0, 0);
+    else drawTiles(this.ctx);
   }
 
   // 상단 보스 체력 바 (보스가 살아있을 때)
@@ -153,49 +202,6 @@ export class Renderer {
     const progress = 1 - Math.max(0, Math.min(1, flash / ATTACK_ANIM_DUR));
     const idx = Math.min(ATTACK_SEQ.length - 1, Math.floor(progress * ATTACK_SEQ.length));
     return ATTACK_SEQ[idx];
-  }
-
-  // 잔디 필드 + 흙길 링(오토타일) + 바깥 테두리 장식
-  private drawTiles(ctx: CanvasRenderingContext2D): void {
-    const terrain = tileSprite('terrain');
-    const dirt = tileSprite('dirtpath');
-    const deco = tileSprite('deco');
-    const n = Math.ceil(MAP.size / TILE);
-    const o1 = PATH_INSET - BAND_HALF;         // 흙길 바깥 경계
-    const i1 = PATH_INSET + BAND_HALF;         // 흙길 안쪽 경계
-    const oFar = MAP.size - o1, iFar = MAP.size - i1;
-    const isPath = (gx: number, gy: number) => {
-      const cx = gx * TILE + TILE / 2, cy = gy * TILE + TILE / 2;
-      const inOuter = cx >= o1 && cx <= oFar && cy >= o1 && cy <= oFar;
-      const inInner = cx > i1 && cx < iFar && cy > i1 && cy < iFar;
-      return inOuter && !inInner;
-    };
-    for (let gy = 0; gy < n; gy++) {
-      for (let gx = 0; gx < n; gx++) {
-        if (terrain.ready) ctx.drawImage(terrain.img, SRC, SRC, SRC, SRC, gx * TILE, gy * TILE, TILE, TILE);
-        else { ctx.fillStyle = '#8bb04a'; ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE); }
-      }
-    }
-    for (let gy = 0; gy < n; gy++) {
-      for (let gx = 0; gx < n; gx++) {
-        if (!isPath(gx, gy)) continue;
-        if (!dirt.ready) { ctx.fillStyle = '#a9843f'; ctx.fillRect(gx * TILE, gy * TILE, TILE, TILE); continue; }
-        const { cx, cy } = autoTile(isPath(gx, gy - 1), isPath(gx, gy + 1), isPath(gx - 1, gy), isPath(gx + 1, gy));
-        ctx.drawImage(dirt.img, cx * SRC, cy * SRC, SRC, SRC, gx * TILE, gy * TILE, TILE, TILE);
-      }
-    }
-    // 길 바깥 잔디에만 덤불/돌 (길 안쪽은 유닛 배치 구역이라 비워둔다)
-    if (!deco.ready) return;
-    for (let gy = 0; gy < n; gy++) {
-      for (let gx = 0; gx < n; gx++) {
-        if (isPath(gx, gy)) continue;
-        const cx = gx * TILE + TILE / 2, cy = gy * TILE + TILE / 2;
-        if (cx > o1 && cx < oFar && cy > o1 && cy < oFar) continue;
-        if (hash2(gx, gy) > 0.4) continue;
-        const idx = Math.floor(hash2(gx + 91, gy + 17) * DECO_COUNT);
-        ctx.drawImage(deco.img, idx * SRC, 0, SRC, SRC, gx * TILE, gy * TILE, TILE, TILE);
-      }
-    }
   }
 
   private zonePath(i: number): void {
