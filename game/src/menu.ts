@@ -79,7 +79,7 @@ export class Menu {
           <div class="tier-badge">${icon('trophy')}</div>
           <div><div class="nm" style="color:var(--text)">${esc(meta.nick)}</div><div class="tr">${tier.kr} · ${meta.pvp.trophies}</div></div>
         </div>
-        <div class="res-chip" data-act="shop"><span class="crystal">${icon('gem')} ${meta.crystals.toLocaleString()}</span><span class="plus">+</span></div>
+        <div class="res-chip" data-act="shop"><span class="crystal">${icon('gem')} ${meta.crystals.toLocaleString()}</span><span class="plus">${icon('plus')}</span></div>
         ${vx !== null ? `<div class="res-chip" data-act="shop"><span class="trophy">VX ${vx.toLocaleString()}</span></div>` : ''}
       </div>
       <div class="lobby-body">
@@ -212,7 +212,7 @@ export class Menu {
         + Array.from({ length: DECK_SIZE - meta.deck.length }, () => '<div class="deck-slot">빈 슬롯</div>').join('');
       const el = openOverlay('modal', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>스테이지 ${id}</h2>
-        <div style="text-align:center;font-size:30px;margin:-6px 0 6px">${starIcons(stars)}</div>
+        <div style="text-align:center;font-size:22px;margin:-6px 0 6px">${starIcons(stars)}</div>
         <div class="row"><div class="ic">${icon('flag')}</div><div class="info"><div class="t">${st.waves}웨이브 · 마지막 보스</div><div class="d">등장: ${races}</div></div></div>
         <div class="row"><div class="ic">${icon('chest')}</div><div class="info"><div class="t">${stars ? `반복 보상 ${icon('gem')}${st.replayReward}` : `첫 클리어 ${icon('gem')}${st.firstReward}`}</div>
           <div class="d">${starIcons(3)} 필드 몹 40마리 이하 유지 · ${starIcons(2, 2)} 70마리 이하</div></div></div>
@@ -220,7 +220,7 @@ export class Menu {
         <div class="section-title"><span>출전 덱</span><button class="btn small blue" data-act="editDeck">덱 편집</button></div>
         <div class="deck-row">${deck}</div>
         ${meta.items.goldBooster > 0 ? `<label class="row" style="cursor:pointer"><div class="ic">${icon('bag')}</div><div class="info"><div class="t">골드 부스터 사용</div><div class="d">시작 골드 2배 · 보유 ${meta.items.goldBooster}</div></div><input type="checkbox" id="booster-chk" ${booster ? 'checked' : ''} style="width:22px;height:22px"></label>` : ''}
-        <button class="btn red close" style="font-size:22px" data-act="go">${icon('sword')} 전투 시작</button></div>`);
+        <button class="btn red close" style="font-size:18px" data-act="go">${icon('sword')} 전투 시작</button></div>`);
       const chk = el.querySelector('#booster-chk') as HTMLInputElement | null;
       if (chk) chk.onchange = () => { booster = chk.checked; };
       bindActions(el, {
@@ -435,14 +435,14 @@ export class Menu {
       if (tab === 'battle') {
         const online = onlineAvailable();
         body = `<div style="text-align:center;margin:6px 0 10px">
-            <div style="font-size:46px">${icon('trophy')}</div>
-            <div class="tier-name" style="font-size:22px;color:${tier.color}">${tier.kr}</div>
+            <div style="font-size:36px">${icon('trophy')}</div>
+            <div class="tier-name" style="font-size:18px;color:${tier.color}">${tier.kr}</div>
             <div class="trophy" style="font-size:18px">${p.trophies} 트로피</div>
             <div class="fine">${p.wins}승 ${p.losses}패 · 연승 ${p.streak}</div></div>
           <div class="row"><div class="ic">${icon('sword')}</div><div class="info"><div class="t">실시간 1:1 대결</div>
             <div class="d">같은 웨이브를 동시에 막으며 몹을 보내 상대를 무너뜨리세요. 먼저 몹 100마리가 쌓이면 패배!</div></div></div>
           <div class="row"><div class="ic">${icon('scroll')}</div><div class="info"><div class="d">연구 미적용(공정) · 유닛 레벨 적용 · 배속 1x 고정<br>승리 ${icon('trophy')}+${PVP.trophyWin} ${icon('gem')}${PVP.rewardWin} · 패배 ${icon('trophy')}-${PVP.trophyLoss} ${icon('gem')}${PVP.rewardLoss}</div></div></div>
-          <button class="btn red close" style="font-size:20px" data-act="match" ${online ? '' : 'disabled'}>${icon('sword')} 실시간 매칭</button>
+          <button class="btn red close" style="font-size:17px" data-act="match" ${online ? '' : 'disabled'}>${icon('sword')} 실시간 매칭</button>
           <button class="btn blue close" data-act="bot">${icon('robot')} AI 연습전 (트로피 변동 없음)</button>
           ${online ? '' : '<div class="fine">실시간 매칭은 Verse8 환경(게임서버 연결)에서 활성화됩니다.</div>'}`;
       } else if (tab === 'pass') {

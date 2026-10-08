@@ -203,8 +203,8 @@ export class UI {
     if (key === this.lastTickets) return;
     this.lastTickets = key;
     const chips: string[] = [];
-    if (meta.items.summonTicket > 0) chips.push(`<button class="ticket-chip" data-t="summonTicket">${icon('ticket')} 무료 소환 ×${meta.items.summonTicket}</button>`);
-    if (meta.items.mythicTicket > 0) chips.push(`<button class="ticket-chip mythic" data-t="mythicTicket">${icon('star')} 신화 확정 ×${meta.items.mythicTicket}</button>`);
+    if (meta.items.summonTicket > 0) chips.push(`<button class="ticket-chip" data-t="summonTicket" title="무료 소환권" aria-label="무료 소환권">${icon('ticket')}×${meta.items.summonTicket}</button>`);
+    if (meta.items.mythicTicket > 0) chips.push(`<button class="ticket-chip mythic" data-t="mythicTicket" title="신화 확정 소환권" aria-label="신화 확정 소환권">${icon('star')}×${meta.items.mythicTicket}</button>`);
     row.innerHTML = chips.join('');
     row.querySelectorAll<HTMLButtonElement>('[data-t]').forEach((b) => {
       b.onclick = () => {
