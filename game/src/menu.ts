@@ -4,7 +4,7 @@
 import {
   RESEARCH, researchCost, DAILY_QUESTS, ACHIEVEMENTS, PRODUCTS, ITEM_KR,
   UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, UNIT_PERK_LEVELS, unitUpgradeCost, SKILL_DESC, SKILL_KR,
-  DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, STAGES_PER_CHAPTER, RACE_KR,
+  DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, STAGES_PER_CHAPTER,
   SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, PVP,
 } from './config';
 import { meta, saveMeta, researchLevel, currentSeasonId } from './meta';
@@ -207,16 +207,17 @@ export class Menu {
     const stars = stageStars(id);
     let booster = false;
     const draw = () => {
-      const races = (st.races ?? ['troll', 'orc', 'undead']).map((r) => `${raceIcon(r as Race)} ${RACE_KR[r as keyof typeof RACE_KR]}`).join(' · ');
+      const races = (st.races ?? ['troll', 'orc', 'undead']).map((r) => raceIcon(r as Race)).join('');
       const deck = meta.deck.map((j) => `<div class="deck-slot filled">${spriteIcon(unitIconUrl(j))}<div>${UNIT_BY_ID[j].kr}</div></div>`).join('')
         + Array.from({ length: DECK_SIZE - meta.deck.length }, () => '<div class="deck-slot">빈 슬롯</div>').join('');
       const el = openOverlay('modal', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>스테이지 ${id}</h2>
         <div style="text-align:center;font-size:22px;margin:-6px 0 6px">${starIcons(stars)}</div>
-        <div class="row"><div class="ic">${icon('flag')}</div><div class="info"><div class="t">${st.waves}웨이브 · 마지막 보스</div><div class="d">등장: ${races}</div></div></div>
-        <div class="row"><div class="ic">${icon('chest')}</div><div class="info"><div class="t">${stars ? `반복 보상 ${icon('gem')}${st.replayReward}` : `첫 클리어 ${icon('gem')}${st.firstReward}`}</div>
-          <div class="d">${starIcons(3)} 필드 몹 40마리 이하 유지 · ${starIcons(2, 2)} 70마리 이하</div></div></div>
-        ${st.unlocks && !unitUnlocked(st.unlocks) ? `<div class="row" style="border:2px solid var(--gold)">${spriteIcon(unitIconUrl(st.unlocks), 'frame-sprite', 'width:40px;height:40px')}<div class="info"><div class="t">클리어 시 ${UNIT_BY_ID[st.unlocks].kr} 해금!</div><div class="d">${SKILL_DESC[st.unlocks]}</div></div></div>` : ''}
+        <div class="stage-facts">
+          <span>${icon('flag')} ${st.waves}</span><span>${icon('skull')} 보스</span><span class="races">${races}</span>
+          <span>${icon('gem')} ${stars ? st.replayReward : st.firstReward}</span>
+        </div>
+        ${st.unlocks && !unitUnlocked(st.unlocks) ? `<div class="row" style="border:2px solid var(--gold)">${spriteIcon(unitIconUrl(st.unlocks), 'frame-sprite', 'width:40px;height:40px')}<div class="info"><div class="t">${UNIT_BY_ID[st.unlocks].kr} ${icon('lock')} → NEW</div></div></div>` : ''}
         <div class="section-title"><span>출전 덱</span><button class="btn small blue" data-act="editDeck">덱 편집</button></div>
         <div class="deck-row">${deck}</div>
         ${meta.items.goldBooster > 0 ? `<label class="row" style="cursor:pointer"><div class="ic">${icon('bag')}</div><div class="info"><div class="t">골드 부스터 사용</div><div class="d">시작 골드 2배 · 보유 ${meta.items.goldBooster}</div></div><input type="checkbox" id="booster-chk" ${booster ? 'checked' : ''} style="width:22px;height:22px"></label>` : ''}
@@ -269,16 +270,15 @@ export class Menu {
         }
         return `<div class="unit-card ${inDeck ? 'in-deck' : ''} ${unlocked ? '' : 'locked'}">
           <div class="head">${spriteIcon(unitIconUrl(u.id, unlocked ? Math.min(5, lv >> 1) : 0))}
-            <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : u.unlockStage ? `${icon('lock')} ${u.unlockStage} 클리어` : icon('lock')}</div><div class="role">${u.role}</div></div></div>
+            <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : u.unlockStage ? `${icon('lock')} ${u.unlockStage} 클리어` : icon('lock')}</div></div></div>
           <div class="lv-pips">${pips}</div>
-          <div class="sk"><b>${SKILL_KR[u.id]}</b> · ${SKILL_DESC[u.id]}</div>
+          <div class="sk" data-act="info" data-job="${u.id}"><b>${SKILL_KR[u.id]}</b> <span class="info-dot">?</span></div>
           <div class="acts">${acts}</div></div>`;
       }).join('');
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>유닛 <span class="crystal" style="font-size:16px">${icon('gem')} ${meta.crystals}</span></h2>
-        <div class="fine" style="margin:-6px 0 8px">덱 ${meta.deck.length}/${DECK_SIZE} · 소환 시 덱에서 무작위로 등장 · 4구역에 1종씩 배치</div>
+        <div class="fine" style="margin:-6px 0 8px">덱 ${meta.deck.length}/${DECK_SIZE}</div>
         <div class="deck-row">${deck}</div>
-        <div class="fine" style="margin-bottom:8px">레벨당 공격력 +8% · Lv5/Lv10 스킬 강화(퍽)</div>
         <div class="unit-grid">${cards}</div></div>`, () => { this.render(); after?.(); });
       bindActions(el, {
         toggle: (b) => {
@@ -287,6 +287,7 @@ export class Menu {
           draw();
         },
         up: (b) => { if (upgradeUnit(b.dataset.job as Job)) { audio.merge(); draw(); } },
+        info: (b) => { const j = b.dataset.job as Job; toast(`<b>${SKILL_KR[j]}</b><br>${SKILL_DESC[j]}`, 3200); },
         buy: async (b) => {
           const j = b.dataset.job as Job;
           if (await confirmModal('유닛 해금', `${UNIT_BY_ID[j].kr}을(를) ${icon('gem')}${UNIT_BY_ID[j].unlockCrystals}로 해금할까요?`)) {
@@ -313,7 +314,6 @@ export class Menu {
       }).join('');
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>연구소 <span class="crystal" style="font-size:16px">${icon('gem')} ${meta.crystals}</span></h2>
-        <div class="fine" style="margin:-6px 0 10px">캠페인·무한 모드에 적용 (PvP 는 공정성을 위해 미적용)</div>
         ${rows}</div>`, () => this.render());
       bindActions(el, {
         res: (b) => {
@@ -462,7 +462,6 @@ export class Menu {
         body = `<div class="pass-head"><div class="lvl">${t}</div><div style="flex:1">
             <div class="fine" style="text-align:left">시즌 ${currentSeasonId().slice(1)} · 다음 단계까지 ${SEASON_XP_PER_TIER - inTier} XP</div>
             <div class="pass-bar"><div style="width:${t >= SEASON_TIERS.length ? 100 : (inTier / SEASON_XP_PER_TIER) * 100}%"></div></div></div></div>
-          <div class="fine" style="margin-bottom:8px">PvP 승리 +${PVP.seasonXpWin}XP · 패배 +${PVP.seasonXpLoss}XP · 캠페인 클리어 +30XP</div>
           ${meta.season.premium ? '' : `<button class="btn gold close" data-act="buyPass" style="margin:0 0 10px">${icon('trophy')} 프리미엄 패스 구매</button>`}
           <div class="pass-row"><div></div><div class="fine">무료</div><div class="fine trophy">프리미엄</div></div>${rows}`;
       } else {

@@ -2,7 +2,7 @@
 //  게임 화면 DOM UI - 상단바/소환/강화/합성·판매/소환권/PvP HUD/결과/튜토리얼
 // ============================================================
 import {
-  JOB_KR, RACE_KR, GRADES, DMG_MULT, ECONOMY, WAVE, PVP, SKILL_KR, GRADE_INDEX, MERGE_COUNT, PLAY_SPEED,
+  JOB_KR, RACE_KR, GRADES, DMG_MULT, ECONOMY, WAVE, PVP, GRADE_INDEX, MERGE_COUNT, PLAY_SPEED,
 } from './config';
 import { MAP, Game, type BoardSnapshot } from './engine';
 import { mobPortraitSrc, unitIconUrl } from './assets';
@@ -13,12 +13,6 @@ import { icon } from './icons';
 import { OppRenderer } from './oppRender';
 import type { Job, Race, GradeKey } from './types';
 
-// 상성 % 색상
-function pctColor(pct: number): string {
-  if (pct >= 100) return '#7ee87e';
-  if (pct >= 80) return '#ffd54f';
-  return '#ff7b7b';
-}
 
 export interface UIContext {
   kind: 'stage' | 'endless' | 'pvp';
@@ -230,17 +224,16 @@ export class UI {
       const top = units.reduce((g, u) => Math.max(g, u.gradeIndex), 0);
       const level = this.game.levels[job] || 1;
       const cost = this.game.upgradeCost(job);
-      const p = Math.round(DMG_MULT[job][this.game.currentRace] * 100);
+      const strong = DMG_MULT[job][this.game.currentRace] >= 1; // 상성: 유리 ▲ / 불리 ▼
       const div = document.createElement('div');
       div.className = `stack${count ? '' : ' empty'}`;
       div.style.borderColor = count ? GRADES[top].color : '';
       div.innerHTML = `
         ${merges.has(job) ? '<div class="merge-tag">합성!</div>' : ''}
         <div class="count">${count}</div>
-        <div class="dmg-pct" style="color:${pctColor(p)}">${p}%</div>
+        <div class="dmg-pct">${icon(strong ? 'up' : 'down')}</div>
         ${spriteIcon(unitIconUrl(job, top))}
         <div class="name">${JOB_KR[job]} Lv.${level}</div>
-        <div class="skill">${SKILL_KR[job]}</div>
         <button class="up-btn" data-job="${job}">강화 ${icon('coin')}${cost}</button>`;
       const btn = div.querySelector('.up-btn') as HTMLButtonElement;
       btn.disabled = count === 0 || this.game.gold < cost;
@@ -299,7 +292,7 @@ export class UI {
             <button data-mode="merge" class="merge ${mode === 'merge' ? 'active' : ''}">${icon('hammer')} 합성${mergeJobs.size ? ' •' : ''}</button>
             <button data-mode="sell" class="sell ${mode === 'sell' ? 'active' : ''}">${icon('coin')} 판매</button>
           </div>
-          <div class="sell-hint">${mode === 'merge' ? `같은 유닛·등급 ${MERGE_COUNT}개 → 상위 등급 1개 (카드를 탭)` : '골드가 급할 때 판매해 소환/강화에 투자하세요'}</div>
+          <div class="sell-hint">${mode === 'merge' ? `같은 카드 ${MERGE_COUNT}장 → 한 등급 위로` : '팔아서 골드 얻기'}</div>
           <div class="grade-row">${cards}</div>
           <div class="job-tabs">
             ${jobs().map((j) => `<button data-job="${j}" class="${j === job ? 'active' : ''}">${JOB_KR[j]}${mergeJobs.has(j) ? '<span class="dot"></span>' : ''}</button>`).join('')}
@@ -388,7 +381,7 @@ export class UI {
     const stars = v.stars !== undefined
       ? `<div class="stars">${[0, 1, 2].map((i) => `<span class="${i < v.stars! ? '' : 'off'}">${icon('star')}</span>`).join('')}</div>` : '';
     const unlock = v.unlocked ? `<div class="unlock">${spriteIcon(unitIconUrl(v.unlocked, 2))}
-      <div><div style="font-size:18px">새 유닛 해금: ${JOB_KR[v.unlocked]}</div><div class="fine" style="text-align:left">로비 → 유닛에서 덱에 편성하세요</div></div></div>` : '';
+      <div><div style="font-size:18px">새 유닛 해금: ${JOB_KR[v.unlocked]}</div><div class="fine" style="text-align:left">덱에 넣어 보세요</div></div></div>` : '';
     panel.innerHTML = `<div class="dialog result">
       <h2 class="${v.win ? 'win' : 'lose'}">${v.title}</h2>
       ${stars}

@@ -150,7 +150,7 @@ function onGameOver(g: Game, d: GameOverData): void {
       title: '위기!',
       sub: d.reason,
       rewards: [],
-      extraHtml: '<div class="fine">광고를 보고 필드의 몹을 모두 정리한 뒤 이어서 싸울 수 있어요 (1회)</div>',
+      extraHtml: '<div class="fine">광고 보고 몹을 모두 지우고 계속 (1회)</div>',
       buttons: [
         { label: `${icon('tv')} 부활하고 계속하기`, cls: 'green', action: async () => {
           if (await showRewarded('revive') && g.revive()) { u.hideResult(); audio.merge(); }
@@ -188,7 +188,7 @@ function finishSolo(u: UI, d: GameOverData): void {
       stars: d.cleared ? stars : undefined,
       rewards: crystals ? [`${icon('gem')} +${crystals}`] : [],
       unlocked: res.unlocked,
-      extraHtml: d.cleared ? '' : '<div class="fine">TIP: 유닛 레벨업 · 연구 · 상성(%) 높은 유닛 배치 · 합성 타이밍을 노려보세요</div>',
+      extraHtml: '',
       buttons: [],
     };
     if (crystals > 0 && rewardedAvailable()) view.buttons.push({ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward(crystals) });
