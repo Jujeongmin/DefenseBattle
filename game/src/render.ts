@@ -432,10 +432,8 @@ export class Renderer {
         ctx.fillStyle = JOB_TINT[u.job];
         ctx.fillRect(u.x - s / 2, u.y - s / 2, s, s);
       }
-      if (u.flash > 0) {
-        ctx.fillStyle = 'rgba(255,255,255,0.35)';
-        ctx.fillRect(u.x - s / 2, u.y - s / 2, s, s);
-      }
+      // 공격 피드백은 스윙 프레임으로 충분하다. 스프라이트 칸 전체를 흰색으로 덮으면
+      // 투명 영역까지 칠해져 공격마다 흰 네모가 깜빡인다.
     }
   }
 
