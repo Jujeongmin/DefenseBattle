@@ -6,6 +6,7 @@ import {
   UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, UNIT_PERK_LEVELS, unitUpgradeCost, SKILL_DESC, SKILL_KR,
   DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, STAGES_PER_CHAPTER,
   SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, PVP, FEATURE_KR, productEfficiency,
+  V1, CAMPAIGN, TROPHY_ROAD, PVP_TIERS,
 } from './config';
 import { meta, saveMeta, researchLevel, currentSeasonId } from './meta';
 import { getPlatform } from './platform';
@@ -15,6 +16,7 @@ import { icon, stars as starIcons } from './icons';
 import {
   stageStars, stageUnlocked, nextStageId, chapterStars, chapterUnlocked, CHAPTER_STAR_GOALS,
   chapterStarReward, starRewardClaimed, claimStarReward, featureUnlocked, featureNew, markFeatureSeen,
+  nextRoadStep, roadUnlockAt, claimRoad,
   unitUnlocked, unitLevel, buyUnit, canUpgradeUnit, upgradeUnit, toggleDeck,
 } from './progress';
 import {
@@ -66,6 +68,7 @@ export class Menu {
 
   // ======================= 로비 =======================
   private render(): void {
+    if (V1) { this.renderV1(); return; }
     const root = $('main-menu');
     const tier = pvpTier(meta.pvp.trophies);
     const next = STAGE_BY_ID[nextStageId()];
@@ -142,6 +145,83 @@ export class Menu {
     if (fresh.length) toast(`새 메뉴 열림: <b>${fresh.map((f) => FEATURE_KR[f]).join(', ')}</b>`, 2800);
   }
 
+  // ======================= v1 로비: 대전 + 트로피 로드 =======================
+  private renderV1(): void {
+    const root = $('main-menu');
+    // 도달했지만 아직 안 받은 로드 보상 (이전 버전 저장본 등)
+    const got = claimRoad();
+    if (got.length) toast(`트로피 로드 보상: ${got.map((s) => (s.unit ? UNIT_BY_ID[s.unit].kr : `${icon('gem')}${s.crystals}`)).join(' · ')}`, 3200);
+    const p = meta.pvp;
+    const tier = pvpTier(p.trophies);
+    const pvpOn = featureUnlocked('pvp');
+    const next = nextRoadStep();
+    const prevAt = [...TROPHY_ROAD].reverse().find((s) => s.at <= p.trophies)?.at ?? 0;
+    const pct = next ? Math.max(0, Math.min(100, ((p.trophies - prevAt) / (next.at - prevAt)) * 100)) : 100;
+    const nextIc = next ? (next.unit ? spriteIcon(unitIconUrl(next.unit), 'frame-sprite road-unit') : `${icon('gem')}${next.crystals}`) : icon('crown');
+    const parade = meta.deck.map((j) => spriteIcon(unitIconUrl(j, Math.min(5, unitLevel(j) >> 1)))).join('');
+    const campDone = CAMPAIGN.filter((s) => stageStars(s.id) > 0).length;
+    const dot = '<span class="dot"></span>';
+    const fresh = (['units', 'pvp'] as const).filter((f) => featureNew(f) && !this.announced.has(f));
+    root.innerHTML = `
+      <div class="lobby-top">
+        <div class="profile-chip" data-act="profile" style="color:${tier.color}">
+          <div class="tier-badge">${icon('trophy')}</div>
+          <div><div class="nm" style="color:var(--text)">${esc(meta.nick)}</div><div class="tr">${tier.kr} · ${p.trophies}</div></div>
+        </div>
+        <div class="res-chip"><span class="crystal">${icon('gem')} ${meta.crystals.toLocaleString()}</span></div>
+        <button class="gear-btn" data-act="settings" aria-label="설정">${icon('settings')}</button>
+      </div>
+      <div class="lobby-body v1">
+        <h1 class="game-title">랜덤 디펜스</h1>
+        <div class="parade">${parade}</div>
+        ${pvpOn ? `<div class="play-card arena-card">
+          <div class="arena-name tier-name" style="color:${tier.color}">${icon('trophy')} ${tier.kr} 아레나 <span>${p.trophies}</span></div>
+          <div class="road-bar"><div style="width:${pct}%"></div><span class="road-next">${nextIc}${next ? ` <small>${next.at}</small>` : ''}</span></div>
+          <button class="btn red play-btn" data-act="battle">${icon('sword')} 대전 시작</button>
+          <div class="arena-sub">${p.wins}승 ${p.losses}패${p.streak > 1 ? ` · ${p.streak}연승` : ''}</div>
+        </div>` : `<div class="play-card">
+          <button class="btn red play-btn" data-act="tutorial">${icon('play')} 튜토리얼 시작</button>
+        </div>`}
+        ${pvpOn ? `<button class="btn small blue camp-btn" data-act="stages">${icon('map')} 연습 스테이지 ${campDone}/${CAMPAIGN.length}</button>` : ''}
+      </div>
+      <nav class="lobby-nav">
+        ${featureUnlocked('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}</span>유닛${featureNew('units') ? NEW_TAG : UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : ''}</button>` : ''}
+        ${pvpOn ? `<button data-act="road"><span class="ic">${icon('trophy')}</span>트로피 로드</button>` : ''}
+        ${pvpOn ? `<button data-act="rank"><span class="ic">${icon('medal')}</span>랭킹</button>` : ''}
+      </nav>`;
+    bindActions(root, {
+      profile: () => this.openProfile(),
+      settings: () => this.openSettings(),
+      units: () => { markFeatureSeen('units'); this.openUnits(); },
+      stages: () => this.openStages(),
+      tutorial: () => this.openStageInfo('1-1'),
+      battle: () => { markFeatureSeen('pvp'); this.startMatchmaking(); },
+      road: () => this.openRoad(),
+      rank: () => this.openPvp('rank'),
+    });
+    root.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => audio.button(), { capture: true }));
+    for (const f of fresh) this.announced.add(f);
+    if (fresh.length) toast(`새로 열림: <b>${fresh.map((f) => FEATURE_KR[f]).join(', ')}</b>`, 2800);
+  }
+
+  // 트로피 로드: 아레나 구간과 보상 (도달하면 대전 결과에서 자동 수령)
+  private openRoad(): void {
+    const p = meta.pvp;
+    const rows = TROPHY_ROAD.map((s) => {
+      const done = meta.roadClaimed.includes(s.at);
+      const reached = p.trophies >= s.at;
+      const arena = PVP_TIERS.find((t) => t.min === s.at);
+      const reward = s.unit ? `${spriteIcon(unitIconUrl(s.unit), 'frame-sprite road-unit')} ${UNIT_BY_ID[s.unit].kr}` : `${icon('gem')} ${s.crystals}`;
+      return `${arena ? `<div class="road-arena tier-name" style="color:${arena.color}">${arena.kr} 아레나</div>` : ''}<div class="road-row ${done ? 'done' : reached ? 'ready' : ''}">
+        <span class="road-at">${icon('trophy')}${s.at}</span><span class="road-rw">${reward}</span>
+        <span class="road-st">${done ? icon('check') : reached ? '' : icon('lock')}</span></div>`;
+    }).join('');
+    openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
+      <h2>트로피 로드</h2>
+      <div class="fine" style="margin:-4px 0 10px">${icon('trophy')} ${p.trophies} · 대전에서 이기면 트로피가 올라요</div>
+      ${rows}</div>`, () => this.render());
+  }
+
   // ======================= 설정 =======================
   private openSettings(): void {
     const draw = () => {
@@ -201,7 +281,7 @@ export class Menu {
     const draw = () => {
       const c = this.selectedChapter;
       const chStars = chapterStars(c);
-      const nodes = STAGES.filter((s) => s.chapter === c).map((s) => {
+      const nodes = (V1 ? CAMPAIGN : STAGES.filter((s) => s.chapter === c)).map((s) => {
         const st = stageStars(s.id);
         const open = stageUnlocked(s.id);
         const isNext = open && st === 0;
@@ -216,11 +296,11 @@ export class Menu {
       }).join('');
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>스테이지</h2>
-        <div class="tab-row">${CHAPTERS.map((ch) => `<button data-act="chap" data-n="${ch.n}" class="${ch.n === c ? 'active' : ''}">${chapterUnlocked(ch.n) ? '' : icon('lock') + ' '}${ch.n}. ${ch.kr}</button>`).join('')}</div>
+        ${V1 ? '' : `<div class="tab-row">${CHAPTERS.map((ch) => `<button data-act="chap" data-n="${ch.n}" class="${ch.n === c ? 'active' : ''}">${chapterUnlocked(ch.n) ? '' : icon('lock') + ' '}${ch.n}. ${ch.kr}</button>`).join('')}</div>`}
         <div class="fine" style="margin:-4px 0 10px">${CHAPTERS[c - 1].desc} · 스테이지당 ${CHAPTERS[c - 1].waves}웨이브</div>
         <div class="stage-grid">${nodes}</div>
-        <div class="section-title"><span>챕터 별 보상</span><span>${icon('star')} ${chStars}/30</span></div>
-        <div class="star-goals">${goals}</div></div>`, () => this.render());
+        ${V1 ? '' : `<div class="section-title"><span>챕터 별 보상</span><span>${icon('star')} ${chStars}/30</span></div>
+        <div class="star-goals">${goals}</div>`}</div>`, () => this.render());
       bindActions(el, {
         chap: (b) => { this.selectedChapter = Number(b.dataset.n); draw(); },
         stage: (b) => {
@@ -305,7 +385,7 @@ export class Menu {
         }
         return `<div class="unit-card ${inDeck ? 'in-deck' : ''} ${unlocked ? '' : 'locked'}">
           <div class="head">${spriteIcon(unitIconUrl(u.id, unlocked ? Math.min(5, lv >> 1) : 0))}
-            <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : u.unlockStage ? `${icon('lock')} ${u.unlockStage} 클리어` : icon('lock')}</div></div></div>
+            <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : V1 && roadUnlockAt(u.id) ? `${icon('lock')} ${icon('trophy')}${roadUnlockAt(u.id)}` : u.unlockStage ? `${icon('lock')} ${u.unlockStage} 클리어` : icon('lock')}</div></div></div>
           <div class="lv-pips">${pips}</div>
           <div class="sk" data-act="info" data-job="${u.id}"><b>${SKILL_KR[u.id]}</b> <span class="info-dot">?</span></div>
           <div class="acts">${acts}</div></div>`;
@@ -466,7 +546,7 @@ export class Menu {
   }
 
   // ======================= PvP =======================
-  private openPvp(tab: 'battle' | 'pass' | 'rank' = 'battle'): void {
+  openPvp(tab: 'battle' | 'pass' | 'rank' = 'battle'): void {
     const draw = async () => {
       const p = meta.pvp;
       const tier = pvpTier(p.trophies);
@@ -505,7 +585,7 @@ export class Menu {
         <h2>PvP 아레나</h2>
         <div class="tab-row">
           <button data-act="tab" data-t="battle" class="${tab === 'battle' ? 'active' : ''}">대전</button>
-          <button data-act="tab" data-t="pass" class="${tab === 'pass' ? 'active' : ''}">시즌 패스${this.seasonClaimable() ? ' •' : ''}</button>
+          ${V1 ? '' : `<button data-act="tab" data-t="pass" class="${tab === 'pass' ? 'active' : ''}">시즌 패스${this.seasonClaimable() ? ' •' : ''}</button>`}
           <button data-act="tab" data-t="rank" class="${tab === 'rank' ? 'active' : ''}">랭킹</button></div>
         <div id="pvp-body">${body}</div></div>`, () => this.render());
       bindActions(el, {

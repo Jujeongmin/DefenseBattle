@@ -216,6 +216,8 @@ export interface MetaData {
   tutorial: number;
   /** 로비에서 이미 확인한(NEW 표시를 지운) 기능 */
   seenFeatures: string[];
+  /** 받은 트로피 로드 보상 (트로피 값) */
+  roadClaimed: number[];
   nick: string;
   adRemoved: boolean;
 }

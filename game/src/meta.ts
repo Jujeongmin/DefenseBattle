@@ -41,6 +41,7 @@ function freshMeta(): MetaData {
     stages: {},
     tutorial: 0,
     seenFeatures: [],
+    roadClaimed: [],
     nick: `용사${Math.floor(1000 + Math.random() * 9000)}`,
     adRemoved: false,
   };
@@ -62,6 +63,7 @@ function load(): MetaData {
   m.oneTime = m.oneTime || {};
   m.units = Object.assign(fresh.units, m.units || {});
   m.stages = m.stages || {};
+  m.roadClaimed = Array.isArray(m.roadClaimed) ? m.roadClaimed : [];
   // 이 필드가 생기기 전 저장본: 이미 열린 메뉴에 NEW 가 갑자기 뜨지 않게 해금된 것은 본 것으로 둔다
   if (!Array.isArray(m.seenFeatures)) {
     m.seenFeatures = Object.entries(FEATURE_UNLOCK).filter(([, st]) => (m.stages[st] || 0) > 0).map(([f]) => f);

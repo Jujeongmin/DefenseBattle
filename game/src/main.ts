@@ -12,7 +12,7 @@ import { audio } from './audio';
 import { getPlatform } from './platform';
 import { meta, saveMeta, reloadMeta, useItem } from './meta';
 import { crystalReward, starsFor, STAGE_BY_ID, STAGES, PVP, PLAY_SPEED } from './config';
-import { completeStage, stageOptions, endlessOptions, stageUnlocked, unitLevels } from './progress';
+import { completeStage, stageOptions, endlessOptions, stageUnlocked, unitLevels, claimRoad } from './progress';
 import { syncPurchases, addSeasonXp } from './shop';
 import { showRewarded, rewardedAvailable, maybeInterstitial } from './ads';
 import type { PvpSession } from './pvp';
@@ -119,14 +119,18 @@ function showPvpResult(g: Game, u: UI, s: PvpSession, r: { won: boolean; trophyD
     if (r.won) { meta.pvp.wins += 1; meta.pvp.streak += 1; meta.pvp.lossStreak = 0; }
     else { meta.pvp.losses += 1; meta.pvp.streak = 0; meta.pvp.lossStreak = (meta.pvp.lossStreak ?? 0) + 1; }
   }
+  const road = claimRoad(); // 트로피 로드 도달 보상 (보석 / 유닛 해금)
   saveMeta();
   audio.gameEnd(r.won);
   const rewards = [`${icon('trophy')} ${r.trophyDelta >= 0 ? '+' : ''}${r.trophyDelta}`, `${icon('gem')} +${crystals}`];
+  for (const st of road) if (st.crystals) rewards.push(`${icon('gem')} +${st.crystals} 로드`);
+  const roadUnit = road.find((st) => st.unit)?.unit;
   u.showResult({
     win: r.won,
     title: r.won ? `${icon('trophy')} 승리!` : '패배',
     sub: `${s.match.opponent.nick} · Wave ${g.wave}${r.reason === 'leave' && r.won ? ' · 상대 이탈' : ''}`,
     rewards,
+    unlocked: roadUnit,
     buttons: [
       ...(rewardedAvailable() ? [{ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward(crystals) }] : []),
       { label: `${icon('sword')} 다시 대전`, cls: 'red', action: () => { void exitGame(true).then(() => menu.quickMatch()); } },

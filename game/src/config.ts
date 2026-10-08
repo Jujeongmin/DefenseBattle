@@ -7,6 +7,11 @@ import type {
   Job, Race, GradeKey, Grade, ResearchDef, DailyQuestDef, AchievementDef, ResearchKey, ItemKey, BaseJob,
 } from './types';
 
+// ---------- v1 프로토타입 빌드 (Voodoo 제출용) ----------
+// true: 결제·광고·퀘스트·시즌 패스·무한 모드·연구를 숨기고 '대전 + 트로피 로드' 하나에 집중한다.
+//       캠페인은 튜토리얼/기초 학습용 앞 5스테이지만, 유닛 해금은 트로피 로드에서.
+export const V1 = true;
+
 // ---------- 유닛 (직업) ----------
 // base: 투사체 형태 (+ sheet 가 없으면 스프라이트 시트), sheet: 전용 시트 이름 (public/sprites/{sheet}_{등급}.png)
 // hue: 색조 회전(도) - 전용 아트가 없을 때의 임시 변형
@@ -405,10 +410,32 @@ export const STAGES: StageDef[] = CHAPTERS.flatMap((ch, ci) =>
       races: index === 0 ? ['orc'] : index === 1 ? ['undead'] : index === 2 ? ['troll'] : undefined,
       firstReward: 40 + index * 12,
       replayReward: 10 + index * 3,
-      unlocks: UNITS.find((u) => u.unlockStage === id)?.id,
+      unlocks: V1 ? undefined : UNITS.find((u) => u.unlockStage === id)?.id, // v1 은 트로피 로드에서 해금
     };
   }),
 );
+/** 플레이할 수 있는 캠페인 스테이지 (v1 은 튜토리얼 + 기초 학습용 앞 5개) */
+export const CAMPAIGN: StageDef[] = V1 ? STAGES.slice(0, 5) : STAGES;
+
+// ---------- 트로피 로드 (v1 의 진행 축) - 트로피가 오르면 보석과 유닛 해금 ----------
+export interface RoadStep { at: number; crystals?: number; unit?: Job }
+export const TROPHY_ROAD: RoadStep[] = [
+  { at: 50, crystals: 100 },
+  { at: 100, unit: 'ranger' },
+  { at: 150, crystals: 150 },
+  { at: 200, unit: 'frost' },
+  { at: 300, crystals: 200 },
+  { at: 400, unit: 'paladin' },
+  { at: 500, crystals: 300 },
+  { at: 650, unit: 'bomber' },
+  { at: 800, crystals: 400 },
+  { at: 900, unit: 'assassin' },
+  { at: 1100, crystals: 500 },
+  { at: 1400, crystals: 800 },
+  { at: 1700, crystals: 1000 },
+  { at: 2000, crystals: 1500 },
+];
+
 export const STAGE_BY_ID: Record<string, StageDef> = Object.fromEntries(STAGES.map((s) => [s.id, s]));
 // 별 기준: 판 도중 필드 몹 최대치 (적을수록 안정적인 방어)
 export const STAR_PEAK = { three: 40, two: 70 };
@@ -416,7 +443,10 @@ export function starsFor(peakMobs: number): number {
   return peakMobs <= STAR_PEAK.three ? 3 : peakMobs <= STAR_PEAK.two ? 2 : 1;
 }
 // 기능 해금 스테이지 - 로비 메뉴는 해금 전엔 보이지 않고, 해금되면 NEW 로 하나씩 등장한다
-export const FEATURE_UNLOCK = { units: '1-1', research: '1-2', quests: '1-3', pvp: '1-5', endless: '1-10' } as const;
+// v1: 1-1 튜토리얼을 마치면 바로 대전/유닛이 열리고, 연구·퀘스트·무한 모드는 쓰지 않는다 ('off' = 열리지 않음)
+export const FEATURE_UNLOCK: Record<'units' | 'research' | 'quests' | 'pvp' | 'endless', string> = V1
+  ? { units: '1-1', research: 'off', quests: 'off', pvp: '1-1', endless: 'off' }
+  : { units: '1-1', research: '1-2', quests: '1-3', pvp: '1-5', endless: '1-10' };
 export const FEATURE_KR: Record<keyof typeof FEATURE_UNLOCK, string> = {
   units: '유닛', research: '연구', quests: '퀘스트', pvp: 'PvP 대전', endless: '무한 모드',
 };

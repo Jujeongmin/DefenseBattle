@@ -3,8 +3,8 @@
 //  (메타 데이터를 읽고 쓰는 규칙을 한 곳에 모아 UI 와 분리)
 // ============================================================
 import {
-  STAGES, STAGE_BY_ID, UNITS, UNIT_BY_ID, DECK_SIZE, UNIT_MAX_LEVEL, unitUpgradeCost,
-  FEATURE_UNLOCK, CHAPTERS, STAGES_PER_CHAPTER,
+  STAGES, STAGE_BY_ID, CAMPAIGN, UNITS, UNIT_BY_ID, DECK_SIZE, UNIT_MAX_LEVEL, unitUpgradeCost,
+  FEATURE_UNLOCK, CHAPTERS, STAGES_PER_CHAPTER, TROPHY_ROAD, type RoadStep,
 } from './config';
 import { meta, saveMeta } from './meta';
 import type { Job, GameOptions } from './types';
@@ -25,8 +25,8 @@ export function stageUnlocked(id: string): boolean {
 }
 /** 다음에 도전할 스테이지 (모두 클리어 시 마지막) */
 export function nextStageId(): string {
-  const s = STAGES.find((x) => !stageCleared(x.id));
-  return (s ?? STAGES[STAGES.length - 1]).id;
+  const s = CAMPAIGN.find((x) => !stageCleared(x.id));
+  return (s ?? CAMPAIGN[CAMPAIGN.length - 1]).id;
 }
 export function chapterStars(chapter: number): number {
   return STAGES.filter((s) => s.chapter === chapter).reduce((n, s) => n + stageStars(s.id), 0);
@@ -173,4 +173,27 @@ export function stageOptions(id: string, goldBooster: boolean): Partial<GameOpti
 }
 export function endlessOptions(goldBooster: boolean): Partial<GameOptions> {
   return { mode: 'solo', deck: [...meta.deck], unitLevels: unitLevels(), startGoldMult: goldBooster ? 2 : 1 };
+}
+
+// ---------- 트로피 로드 ----------
+/** 현재 트로피로 도달한 로드 보상을 모두 받는다 (트로피가 다시 내려가도 받은 보상은 유지) */
+export function claimRoad(): RoadStep[] {
+  const got: RoadStep[] = [];
+  for (const step of TROPHY_ROAD) {
+    if (meta.pvp.trophies < step.at || meta.roadClaimed.includes(step.at)) continue;
+    meta.roadClaimed.push(step.at);
+    if (step.crystals) meta.crystals += step.crystals;
+    if (step.unit) unlockUnit(step.unit, false);
+    got.push(step);
+  }
+  if (got.length) saveMeta();
+  return got;
+}
+/** 다음 로드 보상 (없으면 null) */
+export function nextRoadStep(): RoadStep | null {
+  return TROPHY_ROAD.find((s) => !meta.roadClaimed.includes(s.at) && s.at > meta.pvp.trophies) ?? null;
+}
+/** 이 유닛을 여는 로드 지점 (없으면 null) */
+export function roadUnlockAt(job: Job): number | null {
+  return TROPHY_ROAD.find((s) => s.unit === job)?.at ?? null;
 }

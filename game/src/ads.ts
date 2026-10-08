@@ -4,6 +4,7 @@
 //  전면형: 스테이지 결과 후 (광고 제거 구매 시 제외, 초반 스테이지 제외)
 //  Verse8 호스트 밖(로컬 개발)에서는 개발 서버에서만 가짜 광고로 흐름 테스트
 // ============================================================
+import { V1 } from './config';
 import { meta, saveMeta, todayStr, addItem } from './meta';
 import { icon } from './icons';
 
@@ -55,6 +56,7 @@ function fakeAd(label: string): Promise<boolean> {
 
 /** 보상형 광고 사용 가능 여부 (광고 제거 보유 시 시청 없이 즉시 보상) */
 export function rewardedAvailable(): boolean {
+  if (V1) return false; // v1 프로토타입은 광고 없음
   return meta.adRemoved || !unsupported || isDev();
 }
 
@@ -78,7 +80,7 @@ export async function showRewarded(placement: keyof typeof AD_PLACEMENTS): Promi
 
 /** 판 종료 후 전면 광고 (조건 충족 시) */
 export async function maybeInterstitial(stageIndex: number | null): Promise<void> {
-  if (meta.adRemoved || unsupported) return;
+  if (V1 || meta.adRemoved || unsupported) return;
   if (stageIndex !== null && stageIndex < INTERSTITIAL_FROM_STAGE) return;
   gamesSinceInterstitial += 1;
   if (gamesSinceInterstitial < INTERSTITIAL_EVERY) return;
