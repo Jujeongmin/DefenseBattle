@@ -2,7 +2,7 @@
 //  글로벌(계정) 상태 - localStorage 영구 저장
 //  크리스탈, 연구소 레벨, 퀘스트/업적 진행도
 // ============================================================
-import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS, FEATURE_UNLOCK } from './config';
+import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS, FEATURE_UNLOCK, STARTER_ATTACKS, ATTACK_BY_KEY } from './config';
 import { getPlatform } from './platform';
 import type { MetaData, ResearchKey, QuestStat, AchievementDef, ItemKey } from './types';
 
@@ -38,6 +38,7 @@ function freshMeta(): MetaData {
     pvp: { trophies: 0, wins: 0, losses: 0, streak: 0 },
     units: { archer: 1, wizard: 1, warrior: 1 },
     deck: ['archer', 'wizard', 'warrior'],
+    attackDeck: [...STARTER_ATTACKS],
     stages: {},
     tutorial: 0,
     seenFeatures: [],
@@ -70,6 +71,7 @@ function load(): MetaData {
   }
   if (!Array.isArray(m.deck) || !m.deck.length) m.deck = fresh.deck;
   m.deck = m.deck.filter((j) => m.units[j]); // 미해금 유닛 제거
+  if (!Array.isArray(m.attackDeck) || !m.attackDeck.every((k) => ATTACK_BY_KEY[k])) m.attackDeck = [...STARTER_ATTACKS];
   m.grantedPurchases = Array.isArray(m.grantedPurchases) ? m.grantedPurchases : [];
   // 시즌이 바뀌면 시즌 패스 진행 초기화 (프리미엄은 시즌 단위 상품)
   if (!m.season || m.season.id !== currentSeasonId()) m.season = fresh.season;

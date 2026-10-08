@@ -5,6 +5,7 @@
 export type Job = 'archer' | 'wizard' | 'warrior' | 'ranger' | 'frost' | 'paladin' | 'assassin' | 'bomber';
 export type BaseJob = 'archer' | 'wizard' | 'warrior';
 export type Race = 'troll' | 'orc' | 'undead';
+import type { AttackKey } from './config';
 export type GradeKey = 'common' | 'rare' | 'elite' | 'legendary' | 'mythic' | 'eternal';
 
 export interface Grade {
@@ -60,13 +61,17 @@ export interface Unit {
   _newZone?: number;
 }
 
-export type MobKind = 'normal' | 'fast' | 'tank' | 'sent' | 'rush' | 'giant' | 'elite';
+export type MobKind = 'normal' | 'fast' | 'tank' | 'card';
 
 export interface Mob {
   id: number;
   race: Race;
   variant: number;     // 종족 안의 그림 변형 (MOB_VARIANTS)
-  kind: MobKind;       // fast=빠름/약함, tank=느림/단단함, sent/elite=PvP 상대가 보낸 몹
+  kind: MobKind;       // fast=빠름/약함, tank=느림/단단함, card=PvP 상대가 던진 몹 카드
+  card?: number;       // 몹 카드 번호 (ATTACKS) - 특수 능력
+  tick?: number;       // 회복·소환 주기 타이머
+  ghost?: boolean;     // 반투명 (유령)
+  gold?: number;       // 처치 골드 덮어쓰기 (분열·졸개는 적게)
   x: number;
   y: number;
   seg: number;
@@ -164,6 +169,8 @@ export interface GameOptions {
   track: boolean;
   /** 출전 덱 - 소환 시 이 중에서 랜덤 */
   deck: Job[];
+  /** PvP 공격 덱 (몹 카드 4장) */
+  attackDeck: AttackKey[];
   /** 유닛 영구 레벨 (컬렉션 성장) */
   unitLevels: Partial<Record<Job, number>>;
   /** 웨이브 수 (0 = 기본 50, PvP 는 무한) */
@@ -178,7 +185,7 @@ export interface GameOptions {
 
 // PvP: 상대에게 보내는 공격 묶음
 export interface AttackPayload {
-  tier: 0 | 1 | 2 | 3; // PVP.attacks 순서: 0=무리 1=질주 2=거인 3=정예
+  card: number;        // ATTACKS 번호 (몹 카드 10종)
   wave: number;        // 보낸 쪽 웨이브 (체력 기준)
   pos?: number;        // 던진 위치: 길(사각 링) 둘레 비율 0~1 (출발점=0, 반시계)
 }
@@ -211,6 +218,8 @@ export interface MetaData {
   units: Partial<Record<Job, number>>;
   /** 출전 덱 (최대 4 = 배치 구역 수) */
   deck: Job[];
+  /** PvP 공격 덱 (몹 카드 4장) */
+  attackDeck: AttackKey[];
   /** 캠페인 스테이지별 별 개수 ("1-3": 2) */
   stages: Record<string, number>;
   /** 튜토리얼 완료 단계 */

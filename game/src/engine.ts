@@ -7,7 +7,7 @@ import {
   DMG_MULT, RACES, JOB_KR, FULL_RANGE_FROM_INDEX, RESEARCH_PER,
   MOB_KINDS, SKILLS, SKILL_FROM_INDEX, MERGE_COUNT, PVP, UNIT_BY_ID, STARTER_UNITS,
   UNIT_LEVEL_ATK, perkMult,
-  rollGrade, rollJob, makeRng, JOBS, MOB_VARIANTS,
+  rollGrade, rollJob, makeRng, JOBS, MOB_VARIANTS, ATTACKS, STARTER_ATTACKS, RESIST_MULT,
 } from './config';
 import {
   meta, researchLevel, addDailyProgress, setDailyBestWave, unlockAchievement,
@@ -84,6 +84,7 @@ export const DEFAULT_OPTIONS: GameOptions = {
   startGoldMult: 1,
   track: true,
   deck: STARTER_UNITS,
+  attackDeck: STARTER_ATTACKS,
   unitLevels: {},
   waves: 0,
   hpMult: 1,
@@ -155,7 +156,7 @@ export class Game {
   time = 0;                       // 게임 경과 시간(배속 반영)
   sentCount = 0;                  // PvP: 보낸 공격 수
   peakMobs = 0;                   // 필드 몹 최대치 (별 판정)
-  private pending: { kind: MobKind; hp: number; delay: number; pos?: number }[] = []; // PvP: 도착 대기 몹
+  private pending: { card: number; hp: number; delay: number; pos: number }[] = []; // PvP: 도착 대기 몹
   private rng: () => number = Math.random;
   private _listeners: { [K in EventName]?: Listener<K>[] } = {};
 
@@ -208,7 +209,7 @@ export class Game {
     this.sentCount = 0;
     this.peakMobs = 0;
     this.pending = [];
-    this.attackReadyAt = [0, 0, 0, 0];
+    this.attackReadyAt = {};
     this._listeners = {};
   }
 
@@ -271,36 +272,33 @@ export class Game {
     this.addMob(kind, this.waveHp() * (k ? k.hpMult : 1), false);
   }
 
-  private addMob(kind: MobKind, hp: number, boss: boolean, pos = 0): Mob {
+  private addMob(kind: MobKind, hp: number, boss: boolean, pos = 0, card?: number): Mob {
     let size = 60; // 그리기 크기 (판정에는 쓰지 않음) - 작은 화면에서도 알아보게 44 → 60
     let speedMult = 1;
+    const def = card !== undefined ? ATTACKS[card] : null;
     if (boss) size = 44 * WAVE.bossSizeMult;
-    else if (kind === 'fast' || kind === 'tank') {
+    else if (def) {
+      size *= def.size;
+      speedMult = def.speed;
+    } else if (kind === 'fast' || kind === 'tank') {
       size *= MOB_KINDS[kind].sizeMult;
       speedMult = MOB_KINDS[kind].speedMult;
-    } else if (kind === 'elite') {
-      size *= 1.5;
-      speedMult = 0.85;
-    } else if (kind === 'giant') {
-      size *= 1.7;
-      speedMult = 0.55;
-    } else if (kind === 'rush') {
-      size *= 0.8;
-      speedMult = 1.9;
-    } else if (kind === 'sent') {
-      speedMult = 1.1;
     }
     const start = pathAt(pos);
-    const race = this.currentRace;
+    // 몹 카드는 카드마다 정해진 그림·종족, 웨이브 몹은 이번 웨이브 종족
+    const race = def ? def.race : this.currentRace;
     const n = MOB_VARIANTS[race];
     // 그림 변형: 보스는 가장 강해 보이는 마지막, 탱커는 그 앞, 빠른 몹은 1번, 보통 몹은 앞쪽 두 가지를 섞는다
-    const variant = boss ? n - 1 : kind === 'tank' || kind === 'giant' || kind === 'elite' ? Math.max(0, n - 2)
-      : kind === 'fast' || kind === 'rush' ? Math.min(1, n - 1) : Math.floor(Math.random() * Math.min(2, n));
+    const variant = def ? def.variant : boss ? n - 1 : kind === 'tank' ? Math.max(0, n - 2)
+      : kind === 'fast' ? Math.min(1, n - 1) : Math.floor(Math.random() * Math.min(2, n));
     const m: Mob = {
       id: nextId++,
       race,
       variant,
       kind,
+      card,
+      tick: 0,
+      ghost: def?.key === 'ghost',
       x: start.x,
       y: start.y,
       seg: start.next,
@@ -320,34 +318,49 @@ export class Game {
   }
 
   // ---------------- PvP: 몹 보내기 / 받기 ----------------
-  attackCost(tier: AttackPayload['tier']): number { return PVP.attacks[tier].cost; }
-  /** 남은 쿨타임(초, 게임 시간) - 정예처럼 쿨타임이 있는 카드 */
-  attackCooldown(tier: AttackPayload['tier']): number { return Math.max(0, this.attackReadyAt[tier] - this.time); }
-  private attackReadyAt = [0, 0, 0, 0];
+  /** 내 공격 덱의 카드 번호들 (ATTACKS 번호) */
+  get attackCards(): number[] {
+    return this.opts.attackDeck.map((k) => ATTACKS.findIndex((a) => a.key === k)).filter((i) => i >= 0);
+  }
+  attackCost(card: number): number { return ATTACKS[card].cost; }
+  /** 남은 쿨타임(초, 게임 시간) - 마왕처럼 쿨타임이 있는 카드 */
+  attackCooldown(card: number): number { return Math.max(0, (this.attackReadyAt[card] ?? 0) - this.time); }
+  private attackReadyAt: Record<number, number> = {};
 
-  /** 몹 던지기. pos = 상대 길 위치(둘레 비율 0~1) */
-  sendAttack(tier: AttackPayload['tier'], pos = 0): boolean {
-    if (!this.isPvp || this.over) return false;
-    const def = PVP.attacks[tier];
-    if (this.gold < def.cost || this.attackCooldown(tier) > 0) return false;
+  /** 몹 던지기 (덱에 있는 카드만). pos = 상대 길 위치(둘레 비율 0~1) */
+  sendAttack(card: number, pos = 0): boolean {
+    if (!this.isPvp || this.over || !this.attackCards.includes(card)) return false;
+    const def = ATTACKS[card];
+    if (this.gold < def.cost || this.attackCooldown(card) > 0) return false;
     this.gold -= def.cost;
-    this.attackReadyAt[tier] = this.time + def.cooldown;
+    this.attackReadyAt[card] = this.time + def.cooldown;
     this.sentCount += 1;
-    const payload: AttackPayload = { tier, wave: Math.max(1, this.wave), pos };
-    this.pushLog(`${icon(def.icon)} ${def.kr} 던짐!`);
+    const payload: AttackPayload = { card, wave: Math.max(1, this.wave), pos };
+    this.pushLog(`${def.kr} 던짐!`);
     this.emit('attack', payload);
     return true;
   }
 
   receiveAttack(p: AttackPayload): void {
     if (this.over) return;
-    const def = PVP.attacks[p.tier] ?? PVP.attacks[0];
+    const card = ATTACKS[p.card] ? p.card : 0;
+    const def = ATTACKS[card];
     const hp = this.baseHp(p.wave) * def.hpMult;
     const pos = Number.isFinite(p.pos) ? (p.pos as number) : 0;
-    for (let i = 0; i < def.count; i++) this.pending.push({ kind: def.kind, hp, delay: i * 0.25, pos });
+    for (let i = 0; i < def.count; i++) this.pending.push({ card, hp, delay: i * 0.25, pos });
     this.pushLog(`${icon('warning')} 상대의 ${def.kr}!`);
-    if (p.tier >= 2) this.shake = Math.max(this.shake, 6);
+    if (def.cost >= 80) this.shake = Math.max(this.shake, 6);
     this.emit('incoming', p);
+  }
+
+  /** 다른 몹 자리에서 새 몹 (분열·졸개) */
+  private spawnFrom(src: Mob, card: number, hp: number, gold: number, sizeMult = 1): void {
+    const m = this.addMob('card', hp, false, 0, card);
+    m.x = src.x + (Math.random() - 0.5) * 30;
+    m.y = src.y + (Math.random() - 0.5) * 30;
+    m.seg = src.seg;
+    m.size *= sizeMult;
+    m.gold = gold;
   }
 
   private updatePending(dt: number): void {
@@ -356,7 +369,7 @@ export class Game {
     const ready = this.pending.filter((p) => p.delay <= 0);
     if (!ready.length) return;
     this.pending = this.pending.filter((p) => p.delay > 0);
-    for (const p of ready) this.addMob(p.kind, p.hp, false, p.pos ?? 0);
+    for (const p of ready) this.addMob('card', p.hp, false, p.pos, p.card);
   }
 
   // PvP 상대 미니맵/상태 보고용 요약
@@ -364,7 +377,7 @@ export class Game {
     const q = (v: number) => Math.max(0, Math.min(255, Math.round((v / MAP.size) * 255)));
     const mobs: number[] = [];
     for (const m of this.mobs.slice(0, 120)) {
-      const kind = m.boss ? SNAP_KIND.boss : m.kind === 'sent' || m.kind === 'elite' || m.kind === 'rush' || m.kind === 'giant' ? SNAP_KIND.sent : SNAP_KIND.normal;
+      const kind = m.boss ? SNAP_KIND.boss : m.kind === 'card' ? SNAP_KIND.sent : SNAP_KIND.normal;
       mobs.push(m.id, q(m.x), q(m.y), RACES.indexOf(m.race) | (kind << 2) | (m.dir << 4) | (m.variant << 6), Math.round(m.size));
     }
     const units: number[] = [];
@@ -621,13 +634,15 @@ export class Game {
   /** 컬렉션(영구) 레벨 */
   collectionLevel(job: Job): number { return this.opts.unitLevels[job] || 1; }
 
-  unitDamage(u: Unit, mob: { race: Race; boss: boolean; kind?: MobKind }): number {
+  unitDamage(u: Unit, mob: { race: Race; boss: boolean; kind?: MobKind; card?: number }): number {
     const level = this.unitLevel(u);
     let dmg = u.baseAtk * (1 + (level - 1) * ECONOMY.upgradePerLevel);
     dmg *= UNIT_BY_ID[u.job].atkMult * (1 + (this.collectionLevel(u.job) - 1) * UNIT_LEVEL_ATK);
     dmg *= DMG_MULT[u.job][mob.race];
-    // 성기사: 보스/정예 특화
-    if (u.job === 'paladin' && u.gradeIndex >= SKILL_FROM_INDEX && (mob.boss || mob.kind === 'elite' || mob.kind === 'giant')) {
+    const def = mob.card !== undefined ? ATTACKS[mob.card] : null;
+    if (def?.resist?.includes(u.job)) dmg *= RESIST_MULT; // 유령(물리)·방패병(화살)
+    // 성기사: 보스와 큰 몹 카드(거인·킹·마왕) 특화
+    if (u.job === 'paladin' && u.gradeIndex >= SKILL_FROM_INDEX && (mob.boss || (def && def.hpMult >= 5))) {
       const m = u.gradeIndex >= FULL_RANGE_FROM_INDEX ? SKILLS.paladin.bossMultHigh : SKILLS.paladin.bossMult;
       dmg *= 1 + (m - 1) * perkMult(this.collectionLevel(u.job));
     }
@@ -704,9 +719,10 @@ export class Game {
 
   updateMobs(dt: number): void {
     const speedPx = 50 * (WAVE.mobSpeed / 1.2);
-    for (const m of this.mobs) {
+    for (const m of this.mobs.slice()) {
       if (m.hitFlash > 0) m.hitFlash -= dt;
       if (m.slow > 0) m.slow -= dt;
+      if (m.card !== undefined && !m.dead) this.cardAbility(m, dt);
       if (m.pause > 0) { m.pause -= dt; continue; }
       const target = PATH.corners[m.seg];
       const dx = target.x - m.x, dy = target.y - m.y;
@@ -723,6 +739,25 @@ export class Game {
         m.x += (dx / dist) * step;
         m.y += (dy / dist) * step;
       }
+    }
+  }
+
+  /** 몹 카드 능력: 신관 회복, 킹 졸개 소환 */
+  private cardAbility(m: Mob, dt: number): void {
+    const def = ATTACKS[m.card!];
+    if (!def.heal && !def.spawn) return;
+    m.tick = (m.tick ?? 0) + dt;
+    if (def.heal && m.tick >= 1) {
+      m.tick -= 1;
+      for (const o of this.mobs) {
+        if (o.dead || o.boss || o.hp >= o.maxHp || Math.hypot(o.x - m.x, o.y - m.y) > 130) continue;
+        o.hp = Math.min(o.maxHp, o.hp + o.maxHp * def.heal);
+      }
+      this.addEffect({ type: 'splash', x: m.x, y: m.y, ttl: 0.4, r: 130, color: '#7ee87e' });
+    }
+    if (def.spawn && m.tick >= 4) {
+      m.tick -= 4;
+      for (let i = 0; i < def.spawn; i++) this.spawnFrom(m, 0, m.maxHp * 0.06, 1, 0.8);
     }
   }
 
@@ -878,9 +913,22 @@ export class Game {
 
   killMob(m: Mob): void {
     if (m.dead) return;
+    const def = m.card !== undefined ? ATTACKS[m.card] : null;
+    // 망령: 한 번 되살아남
+    if (def?.revive && m.gold === undefined) {
+      m.gold = ECONOMY.killGold;
+      m.hp = m.maxHp * 0.5;
+      m.pause = 0.6;
+      this.addEffect({ type: 'splash', x: m.x, y: m.y, ttl: 0.4, r: 40, color: '#c9a2ff' });
+      return;
+    }
     m.dead = true; // 배열 제거는 전투 루프 끝에서 일괄 처리
+    // 분열 알: 작은 몹으로 갈라짐 (분열된 몹은 다시 갈라지지 않음)
+    if (def?.split && m.gold === undefined) {
+      for (let i = 0; i < def.split; i++) this.spawnFrom(m, m.card!, m.maxHp * 0.25, 1, 0.6);
+    }
     const goldMult = 1 + this.res('goldGain') * RESEARCH_PER.goldGain;
-    const base = m.boss ? ECONOMY.bossGold : m.kind === 'elite' ? ECONOMY.bossGold / 4 : m.kind === 'giant' ? ECONOMY.bossGold / 8 : ECONOMY.killGold;
+    const base = m.boss ? ECONOMY.bossGold : m.gold ?? def?.gold ?? ECONOMY.killGold;
     const gained = Math.round(base * goldMult);
     this.gold += gained;
     this.kills += 1;

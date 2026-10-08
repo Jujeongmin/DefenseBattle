@@ -3,7 +3,7 @@
 //  두 구현이 같은 인터페이스를 가져 UI/게임 흐름은 상대 종류를 신경 쓰지 않는다.
 // ============================================================
 import { Game, type BoardSnapshot } from './engine';
-import { PVP, JOBS, PLAY_SPEED, STARTER_UNITS, TROPHY_ROAD, DECK_SIZE } from './config';
+import { PVP, JOBS, PLAY_SPEED, STARTER_UNITS, TROPHY_ROAD, DECK_SIZE, ATTACKS, STARTER_ATTACKS, ATTACK_DECK_SIZE, type AttackKey } from './config';
 import { aiStep, thinkInterval } from './ai';
 import { meta } from './meta';
 import { unitLevels } from './progress';
@@ -192,6 +192,7 @@ export function createBotSession(): PvpSession {
  *  연승하면 조금 세게, 연패하면 확실히 약하게 (매스마켓: 지기만 하는 판이 이어지지 않게). tools/pvpsim.ts */
 export function botSkill(): number {
   const p = meta.pvp;
+  if (p.wins + p.losses < 3) return 0.1; // 첫 3판은 가장 약한 봇 - 처음 대전에서 이기는 경험
   const base = 0.2 + p.trophies / 1000;
   const adj = Math.min(4, p.streak) * 0.05 - Math.min(3, p.lossStreak ?? 0) * 0.1;
   return Math.max(0.1, Math.min(0.75, base + adj));
@@ -201,6 +202,13 @@ export function botSkill(): number {
 export function botDeck(trophies: number): Job[] {
   const pool = JOBS.filter((j) => STARTER_UNITS.includes(j) || TROPHY_ROAD.some((s) => s.unit === j && s.at <= trophies));
   return [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(DECK_SIZE, pool.length));
+}
+
+/** 봇 공격 덱: 기본 4장 + 그 트로피에서 열려 있을 몹 카드 중 4장 */
+export function botAttackDeck(trophies: number): AttackKey[] {
+  const pool = ATTACKS.map((a) => a.key)
+    .filter((k) => STARTER_ATTACKS.includes(k) || TROPHY_ROAD.some((s) => s.attack === k && s.at <= trophies));
+  return [...pool].sort(() => Math.random() - 0.5).slice(0, ATTACK_DECK_SIZE);
 }
 
 /** 봇전 트로피 규칙 - 서버 finishMatch 와 같다 */
@@ -235,7 +243,8 @@ class BotSession implements PvpSession {
     const lv = unitLevels();
     const vals = Object.values(lv) as number[];
     const avg = Math.max(1, Math.round(vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.length)));
-    const game = new Game({ mode: 'pvp', seed: this.match.seed, useResearch: false, track: false, deck, unitLevels: Object.fromEntries(deck.map((j) => [j, avg])) });
+    const game = new Game({ mode: 'pvp', seed: this.match.seed, useResearch: false, track: false, deck,
+      attackDeck: botAttackDeck(this.match.opponent.trophies), unitLevels: Object.fromEntries(deck.map((j) => [j, avg])) });
     this.game = game;
     game.on('attack', (p) => h.onAttack(p));
     game.on('gameover', () => void this.finish(true));

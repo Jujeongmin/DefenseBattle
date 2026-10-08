@@ -14,7 +14,7 @@ import type { Job } from '../game/src/types';
 
 const W = (await import('../game/src/config')).WAVE as { pvpHpGrowth: number };
 if (process.env.PVP_HPG) W.pvpHpGrowth = Number(process.env.PVP_HPG);
-const DECK: Job[] = ['archer', 'wizard', 'warrior', 'ranger'];
+const DECK: Job[] = (process.env.PDECK?.split(',') as Job[]) ?? ['archer', 'wizard', 'warrior', 'ranger'];
 const ALL: Job[] = ['archer', 'wizard', 'warrior', 'ranger', 'frost', 'paladin', 'bomber', 'assassin'];
 
 /** 한 판: 플레이어가 이겼는지, 실시간 길이(초) */

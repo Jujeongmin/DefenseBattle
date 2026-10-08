@@ -196,16 +196,58 @@ export const SKILL_DESC: Record<Job, string> = {
 export const MERGE_COUNT = 3;
 
 // ---------- PvP ----------
+// ---------- PvP 몹 카드 (공격 덱) ----------
+// 10종 중 4장을 골라 덱을 짠다. 카드마다 잘 막는 유닛(counters)이 달라 상대 덱을 보고 고르는 판단이 생긴다.
+//   그림은 카드마다 고정된 종족·변형 (종족 상성도 그대로 적용)
+export type AttackKey = 'swarm' | 'rush' | 'giant' | 'ghost' | 'shield' | 'priest' | 'egg' | 'wraith' | 'king' | 'demon';
+export interface AttackDef {
+  key: AttackKey;
+  kr: string;
+  desc: string;          // 카드 한 줄 설명 (짧게)
+  race: Race;            // 그림·상성 종족
+  variant: number;       // 종족 안 그림 번호
+  cost: number;
+  count: number;
+  hpMult: number;        // 보낸 쪽 웨이브 기본 체력 대비
+  speed: number;         // 이동 속도 배율
+  size: number;          // 그리기 크기 배율
+  cooldown: number;      // 게임 시간(초)
+  counters: Job[];       // 이 카드를 잘 막는 유닛 (봇 판단·카드 설명)
+  resist?: Job[];        // 이 유닛들의 피해 -60%
+  heal?: number;         // 초당 주변 몹 회복 (최대 체력 비율)
+  split?: number;        // 죽으면 작은 몹 n 마리로 갈라짐
+  revive?: boolean;      // 한 번 되살아남 (체력 50%)
+  spawn?: number;        // 4초마다 졸개 n 마리 소환
+  gold?: number;         // 처치 골드 (기본 ECONOMY.killGold)
+}
+export const RESIST_MULT = 0.4;
+export const ATTACKS: AttackDef[] = [
+  { key: 'swarm', kr: '고블린 무리', desc: '약한 몹 8마리', race: 'orc', variant: 0, cost: 40, count: 8, hpMult: 0.55, speed: 1.1, size: 0.85, cooldown: 0,
+    counters: ['wizard', 'bomber'] },
+  { key: 'rush', kr: '질주 엘프', desc: '아주 빠른 몹 4마리', race: 'troll', variant: 1, cost: 50, count: 4, hpMult: 0.6, speed: 1.9, size: 0.85, cooldown: 0,
+    counters: ['frost', 'warrior'] },
+  { key: 'giant', kr: '거인', desc: '느리고 단단한 1마리', race: 'troll', variant: 0, cost: 80, count: 1, hpMult: 7, speed: 0.55, size: 1.7, cooldown: 0,
+    counters: ['assassin', 'paladin'], gold: 12 },
+  { key: 'ghost', kr: '유령', desc: '물리 공격에 강함', race: 'undead', variant: 1, cost: 60, count: 3, hpMult: 1.05, speed: 1, size: 1, cooldown: 0,
+    counters: ['wizard', 'frost'], resist: ['warrior', 'archer', 'ranger', 'assassin'] },
+  { key: 'shield', kr: '방패병', desc: '화살에 강함', race: 'troll', variant: 2, cost: 65, count: 3, hpMult: 1.9, speed: 0.85, size: 1.05, cooldown: 0,
+    counters: ['wizard', 'bomber', 'warrior'], resist: ['archer', 'ranger'] },
+  { key: 'priest', kr: '어둠 신관', desc: '주변 몹을 회복', race: 'orc', variant: 3, cost: 90, count: 1, hpMult: 3.5, speed: 0.9, size: 1.1, cooldown: 0,
+    counters: ['assassin', 'ranger'], heal: 0.06, gold: 8 },
+  { key: 'egg', kr: '분열 알', desc: '죽으면 3마리로', race: 'undead', variant: 3, cost: 70, count: 2, hpMult: 2.2, speed: 0.9, size: 1.15, cooldown: 0,
+    counters: ['bomber', 'wizard'], split: 3 },
+  { key: 'wraith', kr: '망령', desc: '한 번 되살아남', race: 'undead', variant: 2, cost: 60, count: 5, hpMult: 0.5, speed: 1.05, size: 0.95, cooldown: 0,
+    counters: ['bomber', 'archer'], revive: true },
+  { key: 'king', kr: '고블린 킹', desc: '졸개를 계속 부름', race: 'orc', variant: 4, cost: 120, count: 1, hpMult: 7, speed: 0.7, size: 1.45, cooldown: 0,
+    counters: ['ranger', 'paladin'], spawn: 3, gold: 16 },
+  { key: 'demon', kr: '마왕', desc: '아주 강함 · 긴 쿨타임', race: 'orc', variant: 5, cost: 140, count: 1, hpMult: 26, speed: 0.55, size: 1.9, cooldown: 30,
+    counters: ['paladin', 'assassin'], gold: 30 },
+];
+export const ATTACK_BY_KEY = Object.fromEntries(ATTACKS.map((a) => [a.key, a])) as Record<AttackKey, AttackDef>;
+export const STARTER_ATTACKS: AttackKey[] = ['swarm', 'rush', 'giant', 'egg'];
+export const ATTACK_DECK_SIZE = 4;
+
 export const PVP = {
-  // 몹 던지기 카드 4종 - 서로 다른 유닛이 카운터 (상대 덱을 보고 약점을 고르는 판단)
-  //   무리: 약한 몹 여럿 ↔ 범위 공격(마법사·폭격수)   질주: 빠른 몹 ↔ 둔화(빙결술사·전사)
-  //   거인: 체력 큰 한 마리 ↔ 처형·보스 특화(암살자·성기사)   정예: 비싸고 강함, 쿨타임
-  attacks: [
-    { key: 'swarm', kr: '무리', icon: 'skull', cost: 40, count: 8, hpMult: 0.55, kind: 'sent', cooldown: 0 },
-    { key: 'rush', kr: '질주', icon: 'bolt', cost: 50, count: 4, hpMult: 0.6, kind: 'rush', cooldown: 0 },
-    { key: 'giant', kr: '거인', icon: 'hammer', cost: 80, count: 1, hpMult: 7, kind: 'giant', cooldown: 0 },
-    { key: 'elite', kr: '정예', icon: 'crown', cost: 160, count: 1, hpMult: 14, kind: 'elite', cooldown: 20 },
-  ],
   hpMult: 3,            // PvP 몹 시작 체력 배율 - pvpHpGrowth 와 함께 한 판 ~4분 (tools/pvpsim.ts)
   reportInterval: 0.5,   // 상태 보고 주기(초)
   matchTimeout: 25,      // 매칭 대기 최대(초) → 초과 시 AI 대전 제안
@@ -424,20 +466,26 @@ export const STAGES: StageDef[] = CHAPTERS.flatMap((ch, ci) =>
 export const CAMPAIGN: StageDef[] = V1 ? STAGES.slice(0, 5) : STAGES;
 
 // ---------- 트로피 로드 (v1 의 진행 축) - 트로피가 오르면 보석과 유닛 해금 ----------
-export interface RoadStep { at: number; crystals?: number; unit?: Job }
-// 한 판 ~4.5분 · 승률 ~55% 기준(tools/pvpsim.ts) 약 3시간 안에 유닛 5종이 모두 열리게, 이후는 보석으로 길게
+export interface RoadStep { at: number; crystals?: number; unit?: Job; attack?: AttackKey }
+// 한 판 ~4.5분 · 승률 ~55% 기준(tools/pvpsim.ts) 약 3시간 안에 유닛 5종 + 몹 카드 6종이 모두 열리게, 이후는 보석으로 길게
 export const TROPHY_ROAD: RoadStep[] = [
   { at: 15, crystals: 50 },
   { at: 30, unit: 'ranger' },
-  { at: 55, crystals: 80 },
+  { at: 45, attack: 'ghost' },
+  { at: 60, crystals: 80 },
   { at: 80, unit: 'frost' },
-  { at: 110, crystals: 120 },
+  { at: 95, attack: 'shield' },
+  { at: 115, crystals: 120 },
   { at: 140, unit: 'paladin' },
-  { at: 170, crystals: 160 },
+  { at: 155, attack: 'wraith' },
+  { at: 175, crystals: 160 },
   { at: 200, unit: 'bomber' },
-  { at: 230, crystals: 200 },
+  { at: 215, attack: 'priest' },
+  { at: 235, crystals: 200 },
   { at: 260, unit: 'assassin' },
+  { at: 290, attack: 'king' },
   { at: 320, crystals: 250 },
+  { at: 360, attack: 'demon' },
   { at: 400, crystals: 300 },
   { at: 500, crystals: 400 },
   { at: 650, crystals: 600 },

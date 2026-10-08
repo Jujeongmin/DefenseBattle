@@ -6,7 +6,7 @@ import { Game } from './engine';
 import { Renderer } from './render';
 import { UI, type ResultView } from './ui';
 import { Spotlight, type SpotStep } from './tutorial';
-import { Menu, type Launch } from './menu';
+import { Menu, roadRewardIcon, type Launch } from './menu';
 import { preloadAll, warmTints } from './assets';
 import { audio } from './audio';
 import { getPlatform } from './platform';
@@ -46,7 +46,7 @@ function launch(l: Launch): void {
   if (l.kind === 'stage') game = new Game(stageOptions(l.stageId, booster));
   else if (l.kind === 'endless') game = new Game(endlessOptions(booster));
   else {
-    game = new Game({ mode: 'pvp', seed: l.session.match.seed, useResearch: false, deck: [...meta.deck], unitLevels: unitLevels() });
+    game = new Game({ mode: 'pvp', seed: l.session.match.seed, useResearch: false, deck: [...meta.deck], attackDeck: [...meta.attackDeck], unitLevels: unitLevels() });
     game.paused = true; // 카운트다운 후 동시에 시작
   }
   renderer = new Renderer(canvas, game);
@@ -124,6 +124,7 @@ function showPvpResult(g: Game, u: UI, s: PvpSession, r: { won: boolean; trophyD
   audio.gameEnd(r.won);
   const rewards = [`${icon('trophy')} ${r.trophyDelta >= 0 ? '+' : ''}${r.trophyDelta}`, `${icon('gem')} +${crystals}`];
   for (const st of road) if (st.crystals) rewards.push(`${icon('gem')} +${st.crystals} 로드`);
+  for (const st of road) if (st.attack) rewards.push(`${roadRewardIcon(st)} 새 몹 카드!`);
   const roadUnit = road.find((st) => st.unit)?.unit;
   u.showResult({
     win: r.won,

@@ -81,7 +81,7 @@ describe('PvP 룸', () => {
     expect(lb.me.wins).toBe(1);
   });
 
-  test('몹 던지기: 경기 전엔 거부, 경기 중엔 카드 4종·범위 밖 값도 받아서 중계', async (server) => {
+  test('몹 던지기: 경기 전엔 거부, 경기 중엔 몹 카드 10종·범위 밖 값도 받아서 중계', async (server) => {
     await server.simulateJoin('r3', 'p5');
     await server.simulateJoin('r3', 'p6');
     server.connect({ account: 'p5', roomId: 'r3' });
@@ -91,7 +91,9 @@ describe('PvP 룸', () => {
     await server.pvpReady({});
     expect(await server.pvpAttack({ tier: 3, wave: 5, pos: 0.25 })).toBe(true);
     expect(await server.pvpAttack({ tier: 9, wave: -1, pos: 7 })).toBe(true);
-    expect(await server.pvpAttack({ tier: 1, wave: 2 })).toBe(true);
+    expect(await server.pvpAttack({ tier: 1, wave: 2 })).toBe(true); // 예전 클라이언트
+    expect(await server.pvpAttack({ card: 9, wave: 4, pos: 0.5 })).toBe(true);
+    expect(await server.pvpAttack({ card: 42, wave: 4 })).toBe(true);
   });
 
   test('봇전 결과: 잘못된 id·너무 짧은 경기는 트로피 반영 안 함', async (server) => {

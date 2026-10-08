@@ -5,6 +5,7 @@
 import {
   STAGES, STAGE_BY_ID, CAMPAIGN, UNITS, UNIT_BY_ID, DECK_SIZE, UNIT_MAX_LEVEL, unitUpgradeCost,
   FEATURE_UNLOCK, CHAPTERS, STAGES_PER_CHAPTER, TROPHY_ROAD, type RoadStep,
+  STARTER_ATTACKS, ATTACK_DECK_SIZE, type AttackKey,
 } from './config';
 import { meta, saveMeta } from './meta';
 import type { Job, GameOptions } from './types';
@@ -153,6 +154,50 @@ export function toggleDeck(job: Job): boolean {
     if (meta.deck.length >= DECK_SIZE) return false;
     meta.deck.push(job);
   }
+  saveMeta();
+  return true;
+}
+
+/** 끌어다 놓기: 유닛을 덱 slot 칸에 놓는다. 이미 덱에 있으면 두 칸을 바꾸고, 칸이 차 있으면 교체 */
+export function placeDeck(job: Job, slot: number): boolean {
+  if (!unitUnlocked(job) || slot < 0 || slot >= DECK_SIZE) return false;
+  const d = meta.deck;
+  const from = d.indexOf(job);
+  if (slot >= d.length) { // 빈 칸: 맨 뒤에 붙인다
+    if (from >= 0) d.splice(from, 1);
+    d.push(job);
+  } else if (from >= 0) {
+    [d[from], d[slot]] = [d[slot], d[from]];
+  } else {
+    d[slot] = job;
+  }
+  saveMeta();
+  return true;
+}
+/** 덱에서 뺀다 (최소 1) */
+export function removeDeck(job: Job): boolean {
+  const i = meta.deck.indexOf(job);
+  if (i < 0 || meta.deck.length <= 1) return false;
+  meta.deck.splice(i, 1);
+  saveMeta();
+  return true;
+}
+
+// ---------- 공격 덱 (몹 카드 4장) ----------
+/** 기본 카드 + 트로피 로드에서 받은 카드 */
+export function attackUnlocked(k: AttackKey): boolean {
+  return STARTER_ATTACKS.includes(k) || TROPHY_ROAD.some((s) => s.attack === k && meta.roadClaimed.includes(s.at));
+}
+export function attackUnlockAt(k: AttackKey): number | null {
+  return TROPHY_ROAD.find((s) => s.attack === k)?.at ?? null;
+}
+/** 몹 카드를 slot 칸에 놓는다. 이미 덱에 있으면 두 칸을 바꾼다 (공격 덱은 늘 4장) */
+export function placeAttack(k: AttackKey, slot: number): boolean {
+  if (!attackUnlocked(k) || slot < 0 || slot >= ATTACK_DECK_SIZE) return false;
+  const d = meta.attackDeck;
+  const from = d.indexOf(k);
+  if (from >= 0) [d[from], d[slot]] = [d[slot], d[from]];
+  else d[slot] = k;
   saveMeta();
   return true;
 }

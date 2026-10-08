@@ -4,20 +4,21 @@
 import {
   RESEARCH, researchCost, DAILY_QUESTS, ACHIEVEMENTS, PRODUCTS, ITEM_KR,
   UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, UNIT_PERK_LEVELS, unitUpgradeCost, SKILL_DESC, SKILL_KR,
-  DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, STAGES_PER_CHAPTER,
+  DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, STAGES_PER_CHAPTER, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, type RoadStep, type AttackKey,
   SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, PVP, FEATURE_KR, productEfficiency,
   V1, CAMPAIGN, TROPHY_ROAD, PVP_TIERS,
 } from './config';
 import { meta, saveMeta, researchLevel, currentSeasonId } from './meta';
 import { getPlatform } from './platform';
 import { audio } from './audio';
-import { unitIconUrl, mobPortraitSrc } from './assets';
+import { unitIconUrl, mobPortraitSrc, mobSprite } from './assets';
 import { icon, stars as starIcons } from './icons';
 import {
   stageStars, stageUnlocked, nextStageId, chapterStars, chapterUnlocked, CHAPTER_STAR_GOALS,
   chapterStarReward, starRewardClaimed, claimStarReward, featureUnlocked, featureNew, markFeatureSeen,
   nextRoadStep, roadUnlockAt, claimRoad,
   unitUnlocked, unitLevel, buyUnit, canUpgradeUnit, upgradeUnit, toggleDeck,
+  placeDeck, removeDeck, attackUnlocked, attackUnlockAt, placeAttack,
 } from './progress';
 import {
   purchase, productOwned, monthlyActive, monthlyDaysLeft, canClaimMonthly, claimMonthly,
@@ -26,6 +27,7 @@ import {
 import { freeTicketAdsLeft, watchForTickets, rewardedAvailable, FREE_TICKET_AMOUNT } from './ads';
 import { onlineAvailable, findMatch, type PvpSession } from './pvp';
 import { $, toast, openOverlay, closeOverlay, bindActions, spriteIcon, confirmModal } from './dom';
+import { enableDeckDrag } from './dragdeck';
 import type { Job, Race, ResearchKey } from './types';
 
 export type Launch =
@@ -37,6 +39,18 @@ const raceIcon = (r: Race) => spriteIcon(mobPortraitSrc(r), 'frame-sprite race-i
 
 const NEW_TAG = '<span class="new-tag">NEW</span>';
 type LobbyFeature = 'units' | 'research' | 'quests' | 'pvp' | 'endless';
+
+/** 트로피 로드 보상 그림 (유닛·몹 카드는 캐릭터 그림, 보석은 아이콘) */
+export function roadRewardIcon(s: RoadStep): string {
+  if (s.unit) return spriteIcon(unitIconUrl(s.unit), 'frame-sprite road-unit');
+  if (s.attack) { const a = ATTACK_BY_KEY[s.attack]; return spriteIcon(mobSprite(a.race, a.variant).url, 'frame-sprite road-unit'); }
+  return `${icon('gem')}${s.crystals}`;
+}
+export function roadRewardText(s: RoadStep): string {
+  if (s.unit) return UNIT_BY_ID[s.unit].kr;
+  if (s.attack) return `몹 카드 ${ATTACK_BY_KEY[s.attack].kr}`;
+  return `${icon('gem')}${s.crystals}`;
+}
 
 export class Menu {
   private onLaunch: (l: Launch) => void;
@@ -121,7 +135,7 @@ export class Menu {
       </div>
       <nav class="lobby-nav">
         <button data-act="shop"><span class="ic">${icon('shop')}</span>상점${PRODUCTS.some((p) => p.id === 'starter_pack') && !productOwned('starter_pack') ? '<span class="dot"></span>' : ''}</button>
-        ${on('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}</span>유닛${tag('units') || (UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : '')}</button>` : ''}
+        ${on('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}</span>덱${tag('units') || (UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : '')}</button>` : ''}
         ${on('research') ? `<button data-act="research"><span class="ic">${icon('flask')}</span>연구${tag('research')}</button>` : ''}
         ${on('quests') ? `<button data-act="quests"><span class="ic">${icon('scroll')}</span>퀘스트${tag('quests') || (this.questClaimable() ? dot : '')}</button>` : ''}
         ${on('pvp') ? `<button data-act="pvp"><span class="ic">${icon('trophy')}</span>시즌</button>` : ''}
@@ -150,14 +164,14 @@ export class Menu {
     const root = $('main-menu');
     // 도달했지만 아직 안 받은 로드 보상 (이전 버전 저장본 등)
     const got = claimRoad();
-    if (got.length) toast(`트로피 로드 보상: ${got.map((s) => (s.unit ? UNIT_BY_ID[s.unit].kr : `${icon('gem')}${s.crystals}`)).join(' · ')}`, 3200);
+    if (got.length) toast(`트로피 로드 보상: ${got.map((s) => roadRewardText(s)).join(' · ')}`, 3200);
     const p = meta.pvp;
     const tier = pvpTier(p.trophies);
     const pvpOn = featureUnlocked('pvp');
     const next = nextRoadStep();
     const prevAt = [...TROPHY_ROAD].reverse().find((s) => s.at <= p.trophies)?.at ?? 0;
     const pct = next ? Math.max(0, Math.min(100, ((p.trophies - prevAt) / (next.at - prevAt)) * 100)) : 100;
-    const nextIc = next ? (next.unit ? spriteIcon(unitIconUrl(next.unit), 'frame-sprite road-unit') : `${icon('gem')}${next.crystals}`) : icon('crown');
+    const nextIc = next ? roadRewardIcon(next) : icon('crown');
     const parade = meta.deck.map((j) => spriteIcon(unitIconUrl(j, Math.min(5, unitLevel(j) >> 1)))).join('');
     const campDone = CAMPAIGN.filter((s) => stageStars(s.id) > 0).length;
     const dot = '<span class="dot"></span>';
@@ -186,7 +200,7 @@ export class Menu {
         ${pvpOn ? `<button class="btn small blue camp-btn" data-act="stages">${icon('map')} 연습 스테이지 ${campDone}/${CAMPAIGN.length}</button>` : ''}
       </div>
       <nav class="lobby-nav">
-        ${featureUnlocked('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}</span>유닛${featureNew('units') ? NEW_TAG : UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : ''}</button>` : ''}
+        ${featureUnlocked('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}</span>덱${featureNew('units') ? NEW_TAG : UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : ''}</button>` : ''}
         ${pvpOn ? `<button data-act="road"><span class="ic">${icon('trophy')}</span>트로피 로드</button>` : ''}
         ${pvpOn ? `<button data-act="rank"><span class="ic">${icon('medal')}</span>랭킹</button>` : ''}
       </nav>`;
@@ -212,7 +226,7 @@ export class Menu {
       const done = meta.roadClaimed.includes(s.at);
       const reached = p.trophies >= s.at;
       const arena = PVP_TIERS.find((t) => t.min === s.at);
-      const reward = s.unit ? `${spriteIcon(unitIconUrl(s.unit), 'frame-sprite road-unit')} ${UNIT_BY_ID[s.unit].kr}` : `${icon('gem')} ${s.crystals}`;
+      const reward = s.crystals ? `${icon('gem')} ${s.crystals}` : `${roadRewardIcon(s)} ${roadRewardText(s)}`;
       return `${arena ? `<div class="road-arena tier-name" style="color:${arena.color}">${arena.kr} 아레나</div>` : ''}<div class="road-row ${done ? 'done' : reached ? 'ready' : ''}">
         <span class="road-at">${icon('trophy')}${s.at}</span><span class="road-rw">${reward}</span>
         <span class="road-st">${done ? icon('check') : reached ? '' : icon('lock')}</span></div>`;
@@ -365,40 +379,32 @@ export class Menu {
     bindActions(el, { go: () => { closeOverlay('modal'); this.onLaunch({ kind: 'endless', goldBooster: booster }); } });
   }
 
-  // ======================= 유닛 / 덱 =======================
+  // ======================= 덱 (유닛 덱 · 몹 카드 덱) =======================
+  // 카드를 위쪽 덱 칸으로 끌어 넣고, 칸끼리 끌어 바꾸고, 칸을 밖으로 끌어 뺀다. 버튼으로도 할 수 있다.
+  private deckTab: 'units' | 'attacks' = 'units';
+  private pickAttack: AttackKey | null = null; // 버튼으로 넣을 몹 카드 (칸을 누르면 들어감)
   private openUnits(after?: () => void): void {
     const draw = () => {
-      const deck = meta.deck.map((j) => `<div class="deck-slot filled" data-act="toggle" data-job="${j}">${spriteIcon(unitIconUrl(j))}<div>${UNIT_BY_ID[j].kr}</div></div>`).join('')
-        + Array.from({ length: DECK_SIZE - meta.deck.length }, () => '<div class="deck-slot">빈 슬롯</div>').join('');
-      const cards = UNITS.map((u) => {
-        const lv = unitLevel(u.id);
-        const unlocked = lv > 0;
-        const inDeck = meta.deck.includes(u.id);
-        const pips = Array.from({ length: UNIT_MAX_LEVEL }, (_, i) =>
-          `<i class="${i < lv ? 'on' : ''} ${UNIT_PERK_LEVELS.includes(i + 1) ? 'perk' : ''}"></i>`).join('');
-        let acts: string;
-        if (!unlocked) {
-          acts = `<button class="btn small gold" data-act="buy" data-job="${u.id}" ${meta.crystals < (u.unlockCrystals || 0) ? 'disabled' : ''}>${icon('gem')}${u.unlockCrystals} 해금</button>`;
-        } else {
-          const maxed = lv >= UNIT_MAX_LEVEL;
-          acts = `<button class="btn small ${inDeck ? 'red' : 'blue'}" data-act="toggle" data-job="${u.id}">${inDeck ? '덱 해제' : '덱 편성'}</button>
-            <button class="btn small green" data-act="up" data-job="${u.id}" ${canUpgradeUnit(u.id) ? '' : 'disabled'}>${maxed ? 'MAX' : `${icon('gem')}${unitUpgradeCost(lv)}`}</button>`;
-        }
-        return `<div class="unit-card ${inDeck ? 'in-deck' : ''} ${unlocked ? '' : 'locked'}">
-          <div class="head">${spriteIcon(unitIconUrl(u.id, unlocked ? Math.min(5, lv >> 1) : 0))}
-            <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : V1 && roadUnlockAt(u.id) ? `${icon('lock')} ${icon('trophy')}${roadUnlockAt(u.id)}` : u.unlockStage ? `${icon('lock')} ${u.unlockStage} 클리어` : icon('lock')}</div></div></div>
-          <div class="lv-pips">${pips}</div>
-          <div class="sk" data-act="info" data-job="${u.id}"><b>${SKILL_KR[u.id]}</b> <span class="info-dot">?</span></div>
-          <div class="acts">${acts}</div></div>`;
-      }).join('');
-      const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
-        <h2>유닛 <span class="crystal" style="font-size:16px">${icon('gem')} ${meta.crystals}</span></h2>
-        <div class="fine" style="margin:-6px 0 8px">덱 ${meta.deck.length}/${DECK_SIZE}</div>
-        <div class="deck-row">${deck}</div>
-        <div class="unit-grid">${cards}</div></div>`, () => { this.render(); after?.(); });
+      const tab = this.deckTab;
+      const tabs = `<div class="tab-row deck-tabs">
+        <button class="${tab === 'units' ? 'active' : ''}" data-act="tab" data-tab="units">${icon('helmet')} 유닛</button>
+        <button class="${tab === 'attacks' ? 'active' : ''}" data-act="tab" data-tab="attacks">${icon('skull')} 몹 카드</button></div>`;
+      const body = tab === 'units' ? this.unitDeckHtml() : this.attackDeckHtml();
+      const el = openOverlay('panel', `<div class="dialog deck-dialog"><button class="close-x">${icon('close')}</button>
+        <h2>덱 <span class="crystal" style="font-size:16px">${icon('gem')} ${meta.crystals}</span></h2>
+        ${tabs}${body}</div>`, () => { this.pickAttack = null; this.render(); after?.(); });
+      enableDeckDrag(el, (key, _from, to) => {
+        let ok: boolean;
+        if (tab === 'units') ok = to === 'out' ? removeDeck(key as Job) : placeDeck(key as Job, to);
+        else ok = to === 'out' ? false : placeAttack(key as AttackKey, to);
+        if (ok) audio.button();
+        else if (to === 'out') toast(tab === 'units' ? '덱에 최소 1종은 있어야 해요' : '몹 카드는 4장 모두 들고 가요. 다른 카드를 칸에 놓아 바꾸세요');
+        draw();
+      });
       bindActions(el, {
+        tab: (b) => { this.deckTab = b.dataset.tab as 'units' | 'attacks'; this.pickAttack = null; draw(); },
         toggle: (b) => {
-          if (!toggleDeck(b.dataset.job as Job)) toast(meta.deck.length >= DECK_SIZE ? '덱이 가득 찼어요 (최대 4)' : '덱에 최소 1종은 있어야 해요');
+          if (!toggleDeck(b.dataset.job as Job)) toast(meta.deck.length >= DECK_SIZE ? '덱이 가득 찼어요. 덱 칸에 끌어 놓아 바꾸세요' : '덱에 최소 1종은 있어야 해요');
           else audio.button();
           draw();
         },
@@ -411,9 +417,78 @@ export class Menu {
           }
           draw();
         },
+        pick: (b) => { const k = b.dataset.key as AttackKey; this.pickAttack = this.pickAttack === k ? null : k; audio.button(); draw(); },
+        slot: (b) => {
+          if (tab !== 'attacks' || !this.pickAttack) return;
+          if (placeAttack(this.pickAttack, Number(b.dataset.dropSlot))) audio.button();
+          this.pickAttack = null;
+          draw();
+        },
       });
     };
     draw();
+  }
+
+  private unitDeckHtml(): string {
+    const slots = Array.from({ length: DECK_SIZE }, (_, i) => {
+      const j = meta.deck[i];
+      return j
+        ? `<div class="deck-slot filled" data-drop-slot="${i}" data-drag="${j}" data-slot="${i}">${spriteIcon(unitIconUrl(j))}<div>${UNIT_BY_ID[j].kr}</div></div>`
+        : `<div class="deck-slot" data-drop-slot="${i}">${icon('plus')}</div>`;
+    }).join('');
+    const cards = UNITS.map((u) => {
+      const lv = unitLevel(u.id);
+      const unlocked = lv > 0;
+      const inDeck = meta.deck.includes(u.id);
+      const pips = Array.from({ length: UNIT_MAX_LEVEL }, (_, i) =>
+        `<i class="${i < lv ? 'on' : ''} ${UNIT_PERK_LEVELS.includes(i + 1) ? 'perk' : ''}"></i>`).join('');
+      let acts: string;
+      if (!unlocked) {
+        acts = u.unlockCrystals
+          ? `<button class="btn small gold" data-act="buy" data-job="${u.id}" ${meta.crystals < u.unlockCrystals ? 'disabled' : ''}>${icon('gem')}${u.unlockCrystals} 해금</button>`
+          : '';
+      } else {
+        const maxed = lv >= UNIT_MAX_LEVEL;
+        acts = `<button class="btn small ${inDeck ? 'red' : 'blue'}" data-act="toggle" data-job="${u.id}">${inDeck ? '빼기' : '넣기'}</button>
+          <button class="btn small green" data-act="up" data-job="${u.id}" ${canUpgradeUnit(u.id) ? '' : 'disabled'}>${maxed ? 'MAX' : `${icon('gem')}${unitUpgradeCost(lv)}`}</button>`;
+      }
+      return `<div class="unit-card ${inDeck ? 'in-deck' : ''} ${unlocked ? '' : 'locked'}" ${unlocked ? `data-drag="${u.id}"` : ''}>
+        <div class="head">${spriteIcon(unitIconUrl(u.id, unlocked ? Math.min(5, lv >> 1) : 0))}
+          <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : V1 && roadUnlockAt(u.id) ? `${icon('lock')} ${icon('trophy')}${roadUnlockAt(u.id)}` : u.unlockStage ? `${icon('lock')} ${u.unlockStage} 클리어` : icon('lock')}</div></div></div>
+        <div class="lv-pips">${pips}</div>
+        <div class="sk" data-act="info" data-job="${u.id}"><b>${SKILL_KR[u.id]}</b> <span class="info-dot">?</span></div>
+        <div class="acts">${acts}</div></div>`;
+    }).join('');
+    return `<div class="deck-hint">${icon('pointer')} 끌어서 칸에 놓기</div>
+      <div class="deck-row">${slots}</div>
+      <div class="unit-grid">${cards}</div>`;
+  }
+
+  private attackDeckHtml(): string {
+    const pick = this.pickAttack;
+    const mobIc = (k: AttackKey) => { const a = ATTACK_BY_KEY[k]; return spriteIcon(mobSprite(a.race, a.variant).url); };
+    const slots = Array.from({ length: ATTACK_DECK_SIZE }, (_, i) => {
+      const k = meta.attackDeck[i];
+      return `<div class="deck-slot filled ${pick ? 'pickable' : ''}" data-act="slot" data-drop-slot="${i}" data-drag="${k}" data-slot="${i}">
+        ${mobIc(k)}<div>${ATTACK_BY_KEY[k].kr}</div></div>`;
+    }).join('');
+    const cards = ATTACKS.map((a) => {
+      const open = attackUnlocked(a.key);
+      const inDeck = meta.attackDeck.includes(a.key);
+      const at = attackUnlockAt(a.key);
+      const counters = a.counters.map((j) => spriteIcon(unitIconUrl(j), 'frame-sprite mini')).join('');
+      const act = !open ? `<div class="lock">${icon('lock')} ${icon('trophy')}${at}</div>`
+        : inDeck ? `<div class="in">${icon('check')} 덱</div>`
+        : `<button class="btn small ${pick === a.key ? 'gold' : 'blue'}" data-act="pick" data-key="${a.key}">${pick === a.key ? '칸 선택' : '넣기'}</button>`;
+      return `<div class="mob-card ${inDeck ? 'in-deck' : ''} ${open ? '' : 'locked'} ${pick === a.key ? 'picked' : ''}" ${open ? `data-drag="${a.key}"` : ''}>
+        <div class="head">${mobIc(a.key)}<div><div class="nm">${a.kr}</div><div class="cost">${icon('coin')}${a.cost}${a.cooldown ? ` · ${icon('timer')}${Math.round(a.cooldown / PLAY_SPEED)}s` : ''}</div></div></div>
+        <div class="ds">${a.desc}</div>
+        <div class="ctr"><span>막는 유닛</span>${counters}</div>
+        <div class="acts">${act}</div></div>`;
+    }).join('');
+    return `<div class="deck-hint">${pick ? `${icon('pointer')} 넣을 칸을 누르세요` : `${icon('pointer')} 끌어서 칸에 놓기 · 대전에서 상대에게 던져요`}</div>
+      <div class="deck-row">${slots}</div>
+      <div class="unit-grid">${cards}</div>`;
   }
 
   // ======================= 연구 =======================

@@ -2,18 +2,17 @@
 //  게임 화면 DOM UI - 상단바/소환/강화/합성·판매/소환권/PvP HUD/결과/튜토리얼
 // ============================================================
 import {
-  JOB_KR, RACE_KR, GRADES, DMG_MULT, ECONOMY, WAVE, PVP, GRADE_INDEX, MERGE_COUNT, PLAY_SPEED,
+  JOB_KR, RACE_KR, GRADES, DMG_MULT, ECONOMY, WAVE, GRADE_INDEX, MERGE_COUNT, PLAY_SPEED, ATTACKS,
 } from './config';
 import { MAP, Game, pathPosNear, type BoardSnapshot } from './engine';
-import { mobPortraitSrc, unitIconUrl } from './assets';
+import { mobPortraitSrc, unitIconUrl, mobSprite } from './assets';
 import { meta, useItem } from './meta';
 import { audio } from './audio';
 import { $, toast, spriteIcon } from './dom';
 import { icon } from './icons';
 import { OppRenderer } from './oppRender';
-import type { Job, Race, GradeKey, AttackPayload } from './types';
+import type { Job, Race, GradeKey } from './types';
 
-type AttackTier = AttackPayload['tier'];
 
 
 export interface UIContext {
@@ -163,7 +162,7 @@ export class UI {
     ($('btn-summon') as HTMLButtonElement).disabled = g.gold < ECONOMY.summonCost || g.over;
     if (g.isPvp) {
       document.querySelectorAll<HTMLButtonElement>('#attack-row .attack-card').forEach((b) => {
-        const t = Number(b.dataset.tier) as AttackTier;
+        const t = Number(b.dataset.card);
         const cd = g.attackCooldown(t);
         b.disabled = g.gold < g.attackCost(t) || cd > 0 || g.over;
         const label = cd > 0 ? String(Math.ceil(cd / PLAY_SPEED)) : '';
@@ -196,8 +195,12 @@ export class UI {
   // ---------- PvP 몹 던지기: 카드를 위쪽 상대 전장으로 끌어다 놓는다 ----------
   private buildAttackCards(): void {
     const row = $('attack-row');
-    row.innerHTML = PVP.attacks.map((a, i) => `<button class="attack-card c${i}" data-tier="${i}">
-      ${icon(a.icon)}<b>${a.kr}</b><span>${icon('coin')}${a.cost}</span><i class="cd"></i></button>`).join('');
+    // 내 공격 덱 4장 (로비 '덱' 에서 편성)
+    row.innerHTML = this.game.attackCards.map((c, i) => {
+      const a = ATTACKS[c];
+      return `<button class="attack-card c${i}" data-card="${c}" aria-label="${a.kr}: ${a.desc}">
+      ${spriteIcon(mobSprite(a.race, a.variant).url, 'frame-sprite')}<b>${a.kr}</b><span>${icon('coin')}${a.cost}</span><i class="cd"></i></button>`;
+    }).join('');
     const opp = $<HTMLCanvasElement>('opp-canvas');
     // 손가락 위치 → 상대 길 위치 (상대 전장 밖이면 null)
     const posAt = (x: number, y: number): number | null => {
@@ -206,7 +209,7 @@ export class UI {
       return pathPosNear(((x - r.left) / r.width) * MAP.size, ((y - r.top) / r.height) * MAP.size);
     };
     row.querySelectorAll<HTMLButtonElement>('.attack-card').forEach((card) => {
-      const tier = Number(card.dataset.tier) as AttackTier;
+      const tier = Number(card.dataset.card);
       let ghost: HTMLElement | null = null;
       let x0 = 0, y0 = 0;
       const move = (e: PointerEvent) => {
@@ -224,7 +227,8 @@ export class UI {
         $('game-frame').classList.add('aiming'); // 상대 전장을 크게 펼친다
         ghost = document.createElement('div');
         ghost.className = 'throw-ghost';
-        ghost.innerHTML = icon(PVP.attacks[tier].icon);
+        const a = ATTACKS[tier];
+        ghost.innerHTML = spriteIcon(mobSprite(a.race, a.variant).url, 'frame-sprite');
         document.body.appendChild(ghost);
         move(e);
       };

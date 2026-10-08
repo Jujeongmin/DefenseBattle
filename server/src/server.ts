@@ -17,6 +17,7 @@ const MATCH_TTL = 60_000;        // 매칭 결과 보관(ms)
 const TROPHY_WIN = 30;
 const TROPHY_LOSS = 20;
 const BOT_MIN_MATCH_MS = 40_000; // 봇전 결과를 받는 최소 경기 시간
+const ATTACK_CARD_COUNT = 10;    // 몹 카드 종류 수 (game/src/config.ts ATTACKS)
 const RANKING = 'pvpRanking';
 const MAX_META_BYTES = 60_000;
 
@@ -193,15 +194,15 @@ export class Server {
   }
 
   /** 몹 보내기 중계 */
-  async pvpAttack(payload: { tier: number; wave: number; pos?: number }): Promise<boolean> {
-    // 카드 4종(0=무리 1=질주 2=거인 3=정예) + 던진 길 위치(둘레 비율 0~1)
-    const tier = Math.max(0, Math.min(3, Math.floor(Number(payload?.tier) || 0)));
+  async pvpAttack(payload: { card?: number; tier?: number; wave: number; pos?: number }): Promise<boolean> {
+    // 몹 카드 번호(0~9, 클라이언트 ATTACKS 순서) + 던진 길 위치(둘레 비율 0~1). tier 는 예전 클라이언트 호환
+    const card = Math.max(0, Math.min(ATTACK_CARD_COUNT - 1, Math.floor(Number(payload?.card ?? payload?.tier) || 0)));
     const wave = Math.max(1, Math.min(999, Math.floor(Number(payload?.wave) || 1)));
     const p = Number(payload?.pos);
     const pos = Number.isFinite(p) ? Math.max(0, Math.min(1, p)) : 0;
     const room = await $room.getRoomState(['status']);
     if (room.status !== 'playing') return false;
-    $room.broadcastToRoom('pvpAttack', { from: $sender.account, payload: { tier, wave, pos } });
+    $room.broadcastToRoom('pvpAttack', { from: $sender.account, payload: { card, wave, pos } });
     return true;
   }
 
