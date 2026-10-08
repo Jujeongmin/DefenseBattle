@@ -8,7 +8,7 @@ import { MAP, Game, pathPosNear, type BoardSnapshot } from './engine';
 import { mobPortraitSrc, unitIconUrl, mobSprite } from './assets';
 import { meta, useItem } from './meta';
 import { audio } from './audio';
-import { $, toast, spriteIcon } from './dom';
+import { $, toast, spriteIcon, popIn } from './dom';
 import { icon } from './icons';
 import { OppRenderer } from './oppRender';
 import type { Job, Race, GradeKey } from './types';
@@ -531,6 +531,7 @@ export class UI {
       b.onclick = () => { audio.button(); v.buttons[Number(b.dataset.i)].action(); };
     });
     panel.classList.remove('hidden');
+    popIn(panel); // 결과 창도 통통 튀며 열리고 보상이 차례로 등장
   }
 
   hideResult(): void {

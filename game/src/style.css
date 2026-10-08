@@ -445,10 +445,35 @@ b, strong { font-weight: 700; }
   color: var(--ink);
   --text: var(--ink);
   --muted: var(--ink-2);
-  animation: dlgIn 0.16s ease-out;
+  animation: dlgPop 0.42s cubic-bezier(0.2, 1.3, 0.4, 1) both;
 }
-@keyframes dlgIn { from { transform: scale(0.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.dialog.redraw { animation: none; } /* 열린 패널을 다시 그릴 때 (dom.ts openOverlay) */
+/* ---------- 창 등장 효과: 통통 튀는 팝업 ----------
+   배경이 어두워지고 → 창이 작게 시작해 살짝 커졌다 제자리 → 제목 리본이 위에서 떨어지고 →
+   안의 카드·버튼이 위에서부터 차례로 톡톡 (dom.ts popIn). 닫을 땐 작아지며 사라진다. */
+@keyframes dlgPop {
+  0% { transform: scale(0.55); opacity: 0; }
+  55% { transform: scale(1.05); opacity: 1; }
+  78% { transform: scale(0.98); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.overlay:not(.hidden) { animation: dimIn 0.2s ease-out; }
+@keyframes dimIn { from { background-color: rgba(26, 18, 12, 0); } }
+.dialog h2 { animation: ribbonDrop 0.46s 0.08s cubic-bezier(0.25, 1.5, 0.5, 1) both; }
+@keyframes ribbonDrop {
+  0% { transform: translateY(-34px) rotate(-4deg); opacity: 0; }
+  60% { transform: translateY(3px) rotate(1.5deg); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+.pop-in { animation: itemPop 0.32s cubic-bezier(0.3, 1.6, 0.6, 1) both; animation-delay: calc(0.14s + var(--i, 0) * 0.035s); }
+@keyframes itemPop { from { transform: translateY(10px) scale(0.85); opacity: 0; } to { transform: none; opacity: 1; } }
+.overlay.closing { animation: dimOut 0.16s ease-in forwards; pointer-events: none; }
+.overlay.closing .dialog { animation: dlgOut 0.16s ease-in forwards; }
+@keyframes dimOut { to { background-color: rgba(26, 18, 12, 0); } }
+@keyframes dlgOut { to { transform: scale(0.85); opacity: 0; } }
+.dialog.redraw, .dialog.redraw h2, .dialog.redraw .pop-in { animation: none; } /* 열린 패널을 다시 그릴 때 (dom.ts openOverlay) */
+@media (prefers-reduced-motion: reduce) {
+  .dialog, .dialog h2, .pop-in, .overlay:not(.hidden), .overlay.closing, .overlay.closing .dialog { animation: none !important; }
+}
 .dialog h2 {
   margin: 0 22px 14px;
   text-align: center;
@@ -1102,6 +1127,7 @@ b, strong { font-weight: 700; }
 #sell-panel .sell-dialog { width: 100%; max-width: 480px; max-height: 80%; }
 #sell-panel .sell-dialog { animation: none; } /* 버튼마다 다시 그려지므로 처음 열 때(.anim)만 움직인다 */
 #sell-panel .sell-dialog.anim { animation: sheetUp 0.22s ease; }
+#sell-panel .sell-dialog:not(.anim) h2 { animation: none; } /* 버튼마다 다시 그려질 때 제목 리본이 다시 떨어지지 않게 */
 @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .sell-head { display: flex; align-items: center; justify-content: space-between; margin: 0 28px 10px 0; gap: 8px; }
 .sell-head h2 { margin: 0; font-size: 17px; padding: 7px 40px 10px; border-image-width: 7px 40px 3px 40px; }
