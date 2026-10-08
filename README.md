@@ -77,15 +77,20 @@ PvP 는 AI 연습전만 가능. Verse8 프로젝트(.env 에 `VITE_AGENT8_VERSE`
 
 ### 2) VX Shop 상품 등록
 Verse8 VX Shop 에 아래 **productId** 로 상품을 등록해야 한다 (가격은 등록값이 표시에 우선).
+가격은 100 VX = 1달러 기준. 상점의 '효율 N%' 는 기본 보석 상품(100 VX = 보석 100) 대비 가치로,
+`config.ts` 의 `productEfficiency` 가 등록 가격으로 계산한다. 상품 이미지: `launch/vxshop/{productId}.png` (1:1).
 
-| productId | 내용 | 기본가(VX) |
-| --- | --- | --- |
-| `starter_pack` | 보석 500 + 소환권 20 + 신화 확정권 1 + 골드 부스터 3 (1회 한정) | 30 |
-| `monthly_pass` | 즉시 보석 300 + 30일간 매일 100 | 90 |
-| `ad_remove` | 전면광고 제거, 보상형 광고 즉시 보상, 3배속, 보석 300 | 300 |
-| `season_premium` | 이번 시즌 PvP 패스 프리미엄 트랙 | 150 |
-| `summon_ticket_30` / `mythic_ticket` / `gold_booster_5` | 일반 모드 부스터 | 30 / 60 / 25 |
-| `crystal_100` / `550` / `1200` / `2600` | 보석 | 10 / 50 / 100 / 200 |
+| productId | 내용 | 가격(VX) | 1인 구매 제한 | 효율 |
+| --- | --- | --- | --- | --- |
+| `starter_pack` | 보석 150 + 소환권 10 + 골드 부스터 1 | 100 | 1 | 300% |
+| `monthly_pass` | 즉시 보석 300 + 30일간 매일 보석 40 | 500 | - | 300% |
+| `ad_remove` | 전면광고 제거, 보상형 광고 즉시 보상, 3배속, 보석 500 | 500 | 1 | - |
+| `season_premium` | 이번 시즌 PvP 패스 프리미엄 트랙 | 1000 | - (시즌당 게임이 막음) | - |
+| `summon_ticket_pack` | 소환권 24장 | 200 | - | 120% |
+| `mythic_ticket` | 신화 확정 소환권 1장 | 500 | - | 120% |
+| `gold_booster_pack` | 골드 부스터 5개 | 200 | - | 125% |
+| `crystal_100` / `crystal_550` / `crystal_1200` | 보석 100 / 550 / 1,200 | 100 / 500 / 1000 | - | 100 / 110 / 120% |
+| `crystal_2600` / `crystal_7000` / `crystal_15000` | 보석 2,600 / 7,000 / 15,000 | 2000 / 5000 / 10000 | - | 130 / 140 / 150% |
 
 ### 3) 광고 플레이스먼트 (`ads.ts` `AD_PLACEMENTS`)
 `reward_double`(결과 보상 2배), `reward_revive`(실패 시 1회 부활), `reward_ticket`(하루 3회 소환권 5장),

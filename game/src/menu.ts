@@ -5,7 +5,7 @@ import {
   RESEARCH, researchCost, DAILY_QUESTS, ACHIEVEMENTS, PRODUCTS, ITEM_KR,
   UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, UNIT_PERK_LEVELS, unitUpgradeCost, SKILL_DESC, SKILL_KR,
   DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, STAGES_PER_CHAPTER,
-  SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, PVP, FEATURE_KR,
+  SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, PVP, FEATURE_KR, productEfficiency,
 } from './config';
 import { meta, saveMeta, researchLevel, currentSeasonId } from './meta';
 import { getPlatform } from './platform';
@@ -420,13 +420,17 @@ export class Menu {
         const owned = productOwned(id);
         let extra = '';
         if (id === 'monthly_pass' && monthlyActive()) extra = ` <span class="badge green">${monthlyDaysLeft()}일 남음</span>`;
-        return `<div class="shop-card ${hot ? 'hot' : ''}"><div class="ic">${icon(p.icon)}</div>
+        const eff = owned ? 0 : productEfficiency(p, price(id));
+        return `<div class="shop-card ${hot ? 'hot' : ''}">${eff > 100 ? `<span class="eff">효율<b>${eff}%</b></span>` : ''}<div class="ic">${icon(p.icon)}</div>
           <div class="info"><div class="t">${p.kr}${p.badge ? ` <span class="badge">${p.badge}</span>` : ''}${extra}</div><div class="d">${p.desc}</div></div>
           <button class="btn small ${owned ? '' : 'gold'}" data-act="buy" data-id="${id}" ${owned ? 'disabled' : ''}>${owned ? `보유 ${icon('check')}` : `VX ${price(id)}`}</button></div>`;
       };
-      const gems = PRODUCTS.filter((p) => p.category === 'crystal').map((p) => `<div class="gem-card">
-        ${p.badge ? `<span class="badge">${p.badge}</span>` : ''}<div class="ic">${icon('gem')}</div><div>${p.kr}</div>
-        <button class="btn small gold" data-act="buy" data-id="${p.id}">VX ${price(p.id)}</button></div>`).join('');
+      const gems = PRODUCTS.filter((p) => p.category === 'crystal').map((p) => {
+        const eff = productEfficiency(p, price(p.id));
+        return `<div class="gem-card">
+        ${eff > 100 ? `<span class="eff">효율<b>${eff}%</b></span>` : ''}<div class="ic">${icon('gem')}</div><div>${p.kr}</div>
+        <button class="btn small gold" data-act="buy" data-id="${p.id}">VX ${price(p.id)}</button></div>`;
+      }).join('');
       const items = Object.entries(meta.items).map(([k, n]) => `${icon(ITEM_KR[k as keyof typeof ITEM_KR].icon)}${n}`).join(' · ');
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>상점</h2>
@@ -438,7 +442,7 @@ export class Menu {
         ${card('ad_remove')}
         <div class="section-title">PvP 시즌 패스</div>${card('season_premium')}
         <div class="section-title">부스터 <span class="fine">일반 모드 전용</span></div>
-        ${card('summon_ticket_30')}${card('mythic_ticket')}${card('gold_booster_5')}
+        ${card('summon_ticket_pack')}${card('mythic_ticket')}${card('gold_booster_pack')}
         <div class="section-title">보석</div><div class="gem-grid">${gems}</div>
         <div class="fine">${vx !== null ? '* 로컬 개발 환경: 데모 VX 로 결제를 흉내냅니다.' : '* 결제는 Verse8 VX 로 진행되며, 결제 완료 후 자동 지급됩니다.'}</div></div>`, () => this.render());
       bindActions(el, {
