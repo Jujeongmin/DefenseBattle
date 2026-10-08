@@ -120,4 +120,5 @@ Verse8 VX Shop 에 아래 **productId** 로 상품을 등록해야 한다 (가�
 | [Mixkit](https://mixkit.co/) | 효과음(`sfx/`) 16종, BGM(`bgm/`) 4곡 | Mixkit Sound Effects / Stock Music Free License: 상업 이용 가능, 표기 불필요, 원본 단독 재판매 금지 |
 
 원본 팩은 `Asset/`(gitignore)에 두고, 가공본만 `game/public` 에 커밋한다.
+음원 음량은 `python tools/normalize_audio.py` (pyloudnorm 필요) 로 맞춘다: 효과음은 모두 같은 체감 음량(100ms 최대 −14 LUFS), BGM 은 곡끼리 같게(−16 LUFS).
 가공 스크립트: `python tools/build_ui_assets.py` (Pillow 필요). 팩에 없는 아이콘(별, TV, 티켓 등)은 스크립트 안에 직접 그렸다.

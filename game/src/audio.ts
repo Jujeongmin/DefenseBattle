@@ -1,7 +1,9 @@
 // ============================================================
 //  사운드 - Mixkit 효과음(public/sfx) + BGM(public/bgm)
 //  효과음은 WebAudio 버퍼로 미리 디코딩해 겹쳐 재생하고, BGM 은 <audio> 로 스트리밍 반복 재생한다.
-//  엔진과 분리(이벤트로 호출). 원본은 Asset/mixkit (가공: 앞 무음 제거, BGM 모노 64kbps).
+//  엔진과 분리(이벤트로 호출). 원본은 Asset/mixkit.
+//  파일 음량은 tools/normalize_audio.py 가 맞춰 둔다 (효과음끼리 같은 체감 음량, BGM 은 곡끼리 같게).
+//  그래서 여기서는 효과음마다 볼륨을 따로 주지 않는다 - 튀는 소리가 생기지 않게.
 // ============================================================
 const MUTE_KEY = 'randomdefense.muted.v1';
 
@@ -9,15 +11,13 @@ type Sfx =
   | 'button' | 'coin' | 'summon' | 'mythic' | 'unlock' | 'merge' | 'arrow' | 'magic' | 'sword'
   | 'hit' | 'boss_kill' | 'boss' | 'send' | 'incoming' | 'win' | 'lose';
 
-// 파일별 기본 볼륨 (원본 음량 차이 보정)
-const SFX_VOL: Record<Sfx, number> = {
-  button: 0.5, coin: 0.45, summon: 0.5, mythic: 0.7, unlock: 0.6, merge: 0.6,
-  arrow: 0.22, magic: 0.18, sword: 0.25, hit: 0.25, boss_kill: 0.7, boss: 0.75,
-  send: 0.55, incoming: 0.5, win: 0.7, lose: 0.7,
-};
-
+const SFX: Sfx[] = [
+  'button', 'coin', 'summon', 'mythic', 'unlock', 'merge', 'arrow', 'magic', 'sword',
+  'hit', 'boss_kill', 'boss', 'send', 'incoming', 'win', 'lose',
+];
+const SFX_VOL = 0.8;  // 모든 효과음 공통 (겹칠 때 여유)
 type BgmTrack = 'menu' | 'battle' | 'boss' | 'pvp';
-const BGM_VOL = 0.35;
+const BGM_VOL = 0.45; // 효과음보다 약 7dB 아래
 
 class AudioManager {
   private ctx: AudioContext | null = null;
@@ -60,7 +60,7 @@ class AudioManager {
     if (this.loading || !this.ctx) return;
     this.loading = true;
     const ctx = this.ctx;
-    for (const name of Object.keys(SFX_VOL) as Sfx[]) {
+    for (const name of SFX) {
       fetch(`sfx/${name}.mp3`)
         .then((r) => r.arrayBuffer())
         .then((b) => ctx.decodeAudioData(b))
@@ -70,7 +70,7 @@ class AudioManager {
   }
 
   /** minGap: 같은 소리가 너무 촘촘히 겹치지 않게 하는 최소 간격(ms) */
-  private play(name: Sfx, opts: { vol?: number; rate?: number; minGap?: number } = {}): void {
+  private play(name: Sfx, opts: { rate?: number; minGap?: number } = {}): void {
     if (this.muted || !this.ctx || !this.master) return;
     const buf = this.buffers.get(name);
     if (!buf) return;
@@ -81,7 +81,7 @@ class AudioManager {
     src.buffer = buf;
     src.playbackRate.value = opts.rate ?? 1;
     const g = this.ctx.createGain();
-    g.gain.value = SFX_VOL[name] * (opts.vol ?? 1);
+    g.gain.value = SFX_VOL;
     src.connect(g);
     g.connect(this.master);
     src.start();
