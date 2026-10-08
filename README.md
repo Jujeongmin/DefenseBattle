@@ -117,6 +117,7 @@ Verse8 VX Shop 에 아래 **productId** 로 상품을 등록해야 한다 (가�
 | [Kenney 1-Bit Pack](https://kenney.nl/assets/1-bit-pack) | UI 아이콘(`ui/icons/`, 색 입혀 가공) | CC0 |
 | [Galmuri](https://github.com/quiple/galmuri) (Lee Minseo) | 픽셀 폰트(`fonts/`) | SIL OFL 1.1 |
 | [ぴぽや Pipoya](https://pipoya.net/) 32x32 파츠 (CharaMEL) | 유닛·몹 캐릭터 시트(`sprites/`) | 상업 이용·수정 가능, 소재 재배포 금지 |
+| [Mixkit](https://mixkit.co/) | 효과음(`sfx/`) 16종, BGM(`bgm/`) 4곡 | Mixkit Sound Effects / Stock Music Free License: 상업 이용 가능, 표기 불필요, 원본 단독 재판매 금지 |
 
 원본 팩은 `Asset/`(gitignore)에 두고, 가공본만 `game/public` 에 커밋한다.
 가공 스크립트: `python tools/build_ui_assets.py` (Pillow 필요). 팩에 없는 아이콘(별, TV, 티켓 등)은 스크립트 안에 직접 그렸다.
