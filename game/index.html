@@ -37,10 +37,18 @@
         <!-- PvP: 상대 상태 -->
         <!-- 상대 정보 한 줄 + 상대 전장. PvP 에선 #pvp-hud 가 display:contents 라 둘 다 #game-frame 의 줄이 된다 -->
         <div id="pvp-hud" class="hidden">
-          <div class="opp-info">
-            <div class="opp-name"><span id="opp-nick">상대</span><span id="opp-bot" class="hidden"> <i class="pi pi-robot"></i></span> <span id="opp-trophy" class="trophy"></span></div>
-            <div class="opp-bar"><div id="opp-fill"></div><span id="opp-count">0 / 100</span></div>
-            <div class="opp-sub" id="opp-sub">Wave 1 · 유닛 0</div>
+          <!-- 나 vs 상대: 필드 몹 수 막대 두 개를 한 줄에 (먼저 100 마리가 되는 쪽이 진다) -->
+          <div class="opp-info vs-hud">
+            <div class="vs-names">
+              <span class="vs-tag me">나</span><span id="my-nick" class="vs-nick"></span>
+              <b class="vs-mark">VS</b>
+              <span id="opp-nick" class="vs-nick opp">상대</span><span id="opp-bot" class="hidden"><i class="pi pi-robot"></i></span><span class="vs-tag opp">상대</span>
+            </div>
+            <div class="vs-bars">
+              <div class="vs-bar me"><div id="my-fill"></div><span id="my-count">0/100</span></div>
+              <div class="vs-bar opp"><div id="opp-fill"></div><span id="opp-count">0/100</span></div>
+            </div>
+            <span id="opp-trophy" class="hidden"></span><span id="opp-sub" class="hidden"></span>
           </div>
           <canvas id="opp-canvas" width="72" height="72"></canvas>
           <div class="opp-label">상대 전장<div id="opp-deck"></div></div>

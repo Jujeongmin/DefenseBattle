@@ -141,6 +141,12 @@ export class UI {
     fill.style.width = pct + '%';
     fill.classList.toggle('warn', pct >= 70);
     $('mob-count-label').textContent = `${g.mobs.length} / ${WAVE.gameOverMobCount}`;
+    if (g.isPvp) {
+      const my = $('my-fill');
+      my.style.width = pct + '%';
+      my.classList.toggle('warn', pct >= 70);
+      $('my-count').textContent = `${g.mobs.length}/${WAVE.gameOverMobCount}`;
+    }
 
     const bt = $('boss-timer');
     if (g.waveState === 'waiting_boss' || (g.isBossWave && g.waveState === 'spawning')) {
@@ -450,6 +456,7 @@ export class UI {
   private oppDeckKey = '';
   setOpponentInfo(nick: string, trophies: number, bot: boolean): void {
     $('opp-nick').textContent = nick;
+    $('my-nick').textContent = meta.nick;
     void bot; // 봇도 실제 유저처럼 보여 준다
     $('opp-bot').classList.add('hidden');
     $('opp-trophy').innerHTML = `${icon('trophy')}${trophies}`;
@@ -458,7 +465,8 @@ export class UI {
   setOpponent(s: BoardSnapshot): void {
     const pct = Math.min(100, (s.mobCount / WAVE.gameOverMobCount) * 100);
     $('opp-fill').style.width = pct + '%';
-    $('opp-count').textContent = `${s.mobCount} / ${WAVE.gameOverMobCount}`;
+    $('opp-count').textContent = `${s.mobCount}/${WAVE.gameOverMobCount}`;
+    $('opp-fill').classList.toggle('warn', pct >= 70);
     $('opp-sub').textContent = `Wave ${s.wave} · 유닛 ${s.unitCount}${s.bossHp >= 0 ? ` · 보스 ${Math.round(s.bossHp * 100)}%` : ''}`;
     this.opp?.push(s);
     // 상대 덱: 무엇이 날아올지(몹 카드)와 무엇으로 막는지(유닛) - 상성을 보고 카드를 고른다

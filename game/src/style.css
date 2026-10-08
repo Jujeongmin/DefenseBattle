@@ -778,16 +778,28 @@ b, strong { font-weight: 700; }
   font-size: 12px;
   font-weight: 700;
 }
-.opp-name { white-space: nowrap; max-width: 40%; overflow: hidden; text-overflow: ellipsis; }
-.opp-bar { flex: 1; position: relative; height: 16px; background: var(--edge); border: 2px solid var(--edge); overflow: hidden; }
-#opp-fill { height: 100%; width: 0; background: var(--red); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.3); transition: width 0.3s; }
-#opp-count { position: absolute; inset: 0; text-align: center; font-size: 11px; line-height: 12px; }
-.opp-sub { color: var(--cream-2); white-space: nowrap; }
+/* 나 vs 상대 몹 수 막대 (PvP) - 내 막대는 왼쪽에서, 상대 막대는 오른쪽에서 찬다 */
+.vs-hud { flex-direction: column; align-items: stretch; gap: 3px; padding: 5px 10px 6px; }
+.vs-names { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.vs-nick { min-width: 0; flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vs-nick.opp { text-align: right; }
+.vs-mark { flex: 0 0 auto; color: var(--gold); font-size: 13px; padding: 0 6px; }
+.vs-tag { flex: 0 0 auto; padding: 1px 5px 2px; font-size: 10px; line-height: 1.2; color: #fff; text-shadow: none; }
+.vs-tag.me { background: #3c8d3a; box-shadow: inset 0 -2px 0 #24581f; }
+.vs-tag.opp { background: #b8322c; box-shadow: inset 0 -2px 0 #7a1c18; }
+.vs-bars { display: flex; gap: 10px; }
+.vs-bar { flex: 1; position: relative; height: 18px; background: #4a3020; border: 2px solid var(--edge); overflow: hidden; }
+.vs-bar > div { position: absolute; top: 0; bottom: 0; width: 0; background: var(--red); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.3); transition: width 0.3s; }
+.vs-bar.me > div { left: 0; }
+.vs-bar.opp > div { right: 0; }
+.vs-bar > div.warn { animation: warnBlink 0.6s steps(2) infinite; }
+.vs-bar span { position: absolute; inset: 0; text-align: center; font-size: 11px; line-height: 14px; }
+#game-frame.pvp #progress-row { display: none; } /* PvP 에선 위 VS 막대가 내 몹 수를 보여 준다 */
 /* 상대 전장: 평소엔 내 전장 오른쪽 위 작은 창, 몹 카드를 끄는 동안(.aiming) 크게 펼쳐 조준 */
 #opp-canvas {
   position: absolute;
   z-index: 20;
-  top: 92px; right: 6px;
+  top: 113px; right: 6px; /* VS 막대 아래 */
   width: 112px; height: 112px;
   background: #6c9a3a;
   image-rendering: pixelated;
@@ -801,7 +813,7 @@ b, strong { font-weight: 700; }
   box-shadow: 0 0 0 3px var(--red), 0 0 0 9999px rgba(10, 6, 4, 0.45);
 }
 .opp-label {
-  position: absolute; z-index: 21; top: 207px; right: 6px; width: 112px;
+  position: absolute; z-index: 21; top: 228px; right: 6px; width: 112px;
   text-align: center; font-size: 10px; font-weight: 700; color: var(--cream); text-shadow: var(--outline-thin);
   pointer-events: none;
 }
