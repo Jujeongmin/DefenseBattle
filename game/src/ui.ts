@@ -60,14 +60,7 @@ export class UI {
     game.on('merge', () => audio.merge());
     game.on('attack', () => audio.sendAttack());
     game.on('gameover', () => this.hideThrowHint());
-    game.on('incoming', () => {
-      audio.incoming();
-      // 처음 몇 판: 색 규칙 안내 (한 판에 한 번)
-      if (!this.legendShown && meta.pvp.wins + meta.pvp.losses < 3) {
-        this.legendShown = true;
-        toast(`<span class="side-tag opp">빨강</span> 상대가 던진 몹 · <span class="side-tag me">파랑</span> 내가 던진 몹`, 3500);
-      }
-    });
+    game.on('incoming', () => audio.incoming());
 
     $('pvp-hud').classList.toggle('hidden', !pvp);
     $('game-frame').classList.toggle('pvp', pvp);
@@ -455,7 +448,6 @@ export class UI {
 
   // ---------- PvP: 상대 상태 ----------
   private oppDeckKey = '';
-  private legendShown = false;
   setOpponentInfo(nick: string, trophies: number, bot: boolean): void {
     $('opp-nick').textContent = nick;
     void bot; // 봇도 실제 유저처럼 보여 준다

@@ -38,12 +38,12 @@
         <!-- 상대 정보 한 줄 + 상대 전장. PvP 에선 #pvp-hud 가 display:contents 라 둘 다 #game-frame 의 줄이 된다 -->
         <div id="pvp-hud" class="hidden">
           <div class="opp-info">
-            <div class="opp-name"><span class="side-tag opp">상대</span> <span id="opp-nick">상대</span><span id="opp-bot" class="hidden"> <i class="pi pi-robot"></i></span> <span id="opp-trophy" class="trophy"></span></div>
+            <div class="opp-name"><span id="opp-nick">상대</span><span id="opp-bot" class="hidden"> <i class="pi pi-robot"></i></span> <span id="opp-trophy" class="trophy"></span></div>
             <div class="opp-bar"><div id="opp-fill"></div><span id="opp-count">0 / 100</span></div>
             <div class="opp-sub" id="opp-sub">Wave 1 · 유닛 0</div>
           </div>
           <canvas id="opp-canvas" width="72" height="72"></canvas>
-          <div class="opp-label"><span class="side-tag opp">상대 전장</span><div id="opp-deck"></div></div>
+          <div class="opp-label">상대 전장<div id="opp-deck"></div></div>
         </div>
 
         <!-- 전장 -->
@@ -64,7 +64,6 @@
         <!-- 진행 바 -->
         <div id="progress-row">
           <div id="mob-progress-bar"><div id="mob-progress-fill"></div></div>
-          <span class="side-tag me pvp-only">내 전장</span>
           <div id="mob-count-label">0 / 100</div>
         </div>
 

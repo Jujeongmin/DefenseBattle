@@ -7,7 +7,6 @@ import { unitSprite, mobSprite } from './assets';
 import { GRADES, JOBS, RACES, PLAY_SPEED } from './config';
 import { fieldBackground, FRAME, WALK_SEQ, JOB_TINT, UNIT_DRAW } from './render';
 import type { Job, Race } from './types';
-import { outlined, SIDE_COLOR } from './outline';
 
 interface SnapMob { x: number; y: number; race: Race; kind: number; dir: number; size: number; variant: number }
 interface SnapUnit { job: Job; grade: number; x: number; y: number }
@@ -98,29 +97,21 @@ export class OppRenderer {
       const x = p ? p.x + (m.x - p.x) * a : m.x;
       const y = p ? p.y + (m.y - p.y) * a : m.y;
       const s = m.size;
-      const mine = m.kind === SNAP_KIND.sent; // 상대 전장의 '보낸 몹' = 내가 던진 몹
-      if (mine) {
-        // 작은 창에서도 보이게 파란 원판을 깐다
-        ctx.fillStyle = 'rgba(63,169,255,0.45)';
-        ctx.beginPath(); ctx.arc(x, y, s * 0.55, 0, Math.PI * 2); ctx.fill();
-      } else {
-        ctx.fillStyle = 'rgba(0,0,0,0.25)';
-        ctx.beginPath(); ctx.ellipse(x, y + s * 0.38, s * 0.32, s * 0.12, 0, 0, Math.PI * 2); ctx.fill();
-      }
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.ellipse(x, y + s * 0.38, s * 0.32, s * 0.12, 0, 0, Math.PI * 2); ctx.fill();
       const spr = mobSprite(m.race, m.variant);
       if (spr.ready) {
         const col = WALK_SEQ[Math.floor((t + id * 0.07) / 0.16) % WALK_SEQ.length];
-        const img = mine ? outlined(spr.img, spr.url, SIDE_COLOR.me) ?? spr.img : spr.img;
-        ctx.drawImage(img, col * FRAME, m.dir * FRAME, FRAME, FRAME, x - s / 2, y - s / 2, s, s);
+        ctx.drawImage(spr.img, col * FRAME, m.dir * FRAME, FRAME, FRAME, x - s / 2, y - s / 2, s, s);
       } else {
         ctx.fillStyle = '#357';
         ctx.beginPath(); ctx.arc(x, y, s / 2, 0, Math.PI * 2); ctx.fill();
       }
       if (m.kind !== SNAP_KIND.normal) {
-        // 내가 던진 몹은 파란 고리, 보스는 금색 고리
-        ctx.strokeStyle = m.kind === SNAP_KIND.boss ? '#ffd54f' : SIDE_COLOR.me;
-        ctx.lineWidth = 8;
-        ctx.beginPath(); ctx.arc(x, y, s * 0.55, 0, Math.PI * 2); ctx.stroke();
+        // 보낸 몹/정예는 붉게, 보스는 금색 테두리
+        ctx.strokeStyle = m.kind === SNAP_KIND.boss ? '#ffd54f' : '#ff5a3d';
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(x, y, s * 0.42, 0, Math.PI * 2); ctx.stroke();
       }
     }
 
