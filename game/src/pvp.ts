@@ -188,10 +188,10 @@ export function createBotSession(): PvpSession {
   });
 }
 
-/** 봇 실력 0~1: 트로피가 오를수록 강해지고, 연승하면 조금 세게 / 연패하면 조금 약하게 (승률 50~60% 근처) */
+/** 봇 실력 0~1: 트로피가 오를수록 강해지고(트로피 로드 축에 맞춰 ~500 에서 0.9), 연승하면 조금 세게 / 연패하면 조금 약하게 (승률 50~60%, tools/pvpsim.ts) */
 export function botSkill(): number {
   const p = meta.pvp;
-  const base = 0.3 + p.trophies / 2500;
+  const base = 0.3 + p.trophies / 500;
   const adj = Math.min(4, p.streak) * 0.06 - Math.min(3, p.lossStreak ?? 0) * 0.08;
   return Math.max(0.15, Math.min(0.95, base + adj));
 }

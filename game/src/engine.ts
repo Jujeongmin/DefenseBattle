@@ -240,8 +240,9 @@ export class Game {
   }
 
   baseHp(wave = this.wave): number {
-    const growth = this.opts.stageId ? WAVE.stageHpGrowth : WAVE.hpGrowthPerWave;
-    return WAVE.hpBase * this.opts.hpMult * Math.pow(1 + growth, Math.max(0, wave - 1));
+    const pvp = this.opts.mode === 'pvp';
+    const growth = this.opts.stageId ? WAVE.stageHpGrowth : pvp ? WAVE.pvpHpGrowth : WAVE.hpGrowthPerWave;
+    return WAVE.hpBase * this.opts.hpMult * (pvp ? PVP.hpMult : 1) * Math.pow(1 + growth, Math.max(0, wave - 1));
   }
 
   waveHp(): number {

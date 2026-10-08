@@ -126,6 +126,8 @@ export const WAVE = {
   hpGrowthPerWave: 0.17,
   // 캠페인 스테이지 웨이브당 HP 성장 (스테이지 난이도는 STAGE_HP_BASE/STEP 으로 맞춘다)
   stageHpGrowth: 0.115,
+  // PvP 웨이브당 HP 성장 - 빠르게 올려 한 판을 4분 안팎으로 (tools/pvpsim.ts)
+  pvpHpGrowth: 0.25,
   mobSpeed: 1.2,
   cornerPause: 0.25,
   restBetween: 5.0,
@@ -202,6 +204,7 @@ export const PVP = {
     { key: 'giant', kr: '거인', icon: 'hammer', cost: 80, count: 1, hpMult: 7, kind: 'giant', cooldown: 0 },
     { key: 'elite', kr: '정예', icon: 'crown', cost: 160, count: 1, hpMult: 14, kind: 'elite', cooldown: 20 },
   ],
+  hpMult: 3,            // PvP 몹 시작 체력 배율 - pvpHpGrowth 와 함께 한 판 ~4분 (tools/pvpsim.ts)
   reportInterval: 0.5,   // 상태 보고 주기(초)
   matchTimeout: 25,      // 매칭 대기 최대(초) → 초과 시 AI 대전 제안
   trophyWin: 30,
@@ -359,13 +362,14 @@ export const SEASON_TIERS: { free: SeasonReward; premium: SeasonReward }[] = Arr
 });
 
 // PvP 트로피 → 티어
+// 아레나(티어) - 트로피 로드와 같은 축 (v1: 약 3시간에 플래티넘 근처)
 export const PVP_TIERS = [
   { min: 0, kr: '브론즈', color: '#cd7f32' },
-  { min: 200, kr: '실버', color: '#c0c0c0' },
-  { min: 500, kr: '골드', color: '#ffcf3f' },
-  { min: 900, kr: '플래티넘', color: '#6fe0d0' },
-  { min: 1400, kr: '다이아', color: '#6fb6ff' },
-  { min: 2000, kr: '마스터', color: '#ff6bd5' },
+  { min: 80, kr: '실버', color: '#c0c0c0' },
+  { min: 200, kr: '골드', color: '#ffcf3f' },
+  { min: 320, kr: '플래티넘', color: '#6fe0d0' },
+  { min: 500, kr: '다이아', color: '#6fb6ff' },
+  { min: 800, kr: '마스터', color: '#ff6bd5' },
 ];
 export function pvpTier(trophies: number): { kr: string; color: string } {
   let t = PVP_TIERS[0];
@@ -419,21 +423,24 @@ export const CAMPAIGN: StageDef[] = V1 ? STAGES.slice(0, 5) : STAGES;
 
 // ---------- 트로피 로드 (v1 의 진행 축) - 트로피가 오르면 보석과 유닛 해금 ----------
 export interface RoadStep { at: number; crystals?: number; unit?: Job }
+// 한 판 ~4.5분 · 승률 ~55% 기준(tools/pvpsim.ts) 약 3시간 안에 유닛 5종이 모두 열리게, 이후는 보석으로 길게
 export const TROPHY_ROAD: RoadStep[] = [
-  { at: 50, crystals: 100 },
-  { at: 100, unit: 'ranger' },
-  { at: 150, crystals: 150 },
-  { at: 200, unit: 'frost' },
-  { at: 300, crystals: 200 },
-  { at: 400, unit: 'paladin' },
-  { at: 500, crystals: 300 },
-  { at: 650, unit: 'bomber' },
-  { at: 800, crystals: 400 },
-  { at: 900, unit: 'assassin' },
-  { at: 1100, crystals: 500 },
-  { at: 1400, crystals: 800 },
-  { at: 1700, crystals: 1000 },
-  { at: 2000, crystals: 1500 },
+  { at: 15, crystals: 50 },
+  { at: 30, unit: 'ranger' },
+  { at: 55, crystals: 80 },
+  { at: 80, unit: 'frost' },
+  { at: 110, crystals: 120 },
+  { at: 140, unit: 'paladin' },
+  { at: 170, crystals: 160 },
+  { at: 200, unit: 'bomber' },
+  { at: 230, crystals: 200 },
+  { at: 260, unit: 'assassin' },
+  { at: 320, crystals: 250 },
+  { at: 400, crystals: 300 },
+  { at: 500, crystals: 400 },
+  { at: 650, crystals: 600 },
+  { at: 800, crystals: 800 },
+  { at: 1000, crystals: 1000 },
 ];
 
 export const STAGE_BY_ID: Record<string, StageDef> = Object.fromEntries(STAGES.map((s) => [s.id, s]));
