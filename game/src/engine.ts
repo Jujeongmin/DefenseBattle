@@ -214,7 +214,8 @@ export class Game {
   }
 
   baseHp(wave = this.wave): number {
-    return WAVE.hpBase * this.opts.hpMult * Math.pow(1 + WAVE.hpGrowthPerWave, Math.max(0, wave - 1));
+    const growth = this.opts.stageId ? WAVE.stageHpGrowth : WAVE.hpGrowthPerWave;
+    return WAVE.hpBase * this.opts.hpMult * Math.pow(1 + growth, Math.max(0, wave - 1));
   }
 
   waveHp(): number {

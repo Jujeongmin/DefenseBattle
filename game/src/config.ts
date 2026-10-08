@@ -61,25 +61,28 @@ export const RACE_KR: Record<Race, string> = { troll: '트롤', orc: '오크', u
 export const RACE_SPRITE: Record<Race, string> = { troll: 'Mob_Troll', orc: 'Mob_Orc', undead: 'Mob_Undead' };
 
 // ---------- 직업 x 종족 데미지 배율 ----------
+// 상성: 유리 1.0 / 불리 0.9. 차이를 작게 둬서 상성을 몰라도 크게 손해 보지 않게 한다 (화면엔 ▲/▼ 만 표시).
 export const DMG_MULT: Record<Job, Record<Race, number>> = {
-  archer:   { troll: 0.8, orc: 1.0, undead: 0.8 },
-  wizard:   { troll: 0.6, orc: 0.8, undead: 1.0 },
-  warrior:  { troll: 1.0, orc: 0.8, undead: 0.6 },
-  ranger:   { troll: 1.0, orc: 0.8, undead: 0.8 },
-  frost:    { troll: 0.8, orc: 0.8, undead: 0.8 },
-  paladin:  { troll: 0.8, orc: 0.8, undead: 1.0 },
-  bomber:   { troll: 0.7, orc: 1.0, undead: 0.7 },
-  assassin: { troll: 0.8, orc: 1.0, undead: 0.8 },
+  archer:   { troll: 0.9, orc: 1.0, undead: 0.9 },
+  wizard:   { troll: 0.9, orc: 0.9, undead: 1.0 },
+  warrior:  { troll: 1.0, orc: 0.9, undead: 0.9 },
+  ranger:   { troll: 1.0, orc: 0.9, undead: 0.9 },
+  frost:    { troll: 0.9, orc: 0.9, undead: 0.9 },
+  paladin:  { troll: 0.9, orc: 0.9, undead: 1.0 },
+  bomber:   { troll: 0.9, orc: 1.0, undead: 0.9 },
+  assassin: { troll: 0.9, orc: 1.0, undead: 0.9 },
 };
 
 // ---------- 등급 ----------
+// 공격력은 등급마다 3배: 같은 등급 3마리 합성 = 합친 공격력 그대로 + 사거리·스킬 보너스.
+// (2배였을 땐 합성할수록 전력이 33% 줄어 합성이 손해였다)
 export const GRADES: Grade[] = [
   { key: 'common',    kr: '일반',   spriteIndex: 0, atk: [10, 15],   summonRate: 50,  sellGold: 10,   color: '#b8b8b8' },
-  { key: 'rare',      kr: '고급',   spriteIndex: 1, atk: [20, 30],   summonRate: 33,  sellGold: 25,   color: '#4caf50' },
-  { key: 'elite',     kr: '정예',   spriteIndex: 2, atk: [40, 60],   summonRate: 10,  sellGold: 60,   color: '#2196f3' },
-  { key: 'legendary', kr: '전설',   spriteIndex: 3, atk: [80, 120],  summonRate: 6.5, sellGold: 150,  color: '#9c27b0' },
-  { key: 'mythic',    kr: '신화',   spriteIndex: 4, atk: [160, 240], summonRate: 0.4, sellGold: 400,  color: '#ff9800' },
-  { key: 'eternal',   kr: '태초',   spriteIndex: 5, atk: [320, 480], summonRate: 0.1, sellGold: 1000, color: '#f44336' },
+  { key: 'rare',      kr: '고급',   spriteIndex: 1, atk: [30, 45],   summonRate: 33,  sellGold: 25,   color: '#4caf50' },
+  { key: 'elite',     kr: '정예',   spriteIndex: 2, atk: [90, 135],  summonRate: 10,  sellGold: 60,   color: '#2196f3' },
+  { key: 'legendary', kr: '전설',   spriteIndex: 3, atk: [270, 405], summonRate: 6.5, sellGold: 150,  color: '#9c27b0' },
+  { key: 'mythic',    kr: '신화',   spriteIndex: 4, atk: [810, 1215], summonRate: 0.4, sellGold: 400,  color: '#ff9800' },
+  { key: 'eternal',   kr: '태초',   spriteIndex: 5, atk: [2430, 3645], summonRate: 0.1, sellGold: 1000, color: '#f44336' },
 ];
 export const GRADE_BY_KEY: Record<GradeKey, Grade> =
   Object.fromEntries(GRADES.map((g) => [g.key, g])) as Record<GradeKey, Grade>;
@@ -89,15 +92,17 @@ export const GRADE_INDEX: Record<GradeKey, number> =
 // 전설(index 3) 이상은 맵 전체 사거리
 export const FULL_RANGE_FROM_INDEX = 3;
 
-// 등급별 사거리(픽셀). 전설 이상은 Infinity 로 처리
-// (유닛/몹 크기 확대에 맞춰 상향 - 각 구역이 자기 경로 변을 넉넉히 커버)
-export const GRADE_RANGE: number[] = [215, 270, 330, Infinity, Infinity, Infinity];
+// 등급별 사거리(픽셀). 전설 이상은 Infinity 로 처리.
+// 구역 중심에서 길 대부분이 닿게 넉넉히 준다. 예전 값(215/270/330)은 소환이 몇 직업에 몰려
+// 빈 구역이 생기면 그쪽 길이 통째로 사거리 밖이라, 실력과 상관없이 초반에 무너지는 판이 많았다.
+export const GRADE_RANGE: number[] = [320, 380, 440, Infinity, Infinity, Infinity];
 
 // ---------- 경제 ----------
+// 시작 골드/처치 골드는 넉넉하게: 초반 화력이 모자라면 처치→골드→소환이 막혀 운으로 무너진다 (tools/simulate.ts)
 export const ECONOMY = {
-  startGold: 100,
+  startGold: 200,
   summonCost: 20,
-  killGold: 2,
+  killGold: 3,
   bossGold: 100,
   upgradeBase: 20,
   upgradeStep: 20,
@@ -112,7 +117,10 @@ export const WAVE = {
   // 기획서 원안은 +20%(지수)였으나, 그 값으로는 유닛 파워(선형)가 따라잡지 못해
   // 50웨이브 클리어가 수학적으로 불가능. 하드코어(연구 필수) 곡선을 위해 완화.
   // 합성/직업 스킬 추가로 유닛 파워가 오른 만큼 +11% → +11.5% 로 재조정 (tools/simulate.ts).
-  hpGrowthPerWave: 0.115,
+  // 무한 모드/PvP 웨이브당 HP 성장. 합성 공격력 3배 이후 연구 0 평균 ~38웨이브, 연구 MAX ~50웨이브.
+  hpGrowthPerWave: 0.17,
+  // 캠페인 스테이지 웨이브당 HP 성장 (스테이지 난이도는 STAGE_HP_BASE/STEP 으로 맞춘다)
+  stageHpGrowth: 0.115,
   mobSpeed: 1.2,
   cornerPause: 0.25,
   restBetween: 5.0,
@@ -356,8 +364,8 @@ export const CHAPTERS = [
 export const STAGES_PER_CHAPTER = 10;
 // 난이도 곡선: 챕터 내에서 점진 상승, 챕터 시작 시 웨이브 수 증가로 한 번 더 상승
 // (tools/simulate.ts stages 로 연구 진척별 클리어율 검증)
-export const STAGE_HP_BASE = [0.55, 1.4, 3.0];
-export const STAGE_HP_STEP = [0.08, 0.14, 0.3];
+export const STAGE_HP_BASE = [0.55, 1.4, 2.6];
+export const STAGE_HP_STEP = [0.08, 0.14, 0.16];
 export const STAGES: StageDef[] = CHAPTERS.flatMap((ch, ci) =>
   Array.from({ length: STAGES_PER_CHAPTER }, (_, si): StageDef => {
     const id = `${ch.n}-${si + 1}`;
