@@ -5,6 +5,7 @@ import './style.css';
 import { Game } from './engine';
 import { Renderer } from './render';
 import { UI, type ResultView } from './ui';
+import { Spotlight, type SpotStep } from './tutorial';
 import { Menu, type Launch } from './menu';
 import { preloadAll, warmTints } from './assets';
 import { audio } from './audio';
@@ -66,7 +67,7 @@ function launch(l: Launch): void {
     audio.switchBgm('pvp');
   } else {
     audio.switchBgm('battle');
-    if (l.kind === 'stage' && l.stageId === '1-1' && meta.tutorial === 0) startTutorial(g, u);
+    if (l.kind === 'stage' && l.stageId === '1-1' && meta.tutorial === 0) void startTutorial(g, u);
   }
 }
 
@@ -231,34 +232,36 @@ async function doubleReward(amount: number): Promise<void> {
 // ---------------------------------------------------------------
 //  튜토리얼 (1-1 첫 플레이): 소환 → 합성 → 강화 → 상성/배치
 // ---------------------------------------------------------------
-function startTutorial(g: Game, u: UI): void {
-  let step = 0;
-  const show = () => {
-    if (g !== game) return;
-    if (step === 0) u.coach(`<b>소환</b> 버튼을 눌러 영웅을 불러오세요! (${icon('coin')}20)`, 'btn-summon');
-    else if (step === 1) u.coach('좋아요! 영웅은 몹을 자동으로 공격해요.<br>골드가 모이면 계속 <b>소환</b>하세요', 'btn-summon');
-    else if (step === 2) u.coach('같은 유닛·등급 <b>3개</b>가 모였어요!<br><b>영웅</b> 버튼에서 상위 등급으로 <b>합성</b>하세요', 'btn-sell-panel');
-    else if (step === 3) u.coach('<b>강화</b>하면 그 유닛 전체가 강해져요', 'unit-stacks');
-    else if (step === 4) {
-      u.coach('카드의 <b>%</b>는 이번 몹과의 상성이에요.<br>전장을 <b>드래그</b>해 구역을 바꿀 수 있어요. 행운을 빌어요!');
-      meta.tutorial = 1;
-      saveMeta();
-      setTimeout(() => { if (g === game) u.coach(null); }, 6000);
-    }
-  };
-  const advance = (to: number) => { if (step < to) { step = to; show(); } };
-  g.on('roster', () => {
-    if (step === 0 && g.units.length >= 1) advance(1);
-    if (step <= 1 && g.mergeable().length) advance(2);
-  });
-  g.on('merge', () => { if (step === 2) advance(3); });
-  const levelWatch = setInterval(() => {
-    if (g !== game || g.over) { clearInterval(levelWatch); return; }
-    if (step === 3 && Object.values(g.levels).some((lv) => lv > 1)) { advance(4); clearInterval(levelWatch); }
-    // 합성이 오래 안 나오면 강화 단계로 넘어감
-    if (step === 1 && g.time > 45) advance(3);
-  }, 500);
-  show();
+// 1-1 첫 판 튜토리얼: 게임을 멈춘 채 눌러야 할 곳만 밝혀 한 단계씩 안내한다.
+// 처음 소환 3번은 같은 유닛이 나와서 합성까지 바로 배운다. 상성/드래그는 여기서 다루지 않는다.
+async function startTutorial(g: Game, u: UI): Promise<void> {
+  const job = g.opts.deck[0];
+  g.scriptSummons([{ job, grade: 'common' }, { job, grade: 'common' }, { job, grade: 'common' }]);
+  g.paused = true;
+  u.coach(null);
+  const spot = new Spotlight();
+  const q = <T extends Element>(sel: string) => document.querySelector<T>(sel) as HTMLElement | null;
+  const alive = () => g === game;
+  const steps: SpotStep[] = [
+    { target: () => $('btn-summon'), text: `<b>소환</b>을 눌러 영웅을 불러요 (${icon('coin')}20)` },
+    { target: () => $('btn-summon'), text: '한 번 더!' },
+    { target: () => $('btn-summon'), text: '하나 더 부르면 <b>합성</b>할 수 있어요' },
+    { target: () => $('btn-sell-panel'), text: '같은 영웅 3명! <b>영웅</b>을 눌러요' },
+    { target: () => q('#sell-panel .grade-card.ready'), text: '눌러서 <b>합성</b> - 한 등급 위로!' },
+    { target: () => q('#sell-panel .close-x'), text: '창을 닫아요' },
+    { target: () => q('#unit-stacks .up-btn:not(:disabled)'), text: '<b>강화</b>하면 그 직업이 모두 세져요' },
+  ];
+  for (const s of steps) {
+    if (!alive()) break;
+    await spot.step(s);
+    await new Promise((r) => setTimeout(r, 120)); // 클릭 결과가 화면에 반영될 시간
+  }
+  if (alive()) await spot.message('준비 끝! 몹이 길 끝에 쌓이지 않게 막아요', 1800);
+  spot.close();
+  if (!alive()) return;
+  g.paused = false;
+  meta.tutorial = 1;
+  saveMeta();
 }
 
 // ---------------------------------------------------------------

@@ -8,7 +8,7 @@ export type IconName =
   | 'medal_silver' | 'medal_bronze' | 'flag' | 'heart' | 'star' | 'star_off' | 'tv' | 'ticket'
   | 'bolt' | 'calendar' | 'infinity' | 'check' | 'map' | 'robot' | 'plus' | 'close'
   | 'shop' | 'home' | 'pause' | 'play' | 'timer' | 'gift' | 'party' | 'summon' | 'settings'
-  | 'rank' | 'target' | 'music' | 'trash' | 'up' | 'down';
+  | 'rank' | 'target' | 'music' | 'trash' | 'up' | 'down' | 'pointer';
 
 /** 인라인 아이콘 HTML. 크기는 글자 크기(em)를 따른다. */
 export function icon(name: IconName, cls = ''): string {

@@ -121,6 +121,7 @@ b, strong { font-weight: 700; }
 .pi-plus { background-image: url('/ui/icons/plus.png'); }
 .pi-close { background-image: url('/ui/icons/close.png'); }
 .pi-up { background-image: url('/ui/icons/up.png'); }
+.pi-pointer { background-image: url('/ui/icons/pointer.png'); }
 .pi-down { background-image: url('/ui/icons/down.png'); }
 
 /* ---------- 공용 버튼: Tiny Swords 9-slice. 누르면 Pressed 이미지로 바뀌며 내려앉는다 ---------- */
@@ -342,6 +343,28 @@ b, strong { font-weight: 700; }
 }
 .lobby-nav button .ic { font-size: 26px; height: 30px; }
 .lobby-nav button:active { transform: translateY(2px); }
+/* ---------- 튜토리얼 스포트라이트 (tutorial.ts) ---------- */
+#tut { position: absolute; inset: 0; z-index: 95; }
+#tut.msg-only { background: rgba(10, 6, 4, 0.55); }
+.tut-hole {
+  position: absolute; display: none; pointer-events: none;
+  border: 3px solid var(--gold);
+  box-shadow: 0 0 0 9999px rgba(10, 6, 4, 0.68);
+  animation: tutPulse 0.8s steps(2) infinite;
+}
+#tut.msg-only .tut-hole { box-shadow: none; border: 0; }
+@keyframes tutPulse { 50% { border-color: #fff2a8; } }
+.tut-hand { position: absolute; display: none; pointer-events: none; animation: tutBob 0.6s steps(2) infinite; }
+.tut-hand .pi { width: 36px; height: 36px; }
+@keyframes tutBob { 50% { transform: translateY(8px); } }
+.tut-text {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  width: max-content; max-width: 88%;
+  border-image: url('/ui/frame/paper.png') 44 fill / 16px;
+  color: var(--ink); padding: 12px 16px;
+  font-size: 15px; font-weight: 700; text-align: center; pointer-events: none;
+}
+
 /* 새로 열린 메뉴 표시 */
 .new-tag {
   position: absolute; top: -4px; right: -6px;

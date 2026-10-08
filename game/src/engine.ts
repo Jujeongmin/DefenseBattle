@@ -339,12 +339,18 @@ export class Game {
   }
 
   // ---------------- 소환 / 강화 / 판매 ----------------
+  /** 다음 소환들의 결과를 정해 둔다 (튜토리얼: 같은 유닛 3장으로 합성을 바로 배우게) */
+  private scripted: { job: Job; grade: GradeKey }[] = [];
+  scriptSummons(list: { job: Job; grade: GradeKey }[]): void { this.scripted.push(...list); }
+
   summon(): Unit | null {
     if (this.gold < ECONOMY.summonCost || this.over) return null;
     this.gold -= ECONOMY.summonCost;
     this.summons += 1;
     this.progress('summons');
 
+    const forced = this.scripted.shift();
+    if (forced) return this.createUnit(forced.job, forced.grade);
     const rareBonus = this.res('rare') * RESEARCH_PER.rare;
     const gradeKey = rollGrade(rareBonus);
     const job = rollJob(this.opts.deck);
