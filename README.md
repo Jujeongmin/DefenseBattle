@@ -1,4 +1,6 @@
-# 랜덤 디펜스 (Random Defense)
+# 몹 토스 (Mob Toss)
+
+몹을 상대 전장에 던지고, 내 전장은 소환·합성한 유닛으로 막는 1:1 디펜스 대전. (저장소 이름은 예전 이름 RandomDefense 그대로)
 
 Verse8(Agent8) 플랫폼용 하이브리드 캐주얼 디펜스 게임. **TypeScript + Vite** 클라이언트와
 **Agent8 GameServer**(`server/`)로 구성된다. 기획 의도·KPI·퍼블리싱 피치는 [`docs/GDD.md`](docs/GDD.md) 참고.

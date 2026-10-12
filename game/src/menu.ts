@@ -116,7 +116,7 @@ export class Menu {
         <button class="gear-btn" data-act="settings" aria-label="설정">${icon('settings')}</button>
       </div>
       <div class="lobby-body v1">
-        <h1 class="game-title">랜덤 디펜스</h1>
+        <h1 class="game-title">몹 토스</h1>
         <div class="parade">${parade}</div>
         ${canClaimMonthly() ? `<div class="notice">${icon('calendar')} 월정액 오늘의 보석 <button class="btn small green" data-act="monthly">받기 ${icon('gem')}</button></div>` : ''}
         ${pvpOn ? `<div class="play-card arena-card">
