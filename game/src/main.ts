@@ -11,7 +11,8 @@ import { preloadAll, warmTints } from './assets';
 import { audio } from './audio';
 import { getPlatform } from './platform';
 import { meta, saveMeta, reloadMeta, useItem } from './meta';
-import { crystalReward, starsFor, STAGE_BY_ID, STAGES, PVP, PLAY_SPEED } from './config';
+import { crystalReward, starsFor, STAGE_BY_ID, STAGES, PVP, PLAY_SPEED, PVP_TIERS } from './config';
+import { afterMatch } from './offers';
 import { completeStage, stageOptions, endlessOptions, stageUnlocked, unitLevels, claimRoad } from './progress';
 import { syncPurchases, addSeasonXp } from './shop';
 import { showRewarded, rewardedAvailable, maybeInterstitial } from './ads';
@@ -121,6 +122,10 @@ function showPvpResult(g: Game, u: UI, s: PvpSession, r: { won: boolean; trophyD
     else { meta.pvp.losses += 1; meta.pvp.streak = 0; meta.pvp.lossStreak = (meta.pvp.lossStreak ?? 0) + 1; }
   }
   const road = claimRoad(); // 트로피 로드 도달 보상 (보석 / 유닛 해금)
+  // 결제 팝업 조건: 새 아레나 승급 / 2연패
+  const tierIdx = PVP_TIERS.filter((t) => meta.pvp.trophies >= t.min).length - 1;
+  const tierUp = tierIdx > meta.arenaMax;
+  if (tierUp) meta.arenaMax = tierIdx;
   saveMeta();
   audio.gameEnd(r.won);
   const rewards = [`${icon('trophy')} ${r.trophyDelta >= 0 ? '+' : ''}${r.trophyDelta}`, `${icon('gem')} +${crystals}`];
@@ -139,6 +144,7 @@ function showPvpResult(g: Game, u: UI, s: PvpSession, r: { won: boolean; trophyD
       { label: '로비로', cls: '', action: () => void exitGame(true) },
     ],
   });
+  afterMatch({ tierUp, losing: !r.won && (meta.pvp.lossStreak ?? 0) >= 2 });
 }
 
 // ---------------------------------------------------------------
@@ -181,6 +187,7 @@ function finishSolo(u: UI, d: GameOverData): void {
       addSeasonXp(30);
       if (l.stageId === '1-1' && meta.tutorial < 2) meta.tutorial = 2;
     }
+    meta.stageFailStreak = d.cleared ? 0 : meta.stageFailStreak + 1;
     saveMeta();
     const next = STAGES[st.index + 1];
     const canNext = d.cleared && next && stageUnlocked(next.id);
@@ -201,6 +208,8 @@ function finishSolo(u: UI, d: GameOverData): void {
     view.buttons.push({ label: '다시 하기', cls: canNext ? '' : 'red', action: () => void exitGame(true, st.index).then(() => menu.openStage(l.stageId)) });
     view.buttons.push({ label: '로비로', cls: '', action: () => void exitGame(true, st.index) });
     u.showResult(view);
+    // 결제 팝업 조건: 새 챕터 도달 / 2연속 실패 (튜토리얼 직후는 제외)
+    if (l.stageId !== '1-1') afterMatch({ chapterUp: res.firstClear && !!next && next.chapter > st.chapter, losing: meta.stageFailStreak >= 2 });
   } else {
     const reward = crystalReward(d.wave);
     meta.crystals += reward;

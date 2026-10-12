@@ -7,6 +7,7 @@ import {
   type ProductGrant, type SeasonReward,
 } from './config';
 import { meta, saveMeta, todayStr, addItem, currentSeasonId } from './meta';
+import { unlockUnit } from './progress';
 import { getPlatform } from './platform';
 import type { ItemKey, PurchaseRecord } from './types';
 import { icon, type IconName } from './icons';
@@ -25,6 +26,11 @@ function applyGrant(g: ProductGrant, qty: number): void {
     meta.season.premium = true;
     meta.season.id = currentSeasonId();
   }
+  if (g.units) for (const [j, lv] of Object.entries(g.units)) {
+    const job = j as keyof typeof meta.units;
+    if (!meta.units[job]) unlockUnit(job, false);
+    meta.units[job] = Math.max(meta.units[job] ?? 1, lv ?? 1);
+  }
 }
 
 /** 구매 기록들을 지급. 이미 지급한 purchaseId 는 건너뜀. 지급한 상품 id 목록 반환 */
@@ -36,6 +42,7 @@ export function grantPurchases(list: PurchaseRecord[]): string[] {
     if (!def) { console.warn('[shop] 알 수 없는 상품', p.productId); continue; }
     applyGrant(def.grant, Math.max(1, p.quantity || 1));
     if (def.oneTime) meta.oneTime[def.id] = true;
+    if (def.category === 'offer') delete meta.offers[def.id]; // 산 한정 상품은 닫는다
     meta.grantedPurchases.push(p.purchaseId);
     granted.push(def.id);
   }

@@ -4,7 +4,7 @@
 import {
   RESEARCH, researchCost, DAILY_QUESTS, ACHIEVEMENTS, PRODUCTS, ITEM_KR,
   UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, UNIT_PERK_LEVELS, unitUpgradeCost, SKILL_DESC, SKILL_KR,
-  DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, type RoadStep, type AttackKey,
+  DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, UNIT_PACK, type RoadStep, type AttackKey,
   SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, FEATURE_KR, productEfficiency,
   CAMPAIGN, TROPHY_ROAD, PVP_TIERS,
 } from './config';
@@ -28,6 +28,7 @@ import { freeTicketAdsLeft, watchForTickets, rewardedAvailable, FREE_TICKET_AMOU
 import { onlineAvailable, findMatch, type PvpSession } from './pvp';
 import { $, toast, openOverlay, closeOverlay, bindActions, spriteIcon, confirmModal } from './dom';
 import { enableDeckDrag } from './dragdeck';
+import { showShortage, activeOffers, unitPackAvailable, timeLeft } from './offers';
 import type { Job, Race, ResearchKey } from './types';
 
 export type Launch =
@@ -352,10 +353,17 @@ export class Menu {
           else audio.button();
           draw();
         },
-        up: (b) => { if (upgradeUnit(b.dataset.job as Job)) { audio.merge(); draw(); } },
+        up: (b) => {
+          const j = b.dataset.job as Job;
+          const cost = unitUpgradeCost(unitLevel(j));
+          if (meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, draw); return; }
+          if (upgradeUnit(j)) { audio.merge(); draw(); }
+        },
         info: (b) => { const j = b.dataset.job as Job; toast(`<b>${SKILL_KR[j]}</b><br>${SKILL_DESC[j]}`, 3200); },
         buy: async (b) => {
           const j = b.dataset.job as Job;
+          const need = (UNIT_BY_ID[j].unlockCrystals ?? 0) - meta.crystals;
+          if (need > 0) { showShortage(need, j, draw); return; } // 유닛 패키지를 먼저 제안
           if (await confirmModal('유닛 해금', `${UNIT_BY_ID[j].kr}을(를) ${icon('gem')}${UNIT_BY_ID[j].unlockCrystals}로 해금할까요?`)) {
             if (buyUnit(j)) { audio.fanfareUnlock(); toast(`${UNIT_BY_ID[j].kr} 해금!`); }
           }
@@ -389,12 +397,12 @@ export class Menu {
       let acts: string;
       if (!unlocked) {
         acts = u.unlockCrystals
-          ? `<button class="btn small gold" data-act="buy" data-job="${u.id}" ${meta.crystals < u.unlockCrystals ? 'disabled' : ''}>${icon('gem')}${u.unlockCrystals} 해금</button>`
+          ? `<button class="btn small gold ${meta.crystals < u.unlockCrystals ? 'short' : ''}" data-act="buy" data-job="${u.id}">${icon('gem')}${u.unlockCrystals} 해금</button>`
           : '';
       } else {
         const maxed = lv >= UNIT_MAX_LEVEL;
         acts = `<button class="btn small ${inDeck ? 'red' : 'blue'}" data-act="toggle" data-job="${u.id}">${inDeck ? '빼기' : '넣기'}</button>
-          <button class="btn small green" data-act="up" data-job="${u.id}" ${canUpgradeUnit(u.id) ? '' : 'disabled'}>${maxed ? 'MAX' : `${icon('gem')}${unitUpgradeCost(lv)}`}</button>`;
+          <button class="btn small green ${!maxed && meta.crystals < unitUpgradeCost(lv) ? 'short' : ''}" data-act="up" data-job="${u.id}" ${maxed ? 'disabled' : ''}>${maxed ? 'MAX' : `${icon('gem')}${unitUpgradeCost(lv)}`}</button>`;
       }
       return `<div class="unit-card ${inDeck ? 'in-deck' : ''} ${unlocked ? '' : 'locked'}" ${unlocked ? `data-drag="${u.id}"` : ''}>
         <div class="head">${spriteIcon(unitIconUrl(u.id))}
@@ -445,7 +453,7 @@ export class Menu {
         const cost = researchCost(lv);
         return `<div class="row"><div class="info"><div class="t">${r.kr} <span class="trophy">Lv.${lv}/${r.max}</span></div>
           <div class="d">${r.desc}</div><div class="lv-pips" style="margin-top:4px">${Array.from({ length: r.max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</div></div>
-          <button class="btn small green" data-act="res" data-key="${r.key}" ${maxed || meta.crystals < cost ? 'disabled' : ''}>${maxed ? 'MAX' : `${icon('gem')} ${cost}`}</button></div>`;
+          <button class="btn small green ${!maxed && meta.crystals < cost ? 'short' : ''}" data-act="res" data-key="${r.key}" ${maxed ? 'disabled' : ''}>${maxed ? 'MAX' : `${icon('gem')} ${cost}`}</button></div>`;
       }).join('');
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>연구소 <span class="crystal" style="font-size:16px">${icon('gem')} ${meta.crystals}</span></h2>
@@ -456,6 +464,7 @@ export class Menu {
           const lv = researchLevel(key);
           const r = RESEARCH.find((x) => x.key === key)!;
           const cost = researchCost(lv);
+          if (lv < r.max && meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, draw); return; }
           if (lv < r.max && meta.crystals >= cost) {
             meta.crystals -= cost;
             meta.research[key] = lv + 1;
@@ -522,6 +531,7 @@ export class Menu {
         const owned = productOwned(id);
         let extra = '';
         if (id === 'monthly_pass' && monthlyActive()) extra = ` <span class="badge green">${monthlyDaysLeft()}일 남음</span>`;
+        if (p.category === 'offer') extra = ` <span class="badge">${icon('timer')}${timeLeft(id).split(':').slice(0, 2).join('시간 ')}분</span>`;
         const eff = owned ? 0 : productEfficiency(p, price(id));
         return `<div class="shop-card ${hot ? 'hot' : ''}">${eff > 100 ? `<span class="eff">효율<b>${eff}%</b></span>` : ''}<div class="ic">${icon(p.icon)}</div>
           <div class="info"><div class="t">${p.kr}${p.badge ? ` <span class="badge">${p.badge}</span>` : ''}${extra}</div><div class="d">${p.desc}</div></div>
@@ -538,10 +548,12 @@ export class Menu {
         <h2>상점</h2>
         <div class="balance"><span class="crystal">${icon('gem')} ${meta.crystals.toLocaleString()}</span>${vx !== null ? `<span class="vx-badge">VX ${vx.toLocaleString()}</span>` : ''}</div>
         <div class="fine" style="margin:-4px 0 6px">보유: ${items}</div>
+        ${activeOffers().length ? `<div class="section-title hot-title">${icon('timer')} 한정 특가</div>${activeOffers().map((o) => card(o.id, true)).join('')}` : ''}
         <div class="section-title">추천 패키지</div>
         ${!productOwned('starter_pack') ? card('starter_pack', true) : ''}
         ${card('monthly_pass', true)}
         ${card('ad_remove')}
+        ${UNITS.some((u) => unitPackAvailable(u.id)) ? `<div class="section-title">유닛 패키지 <span class="fine">바로 해금 + Lv5</span></div>${UNITS.filter((u) => unitPackAvailable(u.id)).map((u) => card(UNIT_PACK[u.id]!)).join('')}` : ''}
         <div class="section-title">PvP 시즌 패스</div>${card('season_premium')}
         <div class="section-title">부스터 <span class="fine">캠페인·무한 모드 전용</span></div>
         ${card('summon_ticket_pack')}${card('mythic_ticket')}${card('gold_booster_pack')}

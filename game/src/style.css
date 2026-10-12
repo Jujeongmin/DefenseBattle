@@ -694,6 +694,30 @@ b, strong { font-weight: 700; }
   transform: rotate(-8deg); box-shadow: 0 2px 0 var(--edge);
 }
 .eff b { font-size: 15px; color: var(--gold); }
+/* ---------- 결제 팝업 (offers.ts) ---------- */
+.offer-dialog { text-align: center; }
+.offer-why { font-size: 13px; color: var(--ink-2); margin: -4px 8px 12px; }
+.offer-box {
+  position: relative; margin: 6px 4px 10px; padding: 14px 12px 12px;
+  background: rgba(255, 201, 40, 0.18); border: 3px solid var(--gold-ink);
+}
+.offer-box .eff { top: -12px; left: -8px; padding: 4px 8px 5px; font-size: 10px; }
+.offer-box .eff b { font-size: 20px; }
+.offer-name { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.offer-grant { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.og-row { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.og-row .pi { width: 26px; height: 26px; }
+.og-row b { color: var(--gold-ink); }
+.og-unit { width: 44px; height: 44px; }
+.offer-timer { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 13px; font-weight: 700; color: var(--red); margin-bottom: 10px; }
+.offer-timer .pi { width: 16px; height: 16px; }
+.offer-buy { width: 100%; font-size: 18px; animation: buyPulse 1.2s ease-in-out infinite; }
+@keyframes buyPulse { 50% { transform: scale(1.04); } }
+.offer-later { width: 100%; margin-top: 6px; font-size: 13px; }
+.hot-title { color: var(--red); }
+/* 보석이 모자란 버튼: 누를 수는 있고(누르면 보석 부족 팝업), 값이 빨갛게 */
+.btn.short { filter: saturate(0.6); }
+.btn.short .pi + *, .btn.short { color: #ffd0c8; }
 .shop-card .ic { margin-left: 10px; }
 .gem-card {
   background: rgba(255, 255, 255, 0.3); border: 2px solid var(--line);

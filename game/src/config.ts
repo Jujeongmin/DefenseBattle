@@ -318,8 +318,10 @@ export interface ProductGrant {
   adRemove?: boolean;
   monthlyDays?: number;     // 월정액 기간(일)
   seasonPremium?: boolean;  // 현재 시즌 패스 프리미엄
+  units?: Partial<Record<Job, number>>; // 유닛 즉시 해금 + 이 레벨까지 (이미 더 높으면 그대로)
 }
-export type ProductCategory = 'crystal' | 'package' | 'booster' | 'pass';
+// offer = 팝업으로 뜨는 24시간 한정 상품 (뜬 동안만 상점에도 보임), unit = 유닛 패키지
+export type ProductCategory = 'crystal' | 'package' | 'booster' | 'pass' | 'offer' | 'unit';
 export interface ProductDef {
   id: string;
   kr: string;
@@ -343,6 +345,11 @@ export function productGemValue(p: ProductDef): number {
   const g = p.grant;
   let v = g.crystals ?? 0;
   for (const [k, n] of Object.entries(g.items ?? {})) v += (n ?? 0) * ITEM_GEM_VALUE[k as ItemKey];
+  // 유닛: 보석 해금 가격 + 그 레벨까지 강화 비용
+  for (const [j, lv] of Object.entries(g.units ?? {})) {
+    v += UNIT_BY_ID[j as Job].unlockCrystals ?? 0;
+    for (let l = 1; l < (lv ?? 1); l++) v += unitUpgradeCost(l);
+  }
   if (g.monthlyDays) v += g.monthlyDays * MONTHLY_DAILY_CRYSTALS;
   return v;
 }
@@ -374,6 +381,24 @@ export const PRODUCTS: ProductDef[] = [
     desc: '신화 등급 유닛 1회 확정 소환 (일반 모드)', grant: { items: { mythicTicket: 1 } } },
   { id: 'gold_booster_pack', kr: '골드 부스터 5개', icon: 'bag', category: 'booster', vx: 200,
     desc: '사용한 판의 시작 골드 2배 (일반 모드)', grant: { items: { goldBooster: 5 } } },
+  // 팝업 한정 패키지 (24시간) - 패배 연속 / 새 아레나 / 새 챕터 때 뜬다 (offers.ts)
+  { id: 'offer_comeback', kr: '다시 일어서기 패키지', icon: 'chest', category: 'offer', vx: 200, badge: '24시간 한정',
+    desc: '보석 300 + 소환권 10 + 골드 부스터 2', grant: { crystals: 300, items: { summonTicket: 10, goldBooster: 2 } } },
+  { id: 'offer_arena', kr: '승급 축하 패키지', icon: 'crown', category: 'offer', vx: 500, badge: '24시간 한정',
+    desc: '보석 1,000 + 신화 확정 소환권 1', grant: { crystals: 1000, items: { mythicTicket: 1 } } },
+  { id: 'offer_chapter', kr: '새 챕터 패키지', icon: 'map', category: 'offer', vx: 500, badge: '24시간 한정',
+    desc: '보석 800 + 소환권 30 + 골드 부스터 4', grant: { crystals: 800, items: { summonTicket: 30, goldBooster: 4 } } },
+  // 유닛 패키지 - 바로 해금 + Lv5 (계정당 1회)
+  { id: 'unit_ranger', kr: '레인저 패키지', icon: 'helmet', category: 'unit', vx: 300, oneTime: true,
+    desc: '레인저 즉시 해금 + Lv5 + 보석 200', grant: { units: { ranger: 5 }, crystals: 200 } },
+  { id: 'unit_frost', kr: '빙결술사 패키지', icon: 'helmet', category: 'unit', vx: 300, oneTime: true,
+    desc: '빙결술사 즉시 해금 + Lv5', grant: { units: { frost: 5 } } },
+  { id: 'unit_paladin', kr: '성기사 패키지', icon: 'helmet', category: 'unit', vx: 500, oneTime: true,
+    desc: '성기사 즉시 해금 + Lv5 + 보석 300', grant: { units: { paladin: 5 }, crystals: 300 } },
+  { id: 'unit_bomber', kr: '폭격수 패키지', icon: 'helmet', category: 'unit', vx: 500, oneTime: true,
+    desc: '폭격수 즉시 해금 + Lv5', grant: { units: { bomber: 5 } } },
+  { id: 'unit_assassin', kr: '암살자 패키지', icon: 'helmet', category: 'unit', vx: 700, oneTime: true,
+    desc: '암살자 즉시 해금 + Lv5', grant: { units: { assassin: 5 } } },
   // 보석
   { id: 'crystal_100', kr: '보석 100', icon: 'gem', category: 'crystal', vx: 100, desc: '', grant: { crystals: 100 } },
   { id: 'crystal_550', kr: '보석 550', icon: 'gem', category: 'crystal', vx: 500, desc: '', grant: { crystals: 550 } },
@@ -382,6 +407,14 @@ export const PRODUCTS: ProductDef[] = [
   { id: 'crystal_7000', kr: '보석 7,000', icon: 'gem', category: 'crystal', vx: 5000, desc: '', grant: { crystals: 7000 } },
   { id: 'crystal_15000', kr: '보석 15,000', icon: 'gem', category: 'crystal', vx: 10000, desc: '', grant: { crystals: 15000 } },
 ];
+/** 팝업 한정 상품: 어떤 순간에 뜨는지 → 상품 id */
+export type OfferKind = 'comeback' | 'arena' | 'chapter';
+export const OFFER_PRODUCT: Record<OfferKind, string> = { comeback: 'offer_comeback', arena: 'offer_arena', chapter: 'offer_chapter' };
+export const OFFER_HOURS = 24;
+/** 유닛 → 그 유닛 패키지 id */
+export const UNIT_PACK: Partial<Record<Job, string>> = {
+  ranger: 'unit_ranger', frost: 'unit_frost', paladin: 'unit_paladin', bomber: 'unit_bomber', assassin: 'unit_assassin',
+};
 export const PRODUCT_BY_ID: Record<string, ProductDef> = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
 
 export const ITEM_KR: Record<ItemKey, { kr: string; icon: IconName }> = {
@@ -465,30 +498,38 @@ export const CAMPAIGN: StageDef[] = STAGES;
 
 // ---------- 트로피 로드 (v1 의 진행 축) - 트로피가 오르면 보석과 유닛 해금 ----------
 export interface RoadStep { at: number; crystals?: number; unit?: Job; attack?: AttackKey }
-// 한 판 ~4.5분 · 승률 ~55% 기준(tools/pvpsim.ts) 약 3시간 안에 유닛 5종 + 몹 카드 6종이 모두 열리게, 이후는 보석으로 길게
+// 대전만 하는 사람(시뮬 실력 0.35, 승률 ~60%, 시간당 ~200 트로피) 기준 유닛 5종 약 4시간, 몹 카드 6종 약 6시간.
+// 캠페인을 같이 하면 스테이지 클리어로 유닛이 더 일찍 열린다 (둘 다 하는 보상). 급하면 상점의 유닛 패키지.
+// (tools/progsim.ts 로 검증)
 export const TROPHY_ROAD: RoadStep[] = [
   { at: 15, crystals: 50 },
   { at: 30, unit: 'ranger' },
-  { at: 45, attack: 'ghost' },
-  { at: 60, crystals: 80 },
-  { at: 80, unit: 'frost' },
-  { at: 95, attack: 'shield' },
-  { at: 115, crystals: 120 },
-  { at: 140, unit: 'paladin' },
-  { at: 155, attack: 'wraith' },
-  { at: 175, crystals: 160 },
-  { at: 200, unit: 'bomber' },
-  { at: 215, attack: 'priest' },
-  { at: 235, crystals: 200 },
-  { at: 260, unit: 'assassin' },
-  { at: 290, attack: 'king' },
-  { at: 320, crystals: 250 },
-  { at: 360, attack: 'demon' },
-  { at: 400, crystals: 300 },
-  { at: 500, crystals: 400 },
-  { at: 650, crystals: 600 },
-  { at: 800, crystals: 800 },
-  { at: 1000, crystals: 1000 },
+  { at: 60, attack: 'ghost' },
+  { at: 90, crystals: 80 },
+  { at: 120, unit: 'frost' },
+  { at: 150, crystals: 100 },
+  { at: 180, attack: 'shield' },
+  { at: 220, crystals: 120 },
+  { at: 260, crystals: 140 },
+  { at: 300, unit: 'paladin' },
+  { at: 350, crystals: 160 },
+  { at: 400, attack: 'wraith' },
+  { at: 450, crystals: 180 },
+  { at: 500, crystals: 200 },
+  { at: 550, unit: 'bomber' },
+  { at: 600, crystals: 220 },
+  { at: 650, attack: 'priest' },
+  { at: 720, crystals: 250 },
+  { at: 800, crystals: 300 },
+  { at: 850, unit: 'assassin' },
+  { at: 950, attack: 'king' },
+  { at: 1000, crystals: 400 },
+  { at: 1100, crystals: 450 },
+  { at: 1200, attack: 'demon' },
+  { at: 1350, crystals: 500 },
+  { at: 1500, crystals: 600 },
+  { at: 1700, crystals: 700 },
+  { at: 2000, crystals: 1000 },
 ];
 
 export const STAGE_BY_ID: Record<string, StageDef> = Object.fromEntries(STAGES.map((s) => [s.id, s]));

@@ -193,13 +193,20 @@ export function createBotSession(): PvpSession {
 export function botSkill(): number {
   const p = meta.pvp;
   if (p.wins + p.losses < 3) return 0.05; // 첫 3판은 가장 약한 봇 - 처음 대전에서 이기는 경험
-  // 사람 손은 봇보다 느리고 실수도 많다 → 천천히 강해진다 (300 트로피 ≈ 0.3, 900 ≈ 0.7)
+  // 사람 손은 봇보다 느리고 실수도 많다 → 천천히 강해진다 (300 트로피 ≈ 0.3, 900 ≈ 0.7, 1125+ ≈ 0.85)
   const base = 0.1 + p.trophies / 1500;
   const adj = Math.min(4, p.streak) * 0.05 - Math.min(3, p.lossStreak ?? 0) * 0.1;
-  return Math.max(0.05, Math.min(0.7, base + adj));
+  return Math.max(0.05, Math.min(0.85, base + adj));
 }
 
-/** 봇 유닛 공격력 배수: 약한 봇일수록 낮다 (0.05 → 0.62, 0.3 → 0.75, 0.7 → 0.95) */
+/** 봇 유닛 레벨 = 내 출전 덱의 평균 레벨 (가진 유닛 전체 평균이면 덱만 키운 플레이어가 너무 유리했다) */
+export function botLevel(): number {
+  const lv = unitLevels();
+  const vals = meta.deck.map((j) => lv[j] ?? 1);
+  return Math.max(1, Math.round(vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.length)));
+}
+
+/** 봇 유닛 공격력 배수: 약한 봇일수록 낮다 (0.05 → 0.62, 0.3 → 0.75, 0.85 → 1.0) */
 export function botAtkMult(skill: number): number {
   return 0.6 + skill * 0.5;
 }
@@ -246,9 +253,7 @@ class BotSession implements PvpSession {
     }
     // 덱: 플레이어 덱과 같은 수, 해금 유닛 중 무작위 (레벨은 플레이어 평균 수준)
     const deck = botDeck(this.match.opponent.trophies);
-    const lv = unitLevels();
-    const vals = Object.values(lv) as number[];
-    const avg = Math.max(1, Math.round(vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.length)));
+    const avg = botLevel();
     const game = new Game({ mode: 'pvp', seed: this.match.seed, useResearch: false, track: false, deck, atkMult: botAtkMult(skill),
       attackDeck: botAttackDeck(this.match.opponent.trophies), unitLevels: Object.fromEntries(deck.map((j) => [j, avg])) });
     this.game = game;

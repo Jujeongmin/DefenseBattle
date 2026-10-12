@@ -2,7 +2,7 @@
 //  글로벌(계정) 상태 - localStorage 영구 저장
 //  크리스탈, 연구소 레벨, 퀘스트/업적 진행도
 // ============================================================
-import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS, FEATURE_UNLOCK, STARTER_ATTACKS, ATTACK_BY_KEY } from './config';
+import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS, FEATURE_UNLOCK, STARTER_ATTACKS, ATTACK_BY_KEY, PVP_TIERS } from './config';
 import { getPlatform } from './platform';
 import type { MetaData, ResearchKey, QuestStat, AchievementDef, ItemKey } from './types';
 
@@ -43,6 +43,10 @@ function freshMeta(): MetaData {
     tutorial: 0,
     seenFeatures: [],
     roadClaimed: [],
+    offers: {},
+    offerShownAt: {},
+    arenaMax: 0,
+    stageFailStreak: 0,
     nick: `용사${Math.floor(1000 + Math.random() * 9000)}`,
     adRemoved: false,
   };
@@ -65,6 +69,11 @@ function load(): MetaData {
   m.units = Object.assign(fresh.units, m.units || {});
   m.stages = m.stages || {};
   m.roadClaimed = Array.isArray(m.roadClaimed) ? m.roadClaimed : [];
+  m.offers = m.offers || {};
+  m.offerShownAt = m.offerShownAt || {};
+  // 예전 저장본: 지금 아레나에서 시작 (이미 오른 아레나로 승급 팝업이 뜨지 않게)
+  m.arenaMax = m.arenaMax ?? PVP_TIERS.filter((t) => (m.pvp?.trophies ?? 0) >= t.min).length - 1;
+  m.stageFailStreak = m.stageFailStreak ?? 0;
   // 이 필드가 생기기 전 저장본: 이미 열린 메뉴에 NEW 가 갑자기 뜨지 않게 해금된 것은 본 것으로 둔다
   if (!Array.isArray(m.seenFeatures)) {
     m.seenFeatures = Object.entries(FEATURE_UNLOCK).filter(([, st]) => (m.stages[st] || 0) > 0).map(([f]) => f);

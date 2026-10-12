@@ -231,6 +231,14 @@ export interface MetaData {
   seenFeatures: string[];
   /** 받은 트로피 로드 보상 (트로피 값) */
   roadClaimed: number[];
+  /** 떠 있는 한정 상품 (상품 id → 끝나는 시각 ms) */
+  offers: Record<string, number>;
+  /** 한정 상품 팝업을 마지막으로 띄운 시각 (같은 상품은 하루 한 번) */
+  offerShownAt: Record<string, number>;
+  /** 지금까지 오른 가장 높은 아레나 (승급 팝업용, PVP_TIERS 번호) */
+  arenaMax: number;
+  /** 캠페인 연속 실패 수 (다시 일어서기 팝업용) */
+  stageFailStreak: number;
   nick: string;
   adRemoved: boolean;
 }
