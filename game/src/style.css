@@ -751,6 +751,8 @@ b, strong { font-weight: 700; }
 .unit-tip.below::after { bottom: auto; top: -7px; border-top: 0; border-bottom: 5px solid #ffcf3f; }
 .unit-tip .ut-name { font-weight: 700; font-size: 12px; }
 .unit-tip .ut-role { color: #e6d3b0; }
+.unit-tip.wide { max-width: 220px; text-align: left; }
+.unit-tip .ut-desc { color: #f3e3c3; margin-top: 2px; }
 .unit-tip .ut-own { color: #7fe08a; font-weight: 700; }
 .unit-tip .ut-own.no { color: #c9a98a; }
 .mob-card .acts { display: flex; min-height: 34px; align-items: center; justify-content: center; }

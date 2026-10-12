@@ -3,7 +3,7 @@
 // ============================================================
 import {
   RESEARCH, researchCost, DAILY_QUESTS, ACHIEVEMENTS, PRODUCTS, ITEM_KR,
-  UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, unitUpgradeCost, SKILL_DESC, SKILL_KR,
+  UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, unitUpgradeCost, SKILL_KR,
   DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, UNIT_PACK, CHESTS, RARITY_KR, RARITY_COLOR, GACHA, chestOpenCost, type RoadStep, type AttackKey,
   SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, FEATURE_KR, productEfficiency,
   CAMPAIGN, TROPHY_ROAD, PVP_TIERS,
@@ -415,7 +415,6 @@ export class Menu {
           if (meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, draw); return; }
           if (await act<boolean>('upgradeUnit', { job: j })) { audio.merge(); draw(); }
         },
-        info: (b) => { const j = b.dataset.job as Job; toast(`<b>${SKILL_KR[j]}</b><br>${SKILL_DESC[j]}`, 3200); },
         buy: async (b) => {
           const j = b.dataset.job as Job;
           const need = (UNIT_BY_ID[j].unlockCrystals ?? 0) - meta.crystals;
@@ -470,7 +469,7 @@ export class Menu {
         <div class="head">${spriteIcon(unitIconUrl(u.id))}
           <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : `${icon('lock')} ${[roadUnlockAt(u.id) ? `${icon('trophy')}${roadUnlockAt(u.id)}` : '', u.unlockStage ?? ''].filter(Boolean).join(' / ') || icon('chest')}`}</div></div></div>
         ${bar}
-        <div class="sk" data-act="info" data-job="${u.id}"><b>${SKILL_KR[u.id]}</b> <span class="info-dot">?</span></div>
+        <div class="sk" data-tip-skill="${u.id}"><b>${SKILL_KR[u.id]}</b> <span class="info-dot">?</span></div>
         <div class="acts">${acts}</div></div>`;
     }).join('');
     return `<div class="deck-hint">${icon('pointer')} 끌어서 칸에 놓기</div>

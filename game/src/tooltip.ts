@@ -1,8 +1,9 @@
 // ============================================================
-//  유닛 말풍선 - data-tip-unit="<job>" 이 붙은 아이콘에 마우스를 올리거나(PC) 탭하면(모바일)
-//  유닛 이름·등급·역할·보유 레벨을 아이콘 위에 띄운다. 다른 곳을 누르거나 스크롤하면 닫힌다.
+//  유닛 말풍선 - 마우스를 올리거나(PC) 탭하면(모바일) 요소 위에 띄운다. 다른 곳을 누르거나 스크롤하면 닫힌다.
+//   data-tip-unit="<job>"  : 유닛 이름·등급·역할·보유 레벨 (몹 카드의 '막는 유닛')
+//   data-tip-skill="<job>" : 유닛 스킬 이름·설명 (유닛 카드의 ?)
 // ============================================================
-import { UNIT_BY_ID, RARITY_KR, RARITY_COLOR } from './config';
+import { UNIT_BY_ID, RARITY_KR, RARITY_COLOR, SKILL_KR, SKILL_DESC } from './config';
 import { meta } from './meta';
 import type { Job } from './types';
 
@@ -15,19 +16,28 @@ function hide(): void {
   anchor = null;
 }
 
-function show(el: HTMLElement): void {
+function content(el: HTMLElement): string | null {
+  const skill = el.dataset.tipSkill as Job | undefined;
+  if (skill && SKILL_KR[skill]) return `<div class="ut-name">${SKILL_KR[skill]}</div><div class="ut-desc">${SKILL_DESC[skill]}</div>`;
   const job = el.dataset.tipUnit as Job;
   const u = UNIT_BY_ID[job];
-  if (!u) return;
+  if (!u) return null;
+  const lv = meta.units[job];
+  return `<div class="ut-name">${u.kr} <span style="color:${RARITY_COLOR[u.rarity]}">${RARITY_KR[u.rarity]}</span></div>
+    <div class="ut-role">${u.role}</div>
+    <div class="ut-own ${lv ? '' : 'no'}">${lv ? `보유 Lv.${lv}` : '미보유'}</div>`;
+}
+
+function show(el: HTMLElement): void {
+  const html = content(el);
+  if (!html) return;
   if (!tip) {
     tip = document.createElement('div');
     tip.className = 'unit-tip';
     document.body.appendChild(tip);
   }
-  const lv = meta.units[job];
-  tip.innerHTML = `<div class="ut-name">${u.kr} <span style="color:${RARITY_COLOR[u.rarity]}">${RARITY_KR[u.rarity]}</span></div>
-    <div class="ut-role">${u.role}</div>
-    <div class="ut-own ${lv ? '' : 'no'}">${lv ? `보유 Lv.${lv}` : '미보유'}</div>`;
+  tip.innerHTML = html;
+  tip.classList.toggle('wide', !!el.dataset.tipSkill);
   anchor = el;
   // 아이콘 바로 위 가운데 (화면 밖으로 나가지 않게)
   const r = el.getBoundingClientRect();
@@ -41,7 +51,7 @@ function show(el: HTMLElement): void {
   tip.classList.toggle('below', above < 6);
 }
 
-const target = (e: Event) => (e.target as HTMLElement | null)?.closest?.<HTMLElement>('[data-tip-unit]') ?? null;
+const target = (e: Event) => (e.target as HTMLElement | null)?.closest?.<HTMLElement>('[data-tip-unit],[data-tip-skill]') ?? null;
 
 export function initUnitTips(): void {
   document.addEventListener('pointerover', (e) => {
