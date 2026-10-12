@@ -213,15 +213,12 @@ b, strong { font-weight: 700; }
 /* + 버튼: 칩 오른쪽 끝 테두리에 걸쳐 붙인다 (칩과 한 덩어리로 보이게) */
 .res-chip:has(.plus) { position: relative; padding-right: 30px; }
 .res-chip .plus {
-  position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
-  width: 24px; height: 24px;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: var(--green);
-  border: 2px solid var(--edge);
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
-  line-height: 0;
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  width: 28px; height: 28px;
+  background: url('/ui/plus_btn.png') center / contain no-repeat;
 }
-.res-chip .plus .pi { width: 12px; height: 12px; vertical-align: 0; }
+.res-chip .plus .pi { display: none; }
+.res-chip:active .plus { transform: translateY(-50%) scale(0.92); }
 .lobby-body {
   flex: 1;
   display: flex;
@@ -815,16 +812,18 @@ b, strong { font-weight: 700; }
 .shop-card .t { font-size: 15px; font-weight: 700; }
 .shop-card .d { font-size: 12px; color: var(--ink-2); }
 .gem-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-/* 효율 스티커: 기본 보석 상품 대비 가치 - 패키지 구매 유도 */
-.shop-card, .gem-card { position: relative; }
+/* 효율 띠: 기본 보석 상품 대비 가치 - 카드 왼쪽 위 모서리를 가로지르는 대각선 띠 (카드 밖은 잘림) */
+.shop-card, .gem-card { position: relative; overflow: hidden; }
 .eff {
-  position: absolute; top: -8px; left: 2px; z-index: 2; /* 창 왼쪽 끝에 잘리지 않게 카드 안쪽 */
-  display: flex; flex-direction: column; align-items: center; line-height: 1;
-  background: var(--red); color: var(--cream); border: 2px solid var(--edge);
-  padding: 3px 6px 4px; font-size: 9px; font-weight: 700; text-shadow: var(--outline-thin);
-  transform: rotate(-8deg); box-shadow: 0 2px 0 var(--edge);
+  position: absolute; top: 13px; left: -34px; z-index: 2; width: 118px;
+  transform: rotate(-45deg);
+  display: flex; align-items: baseline; justify-content: center; gap: 3px; line-height: 1;
+  background: var(--red); color: var(--cream);
+  border-top: 2px solid var(--edge); border-bottom: 2px solid var(--edge);
+  padding: 3px 0 2px; font-size: 9px; font-weight: 700; text-shadow: var(--outline-thin);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); pointer-events: none;
 }
-.eff b { font-size: 15px; color: var(--gold); }
+.eff b { font-size: 12px; color: var(--gold); }
 /* ---------- 결제 팝업 (offers.ts) ---------- */
 .offer-dialog { text-align: center; }
 .offer-why { font-size: 13px; color: var(--ink-2); margin: -4px 8px 12px; }
@@ -832,8 +831,9 @@ b, strong { font-weight: 700; }
   position: relative; margin: 6px 4px 10px; padding: 14px 12px 12px;
   background: rgba(255, 201, 40, 0.18); border: 3px solid var(--gold-ink);
 }
-.offer-box .eff { top: -12px; left: -8px; padding: 4px 8px 5px; font-size: 10px; }
-.offer-box .eff b { font-size: 20px; }
+.offer-box { overflow: hidden; }
+.offer-box .eff { top: 18px; left: -36px; width: 140px; padding: 4px 0 3px; font-size: 11px; }
+.offer-box .eff b { font-size: 16px; }
 .offer-name { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
 .offer-grant { display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .og-row { display: flex; align-items: center; gap: 8px; font-size: 15px; }
@@ -856,7 +856,7 @@ b, strong { font-weight: 700; }
 }
 .gem-card .ic { font-size: 32px; }
 .shop-img { width: 56px; height: 56px; flex: none; image-rendering: auto; object-fit: contain; }
-.shop-card .shop-img { margin-left: 26px; } /* 왼쪽 위 효율 스티커 자리 */
+.shop-card .shop-img { margin-left: 4px; }
 .gem-card .shop-img { display: block; width: 64px; height: 64px; margin: 2px auto 2px; }
 .offer-img { display: block; width: 96px; height: 96px; margin: 0 auto 4px; object-fit: contain; }
 .gem-card .badge { position: absolute; top: 6px; right: 6px; margin: 0; }
