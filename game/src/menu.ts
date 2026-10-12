@@ -490,7 +490,7 @@ export class Menu {
       const open = attackUnlocked(a.key);
       const inDeck = meta.attackDeck.includes(a.key);
       const at = attackUnlockAt(a.key);
-      const counters = a.counters.map((j) => spriteIcon(unitIconUrl(j), 'frame-sprite mini')).join('');
+      const counters = a.counters.map((j) => `<span class="tip-unit" data-tip-unit="${j}">${spriteIcon(unitIconUrl(j), 'frame-sprite mini')}</span>`).join('');
       const act = !open ? `<div class="lock">${icon('lock')} ${icon('trophy')}${at}</div>`
         : inDeck ? `<div class="in">${icon('check')} 덱</div>`
         : `<button class="btn small ${pick === a.key ? 'gold' : 'blue'}" data-act="pick" data-key="${a.key}">${pick === a.key ? '칸 선택' : '넣기'}</button>`;
