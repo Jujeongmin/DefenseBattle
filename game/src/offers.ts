@@ -66,6 +66,7 @@ function popup(id: string, title: string, why: string, onDone?: () => void): voi
     <h2>${title}</h2>
     <div class="offer-why">${why}</div>
     <div class="offer-box">${eff > 100 ? `<span class="eff">효율<b>${eff}%</b></span>` : ''}
+      <img class="offer-img" src="/ui/shop/${p.id}.png" alt="">
       <div class="offer-name">${p.kr}</div>
       <div class="offer-grant">${grantRows(p)}</div>
     </div>

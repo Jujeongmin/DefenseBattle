@@ -210,8 +210,11 @@ b, strong { font-weight: 700; }
   white-space: nowrap;
 }
 .res-chip + .res-chip { margin-left: 0; }
+/* + 버튼: 칩 오른쪽 끝 테두리에 걸쳐 붙인다 (칩과 한 덩어리로 보이게) */
+.res-chip:has(.plus) { position: relative; padding-right: 30px; }
 .res-chip .plus {
-  width: 22px; height: 22px;
+  position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+  width: 24px; height: 24px;
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--green);
   border: 2px solid var(--edge);
@@ -815,7 +818,7 @@ b, strong { font-weight: 700; }
 /* 효율 스티커: 기본 보석 상품 대비 가치 - 패키지 구매 유도 */
 .shop-card, .gem-card { position: relative; }
 .eff {
-  position: absolute; top: -8px; left: -6px; z-index: 2;
+  position: absolute; top: -8px; left: 2px; z-index: 2; /* 창 왼쪽 끝에 잘리지 않게 카드 안쪽 */
   display: flex; flex-direction: column; align-items: center; line-height: 1;
   background: var(--red); color: var(--cream); border: 2px solid var(--edge);
   padding: 3px 6px 4px; font-size: 9px; font-weight: 700; text-shadow: var(--outline-thin);
@@ -852,6 +855,10 @@ b, strong { font-weight: 700; }
   padding: 10px; text-align: center; position: relative; font-weight: 700;
 }
 .gem-card .ic { font-size: 32px; }
+.shop-img { width: 56px; height: 56px; flex: none; image-rendering: auto; object-fit: contain; }
+.shop-card .shop-img { margin-left: 26px; } /* 왼쪽 위 효율 스티커 자리 */
+.gem-card .shop-img { display: block; width: 64px; height: 64px; margin: 2px auto 2px; }
+.offer-img { display: block; width: 96px; height: 96px; margin: 0 auto 4px; object-fit: contain; }
 .gem-card .badge { position: absolute; top: 6px; right: 6px; margin: 0; }
 .gem-card .btn { width: 100%; margin-top: 6px; }
 

@@ -630,14 +630,14 @@ export class Menu {
         if (id === 'monthly_pass' && monthlyActive()) extra = ` <span class="badge green">${monthlyDaysLeft()}일 남음</span>`;
         if (p.category === 'offer') extra = ` <span class="badge">${icon('timer')}${timeLeft(id).split(':').slice(0, 2).join('시간 ')}분</span>`;
         const eff = owned ? 0 : productEfficiency(p, price(id));
-        return `<div class="shop-card ${hot ? 'hot' : ''}">${eff > 100 ? `<span class="eff">효율<b>${eff}%</b></span>` : ''}<div class="ic">${icon(p.icon)}</div>
+        return `<div class="shop-card ${hot ? 'hot' : ''}">${eff > 100 ? `<span class="eff">효율<b>${eff}%</b></span>` : ''}<img class="shop-img" src="/ui/shop/${p.id}.png" alt="">
           <div class="info"><div class="t">${p.kr}${p.badge ? ` <span class="badge">${p.badge}</span>` : ''}${extra}</div><div class="d">${p.desc}</div></div>
           <button class="btn small ${owned ? '' : 'gold'}" data-act="buy" data-id="${id}" ${owned ? 'disabled' : ''}>${owned ? `보유 ${icon('check')}` : `VX ${price(id)}`}</button></div>`;
       };
       const gems = PRODUCTS.filter((p) => p.category === 'crystal').map((p) => {
         const eff = productEfficiency(p, price(p.id));
         return `<div class="gem-card">
-        ${eff > 100 ? `<span class="eff">효율<b>${eff}%</b></span>` : ''}<div class="ic">${icon('gem')}</div><div>${p.kr}</div>
+        ${eff > 100 ? `<span class="eff">효율<b>${eff}%</b></span>` : ''}<img class="shop-img" src="/ui/shop/${p.id}.png" alt=""><div>${p.kr}</div>
         <button class="btn small gold" data-act="buy" data-id="${p.id}">VX ${price(p.id)}</button></div>`;
       }).join('');
       const items = Object.entries(meta.items).map(([k, n]) => `${icon(ITEM_KR[k as keyof typeof ITEM_KR].icon)}${n}`).join(' · ');
