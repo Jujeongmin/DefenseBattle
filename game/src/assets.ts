@@ -30,6 +30,20 @@ function loadImage(name: string, dir = 'sprites'): SpriteEntry {
   return entry;
 }
 
+/** 'sprites/Archer_0.png' 같은 경로의 그림을 받아 캐시에 둔다 (로딩 화면) */
+export function warmImage(path: string): Promise<void> {
+  const slash = path.lastIndexOf('/');
+  const dir = slash >= 0 ? path.slice(0, slash) : '';
+  const name = path.slice(slash + 1).replace(/\.png$/i, '');
+  const e = loadImage(name, dir);
+  if (e.ready || e.error) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => resolve();
+    (e.img as HTMLImageElement).addEventListener('load', done, { once: true });
+    (e.img as HTMLImageElement).addEventListener('error', done, { once: true });
+  });
+}
+
 // RGB ↔ HSL 색조 회전 (채도 낮은 픽셀 - 피부/회색 - 은 덜 바뀌게)
 function hueShift(src: HTMLImageElement, deg: number): HTMLCanvasElement {
   const c = document.createElement('canvas');

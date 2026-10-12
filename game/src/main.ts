@@ -23,6 +23,18 @@ import { $, toast } from './dom';
 import type { GameOverData } from './types';
 import { icon } from './icons';
 import { initUnitTips } from './tooltip';
+import { preloadEverything } from './preload';
+
+/** 로딩 화면 한 줄 팁 */
+const LOADING_TIPS = [
+  '같은 유닛 3개를 합치면 한 등급 위로 올라가요',
+  '몹 카드를 끌어 상대 전장에 던지세요',
+  '필드 몹이 100마리가 되면 져요',
+  '상대 덱을 보고 막기 어려운 몹을 골라 보내세요',
+  '영웅·전설 유닛은 정예 등급부터 스킬을 써요',
+  '대전에서 이기면 상자를 받아요',
+  '중복 카드를 모으면 유닛 레벨을 올릴 수 있어요',
+];
 
 preloadAll(meta.deck);
 warmTints();
@@ -353,7 +365,22 @@ setInterval(() => {
 async function boot(): Promise<void> {
   initUnitTips(); // 유닛 아이콘 말풍선 (몹 카드의 '막는 유닛' 등)
   $('main-menu').classList.remove('hidden');
-  $('main-menu').innerHTML = '<div style="margin:auto;text-align:center"><div class="game-title">디펜스 배틀</div><div class="spinner"></div></div>';
+  // 로딩 화면: 모든 에셋을 받는 동안 진행 막대 (서버 접속도 함께)
+  const tips = LOADING_TIPS.slice().sort(() => Math.random() - 0.5);
+  $('main-menu').innerHTML = `<div class="loading">
+    <img class="ld-logo" src="ui/logo.png" alt="디펜스 배틀">
+    <div class="ld-bottom">
+      <div class="ld-tip" id="ld-tip">${tips[0]}</div>
+      <div class="ld-bar"><div id="ld-fill"></div></div>
+      <div class="ld-pct" id="ld-pct">0%</div>
+    </div>
+  </div>`;
+  let tipI = 0;
+  const tipTimer = setInterval(() => { tipI = (tipI + 1) % tips.length; $('ld-tip').textContent = tips[tipI]; }, 2600);
+  const setPct = (p: number) => { $('ld-fill').style.width = `${p}%`; $('ld-pct').textContent = `${Math.floor(p)}%`; };
+  let assetPct = 0, serverDone = false;
+  const show = () => setPct(assetPct * 0.9 + (serverDone ? 10 : 0));
+  const assets = preloadEverything((d, t) => { assetPct = (d / t) * 100; show(); });
   try {
     await getPlatform().init();
     reloadMeta();
@@ -361,6 +388,10 @@ async function boot(): Promise<void> {
   } catch (e) {
     console.warn('[boot] platform init failed', e);
   }
+  serverDone = true; show();
+  await assets;
+  clearInterval(tipTimer);
+  setPct(100);
   const granted = await syncPurchases().catch(() => [] as string[]);
   menu.show();
   if (granted.length) toast('결제한 상품이 지급되었어요');

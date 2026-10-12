@@ -1411,3 +1411,18 @@ table.odds td, table.odds th { white-space: nowrap; }
 table.odds td { padding: 4px 1px; border-bottom: 1px solid rgba(42, 29, 22, 0.15); font-weight: 700; }
 table.odds th .pi { width: 12px; height: 12px; }
 .odds-dialog .fine { text-align: left; line-height: 1.5; }
+
+/* ---------- 로딩 화면 (main.ts boot) - 전체 화면 키아트 위에 로고(위)와 진행 막대(아래) ---------- */
+.loading {
+  position: absolute; inset: 0; z-index: 5; overflow: hidden;
+  background: #0f2a4a url('/ui/loading_bg.jpg') center bottom / cover no-repeat;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: calc(6% + env(safe-area-inset-top)) 6% calc(5% + env(safe-area-inset-bottom));
+}
+.ld-logo { width: min(86%, 360px); image-rendering: pixelated; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)); animation: ldIn 0.5s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
+.ld-bottom { width: min(100%, 340px); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.ld-bar { width: 100%; height: 22px; background: #2a1d16; border: 3px solid var(--edge); box-shadow: 0 0 0 2px #8a6f55, 0 4px 0 rgba(0, 0, 0, 0.35); overflow: hidden; }
+.ld-bar > div { width: 0; height: 100%; background: var(--gold); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.4), inset 0 -4px 0 rgba(0, 0, 0, 0.2); transition: width 0.2s; }
+.ld-pct { margin-top: -4px; font-size: 16px; font-weight: 700; color: var(--cream); text-shadow: var(--outline-thin); }
+.ld-tip { min-height: 34px; width: 100%; font-size: 13px; color: var(--cream); text-shadow: var(--outline-thin); padding: 7px 12px; background: rgba(15, 10, 6, 0.62); border: 2px solid var(--edge); text-align: center; word-break: keep-all; }
+@keyframes ldIn { from { transform: scale(0.6); opacity: 0; } }
