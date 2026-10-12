@@ -34,7 +34,7 @@ describe('VX Shop 지급 (서버가 바로 지급)', () => {
     const got = await server.claimPurchases();
     expect(got.list[0].reveals.length).toBe(1);
     const drops = got.list[0].reveals[0].drops;
-    expect(drops.some((d) => d.n > 0)).toBe(true);
+    expect(drops.some((d: { n: number }) => d.n > 0)).toBe(true);
     expect(got.econ.crystals > 0).toBe(true);
   });
 });
