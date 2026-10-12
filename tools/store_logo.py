@@ -78,7 +78,9 @@ def variant(base: Image.Image, kind: str) -> Image.Image:
     word = fit_word(NAME_EN, W - 90, 6)
     kr = pixel_word(NAME_KR, 22, 3, top=(255, 255, 255), mid=(255, 248, 230), low=(225, 208, 182))
     bottom = H - kr.height - 30  # 한글 이름은 아래 (위쪽은 날아가는 고블린 자리)
-    if kind == 'A':
+    if kind == 'A':  # 썸네일: 위 영문 픽셀 글자만 (아래 한글 판은 그래픽 이미지에만)
+        img.alpha_composite(word, ((W - word.width) // 2, 40))
+    elif kind == 'A2':  # 예전 A: 아래 한글 판까지
         img.alpha_composite(word, ((W - word.width) // 2, 40))
         plate = Image.new('RGBA', (kr.width + 60, kr.height + 26), (0, 0, 0, 0))
         ImageDraw.Draw(plate).rectangle((0, 0, plate.width - 1, plate.height - 1), fill=(42, 26, 16, 235), outline=(255, 196, 40, 255), width=6)
