@@ -722,6 +722,21 @@ b, strong { font-weight: 700; }
 }
 .deck-hint { text-align: center; font-size: 12px; color: var(--ink-2); margin: -4px 0 8px; display: flex; align-items: center; justify-content: center; gap: 4px; }
 .deck-hint .pi { width: 14px; height: 14px; }
+.deck-hint .rec-btn { margin-left: 6px; padding: 2px 8px; font-size: 11px; }
+.preset-dialog { width: min(420px, 100%); }
+.preset-list { display: flex; flex-direction: column; gap: 8px; max-height: 62vh; overflow-y: auto; }
+.preset { padding: 7px 8px; background: rgba(255, 255, 255, 0.3); border: 2px solid var(--edge); }
+.preset.locked { background: rgba(42, 29, 22, 0.08); }
+.preset .pr-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 14px; }
+.preset .pr-desc { font-size: 11px; color: var(--ink-2); margin: 2px 0 5px; }
+.preset .pr-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.pr-card { position: relative; display: flex; flex-direction: column; align-items: center; font-size: 10px; font-weight: 700; min-width: 0; }
+.pr-card span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.pr-card .frame-sprite { width: 40px; height: 40px; }
+.pr-card.locked .frame-sprite { filter: grayscale(1); opacity: 0.5; }
+.pr-card.locked span { color: var(--ink-2); }
+.pr-card .pr-lock { position: absolute; top: 12px; }
+.pr-card .pr-lock .pi { width: 16px; height: 16px; }
 .unit-card[data-drag], .mob-card[data-drag] { cursor: grab; }
 .unit-card .head .frame-sprite, .mob-card .head .frame-sprite { touch-action: none; }
 .mob-card {

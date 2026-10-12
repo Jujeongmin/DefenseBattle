@@ -369,6 +369,7 @@ export class Renderer {
         ctx.save();
         if (m.hitFlash > 0) ctx.globalAlpha = 0.65;
         if (m.ghost) ctx.globalAlpha *= 0.6 + Math.sin(this.t * 3 + m.id) * 0.1; // 유령: 반투명
+        if (m.hidden) ctx.globalAlpha *= 0.22; // 그림자 도적: 숨음
         this.frame(spr.img, col, m.dir, m.x - s / 2, m.y - s / 2, s);
         ctx.restore();
         // 상태 색 덧칠 (ctx.filter 는 사파리 미지원이라 source-atop 대신 반투명 원으로 표시)
@@ -382,6 +383,10 @@ export class Renderer {
           ctx.lineWidth = 2;
           ctx.beginPath(); ctx.arc(m.x, m.y - s * 0.62, 6, 0, Math.PI * 2); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(m.x - 9, m.y - s * 0.62); ctx.lineTo(m.x + 9, m.y - s * 0.62); ctx.moveTo(m.x, m.y - s * 0.62 - 9); ctx.lineTo(m.x, m.y - s * 0.62 + 9); ctx.stroke();
+        }
+        if (m.enraged) {
+          ctx.fillStyle = `rgba(255,60,40,${0.22 + Math.sin(this.t * 10 + m.id) * 0.08})`;
+          ctx.beginPath(); ctx.arc(m.x, m.y, s * 0.38, 0, Math.PI * 2); ctx.fill();
         }
         if (m.slow > 0) {
           ctx.fillStyle = 'rgba(120,200,255,0.28)';

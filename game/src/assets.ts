@@ -4,7 +4,7 @@
 //  해금 유닛(레인저/빙결술사 등)은 기본 3종 시트를 색조 회전한 캔버스로 생성
 //  (전용 아트가 준비되면 UNITS 의 hue 를 0 으로 두고 시트만 추가하면 된다)
 // ============================================================
-import { JOB_SPRITE, GRADES, RACE_SPRITE, UNITS, UNIT_BY_ID, MOB_VARIANTS, STARTER_UNITS } from './config';
+import { JOB_SPRITE, GRADES, RACE_SPRITE, UNITS, UNIT_BY_ID, MOB_VARIANTS, STARTER_UNITS, CARD_ONLY_VARIANTS } from './config';
 import type { Job, Race, GradeKey } from './types';
 
 export interface SpriteEntry {
@@ -100,7 +100,9 @@ export function unitIconUrl(job: Job, gradeIndex = 0): string {
 }
 
 export function mobSprite(race: Race, variant = 0): SpriteEntry {
-  return loadImage(`${RACE_SPRITE[race]}_${Math.min(variant, MOB_VARIANTS[race] - 1)}`);
+  // 몹 카드 전용 그림은 웨이브 변형 수(MOB_VARIANTS) 밖의 번호를 쓴다
+  const v = CARD_ONLY_VARIANTS.some((c) => c.race === race && c.variant === variant) ? variant : Math.min(variant, MOB_VARIANTS[race] - 1);
+  return loadImage(`${RACE_SPRITE[race]}_${v}`);
 }
 
 // 맵 타일 (public/tiles/*.png)
@@ -121,6 +123,7 @@ export function mobPortraitSrc(race: Race): string {
 export function preloadAll(deck: Job[] = []): void {
   preloadUnits([...new Set([...deck, ...STARTER_UNITS])]);
   for (const race of Object.keys(RACE_SPRITE) as Race[]) for (let v = 0; v < MOB_VARIANTS[race]; v++) loadImage(`${RACE_SPRITE[race]}_${v}`);
+  for (const c of CARD_ONLY_VARIANTS) mobSprite(c.race, c.variant);
   for (const t of ['terrain', 'dirtpath', 'deco']) tileSprite(t);
   uiSprite('coin');
 }

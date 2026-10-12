@@ -77,6 +77,12 @@ export interface Mob {
   kind: MobKind;       // fast=빠름/약함, tank=느림/단단함, card=PvP 상대가 던진 몹 카드
   card?: number;       // 몹 카드 번호 (ATTACKS) - 특수 능력
   tick?: number;       // 회복·소환 주기 타이머
+  age?: number;        // 나온 뒤 지난 시간 (은신·점멸·번식 주기)
+  hidden?: boolean;    // 그림자 도적: 숨은 중 (직접 노릴 수 없음)
+  enraged?: boolean;   // 광폭 오크: 질주 중
+  blinkT?: number;     // 점멸 마녀: 다음 순간이동까지
+  gen?: number;        // 번식 유령: 몇 번째 복제인지 (0 = 원본)
+  bred?: boolean;      // 번식 유령: 이미 복제함
   ghost?: boolean;     // 반투명 (유령)
   gold?: number;       // 처치 골드 덮어쓰기 (분열·졸개는 적게)
   markUntil?: number;  // 사냥꾼 표식 (받는 피해 +)
@@ -200,7 +206,7 @@ export interface GameOptions {
 
 // PvP: 상대에게 보내는 공격 묶음
 export interface AttackPayload {
-  card: number;        // ATTACKS 번호 (몹 카드 10종)
+  card: number;        // ATTACKS 번호 (몹 카드 16종)
   wave: number;        // 보낸 쪽 웨이브 (체력 기준)
   pos?: number;        // 던진 위치: 길(사각 링) 둘레 비율 0~1 (출발점=0, 반시계)
 }

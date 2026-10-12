@@ -133,6 +133,9 @@ interface EventMap {
 type EventName = keyof EventMap;
 type Listener<K extends EventName> = (data: EventMap[K]) => void;
 
+/** 수호 주술사 보호 반경 (px) */
+const GUARD_RADIUS = 130;
+
 export class Game {
   readonly opts: GameOptions;
   gold = 0;
@@ -341,6 +344,8 @@ export class Game {
   attackCost(card: number): number { return ATTACKS[card].cost; }
   /** 남은 쿨타임(초, 게임 시간) - 마왕처럼 쿨타임이 있는 카드 */
   attackCooldown(card: number): number { return Math.max(0, (this.attackReadyAt[card] ?? 0) - this.time); }
+  /** 이번 프레임 살아 있는 수호 주술사 (hit 에서 피해 감소) */
+  private guards: Mob[] = [];
   private attackReadyAt: Record<number, number> = {};
 
   /** 몹 던지기 (덱에 있는 카드만). pos = 상대 길 위치(둘레 비율 0~1) */
@@ -375,13 +380,25 @@ export class Game {
   }
 
   /** 다른 몹 자리에서 새 몹 (분열·졸개) */
-  private spawnFrom(src: Mob, card: number, hp: number, gold: number, sizeMult = 1): void {
+  private spawnFrom(src: Mob, card: number, hp: number, gold: number, sizeMult = 1): Mob {
     const m = this.addMob('card', hp, false, 0, card);
     m.x = src.x + (Math.random() - 0.5) * 30;
     m.y = src.y + (Math.random() - 0.5) * 30;
     m.seg = src.seg;
     m.size *= sizeMult;
     m.gold = gold;
+    return m;
+  }
+  /** 길을 따라 dist 만큼 앞으로 (점멸 마녀) */
+  private advance(m: Mob, dist: number): void {
+    const c = PATH.corners;
+    for (let i = 0; i < 8 && dist > 0; i++) {
+      const t = c[m.seg];
+      const d = Math.hypot(t.x - m.x, t.y - m.y);
+      if (d > dist) { m.x += ((t.x - m.x) / d) * dist; m.y += ((t.y - m.y) / d) * dist; return; }
+      m.x = t.x; m.y = t.y; dist -= d;
+      m.seg = (m.seg + 1) % c.length;
+    }
   }
 
   private updatePending(dt: number): void {
@@ -673,7 +690,7 @@ export class Game {
     if (mob.markUntil && mob.markUntil > this.time) dmg *= SKILLS.hunter.markMult;
     if (u.gradeIndex >= SKILL_FROM_INDEX) {
       const high = u.gradeIndex >= FULL_RANGE_FROM_INDEX;
-      if (u.job === 'knight' && (mob.kind === 'tank' || (def && ['shield', 'giant', 'king', 'demon'].includes(def.key)))) {
+      if (u.job === 'knight' && (mob.kind === 'tank' || (def && ['shield', 'giant', 'king', 'demon', 'golem'].includes(def.key)))) {
         dmg *= high ? SKILLS.knight.armoredMultHigh : SKILLS.knight.armoredMult;
       } else if (u.job === 'houndmaster' && (mob.speedMult ?? 1) > 1.2) {
         dmg *= high ? SKILLS.houndmaster.fastMultHigh : SKILLS.houndmaster.fastMult;
@@ -762,6 +779,7 @@ export class Game {
 
   updateMobs(dt: number): void {
     const speedPx = 50 * (WAVE.mobSpeed / 1.2);
+    this.guards = this.mobs.filter((m) => m.card !== undefined && !m.dead && ATTACKS[m.card].guard);
     for (const m of this.mobs.slice()) {
       if (m.hitFlash > 0) m.hitFlash -= dt;
       if (m.slow > 0) m.slow -= dt;
@@ -773,7 +791,8 @@ export class Game {
       // 이동 방향으로 스프라이트 방향 결정 (0=하 1=좌 2=우 3=상)
       if (Math.abs(dx) > Math.abs(dy)) m.dir = dx > 0 ? 2 : 1;
       else m.dir = dy > 0 ? 0 : 3;
-      const step = speedPx * m.speedMult * (m.slow > 0 ? 1 - m.slowPct : 1) * dt;
+      const rage = m.enraged ? ATTACKS[m.card!].enrage! : 1;
+      const step = speedPx * m.speedMult * rage * (m.slow > 0 ? 1 - m.slowPct : 1) * dt;
       if (dist <= step) {
         m.x = target.x; m.y = target.y;
         m.seg = (m.seg + 1) % PATH.corners.length;
@@ -838,11 +857,40 @@ export class Game {
     if (this.mobs.some((m) => m.dead)) this.mobs = this.mobs.filter((m) => !m.dead);
   }
 
-  /** 몹 카드 능력: 신관 회복, 킹 졸개 소환 */
+  /** 몹 카드 능력: 신관 회복, 킹 졸개 소환, 도적 은신, 오크 광폭, 마녀 점멸, 주술사 보호막 표시, 유령 번식 */
   private cardAbility(m: Mob, dt: number): void {
     const def = ATTACKS[m.card!];
-    if (!def.heal && !def.spawn) return;
+    m.age = (m.age ?? 0) + dt;
+    if (def.stealth) {
+      const hide = m.age % 4 >= 4 - def.stealth;
+      if (hide && !m.hidden) this.addEffect({ type: 'splash', x: m.x, y: m.y, ttl: 0.3, r: 26, color: '#6a4c93' });
+      m.hidden = hide;
+    }
+    if (def.enrage && !m.enraged && m.hp < m.maxHp * 0.5) {
+      m.enraged = true;
+      this.addEffect({ type: 'splash', x: m.x, y: m.y, ttl: 0.4, r: 34, color: '#ff4a3a' });
+    }
+    if (def.blink) {
+      m.blinkT = (m.blinkT ?? 3) - dt;
+      if (m.blinkT <= 0) {
+        m.blinkT = 3;
+        this.addEffect({ type: 'splash', x: m.x, y: m.y, ttl: 0.35, r: 30, color: '#c9a2ff' });
+        this.advance(m, def.blink);
+        this.addEffect({ type: 'splash', x: m.x, y: m.y, ttl: 0.35, r: 30, color: '#c9a2ff' });
+      }
+    }
+    if (def.breed && !m.bred && (m.gen ?? 0) < 2 && m.age >= 5) {
+      m.bred = true;
+      const c = this.spawnFrom(m, m.card!, m.maxHp * 0.7, 1, 0.9);
+      c.gen = (m.gen ?? 0) + 1;
+      this.addEffect({ type: 'splash', x: m.x, y: m.y, ttl: 0.4, r: 32, color: '#a8e86a' });
+    }
+    if (!def.heal && !def.spawn && !def.guard) return;
     m.tick = (m.tick ?? 0) + dt;
+    if (def.guard && m.tick >= 1) {
+      m.tick -= 1;
+      this.addEffect({ type: 'splash', x: m.x, y: m.y, ttl: 0.5, r: GUARD_RADIUS, color: '#6fd3ff' });
+    }
     if (def.heal && m.tick >= 1) {
       m.tick -= 1;
       for (const o of this.mobs) {
@@ -883,7 +931,7 @@ export class Game {
       let best: Mob | null = null;
       let bestD = Infinity;
       for (const m of this.mobs) {
-        if (m.dead) continue;
+        if (m.dead || m.hidden) continue; // 숨은 도적은 직접 못 노림 (범위 공격엔 맞음)
         const d = Math.hypot(m.x - u.x, m.y - u.y);
         if (d <= range && d < bestD) { bestD = d; best = m; }
       }
@@ -928,6 +976,10 @@ export class Game {
   // 단일 대상 피해 처리 + 데미지 숫자
   private hit(m: Mob, dmg: number, crit: boolean): void {
     if (m.dead) return;
+    // 수호 주술사 근처의 다른 몹은 피해 감소 (가장 센 하나)
+    for (const g of this.guards) {
+      if (g !== m && !g.dead && Math.hypot(g.x - m.x, g.y - m.y) <= GUARD_RADIUS) { dmg *= 1 - ATTACKS[g.card!].guard!; break; }
+    }
     m.hp -= dmg;
     m.hitFlash = 0.12;
     // 데미지 숫자 (너무 많으면 생략해 성능/난잡함 방지)
@@ -966,7 +1018,7 @@ export class Game {
       case 'archer': {
         const n = (high ? SKILLS.archer.extraTargetsHigh : SKILLS.archer.extraTargets) + (perk > 1.5 ? 1 : 0);
         const others = this.mobs
-          .filter((m) => m !== target && !m.dead && Math.hypot(m.x - u.x, m.y - u.y) <= range)
+          .filter((m) => m !== target && !m.dead && !m.hidden && Math.hypot(m.x - u.x, m.y - u.y) <= range)
           .sort((a, b) => Math.hypot(a.x - target.x, a.y - target.y) - Math.hypot(b.x - target.x, b.y - target.y))
           .slice(0, n);
         for (const m of others) {

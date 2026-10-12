@@ -6,7 +6,7 @@ import {
   UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, unitUpgradeCost, SKILL_KR,
   DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, UNIT_PACK, CHESTS, RARITY_KR, RARITY_COLOR, GACHA, chestOpenCost, type RoadStep, type AttackKey,
   SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, FEATURE_KR, productEfficiency,
-  CAMPAIGN, TROPHY_ROAD, PVP_TIERS,
+  CAMPAIGN, TROPHY_ROAD, PVP_TIERS, UNIT_PRESETS, ATTACK_PRESETS, type DeckPreset,
 } from './config';
 import { meta, saveMeta, researchLevel, currentSeasonId } from './meta';
 import { getPlatform } from './platform';
@@ -32,6 +32,9 @@ import { act, type Reveal } from './econ';
 import { showShortage, activeOffers, unitPackAvailable, timeLeft } from './offers';
 import { chestState, chestLeftMs, leftText, opening, showReveal, flushReveals, pendingReveals } from './chests';
 import type { Job, Race, ResearchKey } from './types';
+
+/** 덱 화면 안내 줄의 '추천 덱' 버튼 */
+const RECS_BTN = `<button class="btn small gold rec-btn" data-act="recs">${icon('star')} 추천 덱</button>`;
 
 export type Launch =
   | { kind: 'stage'; stageId: string; goldBooster: boolean }
@@ -425,6 +428,7 @@ export class Menu {
           draw();
         },
         pick: (b) => { const k = b.dataset.key as AttackKey; this.pickAttack = this.pickAttack === k ? null : k; audio.button(); draw(); },
+        recs: () => { audio.button(); this.openDeckPresets(tab, draw); },
         slot: (b) => {
           if (tab !== 'attacks' || !this.pickAttack) return;
           if (placeAttack(this.pickAttack, Number(b.dataset.dropSlot))) audio.button();
@@ -434,6 +438,44 @@ export class Menu {
       });
     };
     draw();
+  }
+
+  /** 추천 덱 목록 - 다 가진 덱은 바로 장착, 없는 카드는 잠금 */
+  private openDeckPresets(tab: 'units' | 'attacks', after: () => void): void {
+    const units = tab === 'units';
+    const list = (units ? UNIT_PRESETS : ATTACK_PRESETS) as DeckPreset<string>[];
+    const has = (k: string) => (units ? unitUnlocked(k as Job) : attackUnlocked(k as AttackKey));
+    const ic = (k: string) => {
+      if (units) return spriteIcon(unitIconUrl(k as Job));
+      const a = ATTACK_BY_KEY[k as AttackKey];
+      return spriteIcon(mobSprite(a.race, a.variant).url);
+    };
+    const name = (k: string) => (units ? UNIT_BY_ID[k as Job].kr : ATTACK_BY_KEY[k as AttackKey].kr);
+    const cur = units ? meta.deck : meta.attackDeck;
+    const rows = list.map((p, i) => {
+      const missing = p.cards.filter((k) => !has(k)).length;
+      const same = p.cards.length === cur.length && p.cards.every((k) => (cur as string[]).includes(k));
+      const cards = p.cards.map((k) => `<div class="pr-card ${has(k) ? '' : 'locked'}" ${units ? `data-tip-unit="${k}"` : ''}>${ic(k)}<span>${name(k)}</span>${has(k) ? '' : `<i class="pr-lock">${icon('lock')}</i>`}</div>`).join('');
+      const btn = same ? `<button class="btn small" disabled>${icon('check')} 사용 중</button>`
+        : missing ? `<button class="btn small" disabled>${icon('lock')} ${missing}장 없음</button>`
+        : `<button class="btn small gold" data-act="use" data-i="${i}">장착</button>`;
+      return `<div class="preset ${missing ? 'locked' : ''}"><div class="pr-head"><b>${p.name}</b>${btn}</div><div class="pr-desc">${p.desc}</div><div class="pr-cards">${cards}</div></div>`;
+    }).join('');
+    const el = openOverlay('modal', `<div class="dialog preset-dialog"><button class="close-x">${icon('close')}</button>
+      <h2>추천 ${units ? '유닛' : '몹 카드'} 덱</h2><div class="preset-list">${rows}</div></div>`);
+    bindActions(el, {
+      use: (b) => {
+        const p = list[Number(b.dataset.i)];
+        if (!p.cards.every(has)) return;
+        if (units) meta.deck = [...p.cards] as Job[];
+        else meta.attackDeck = [...p.cards] as AttackKey[];
+        saveMeta();
+        audio.merge();
+        toast(`${p.name} 덱 장착`);
+        closeOverlay('modal');
+        after();
+      },
+    });
   }
 
   private unitDeckHtml(): string {
@@ -472,7 +514,7 @@ export class Menu {
         <div class="sk" data-tip-skill="${u.id}"><b>${SKILL_KR[u.id]}</b> <span class="info-dot">?</span></div>
         <div class="acts">${acts}</div></div>`;
     }).join('');
-    return `<div class="deck-hint">${icon('pointer')} 끌어서 칸에 놓기</div>
+    return `<div class="deck-hint">${icon('pointer')} 끌어서 칸에 놓기${RECS_BTN}</div>
       <div class="deck-row">${slots}</div>
       <div class="unit-grid">${cards}</div>`;
   }
@@ -499,7 +541,7 @@ export class Menu {
         <div class="ctr"><span>막는 유닛</span>${counters}</div>
         <div class="acts">${act}</div></div>`;
     }).join('');
-    return `<div class="deck-hint">${pick ? `${icon('pointer')} 넣을 칸을 누르세요` : `${icon('pointer')} 끌어서 칸에 놓기 · 대전에서 상대에게 던져요`}</div>
+    return `<div class="deck-hint">${pick ? `${icon('pointer')} 넣을 칸을 누르세요` : `${icon('pointer')} 끌어서 칸에 놓기 · 대전에서 상대에게 던져요`}${RECS_BTN}</div>
       <div class="deck-row">${slots}</div>
       <div class="unit-grid">${cards}</div>`;
   }

@@ -328,7 +328,8 @@ export const MERGE_COUNT = 3;
 // ---------- PvP 몹 카드 (공격 덱) ----------
 // 10종 중 4장을 골라 덱을 짠다. 카드마다 잘 막는 유닛(counters)이 달라 상대 덱을 보고 고르는 판단이 생긴다.
 //   그림은 카드마다 고정된 종족·변형 (종족 상성도 그대로 적용)
-export type AttackKey = 'swarm' | 'rush' | 'giant' | 'ghost' | 'shield' | 'priest' | 'egg' | 'wraith' | 'king' | 'demon';
+export type AttackKey = 'swarm' | 'rush' | 'giant' | 'ghost' | 'shield' | 'priest' | 'egg' | 'wraith' | 'king' | 'demon'
+  | 'thief' | 'golem' | 'berserk' | 'witch' | 'shaman' | 'slime';
 export interface AttackDef {
   key: AttackKey;
   kr: string;
@@ -347,6 +348,11 @@ export interface AttackDef {
   split?: number;        // 죽으면 작은 몹 n 마리로 갈라짐
   revive?: boolean;      // 한 번 되살아남 (체력 50%)
   spawn?: number;        // 4초마다 졸개 n 마리 소환
+  stealth?: number;      // 4초마다 n초 동안 숨음 (직접 노릴 수 없음 - 범위 공격엔 맞음)
+  enrage?: number;       // 체력 50% 아래면 이동 속도 배율
+  blink?: number;        // 3초마다 길을 따라 n px 순간이동
+  guard?: number;        // 주변(130px) 다른 몹이 받는 피해 감소 비율
+  breed?: boolean;       // 5초 뒤 한 번 복제 (복제는 2대까지)
   gold?: number;         // 처치 골드 (기본 ECONOMY.killGold)
 }
 export const RESIST_MULT = 0.4;
@@ -371,6 +377,36 @@ export const ATTACKS: AttackDef[] = [
     counters: ['ranger', 'paladin'], spawn: 3, gold: 16 },
   { key: 'demon', kr: '마왕', desc: '아주 강함 · 긴 쿨타임', race: 'orc', variant: 5, cost: 140, count: 1, hpMult: 26, speed: 0.55, size: 1.9, cooldown: 30,
     counters: ['paladin', 'assassin'], gold: 30 },
+  { key: 'thief', kr: '그림자 도적', desc: '잠깐씩 숨어 노릴 수 없음', race: 'orc', variant: 8, cost: 60, count: 4, hpMult: 0.9, speed: 1.15, size: 0.95, cooldown: 0,
+    counters: ['wizard', 'bomber', 'pyro'], stealth: 1.8 },
+  { key: 'golem', kr: '돌 골렘', desc: '마법에 강하고 단단함', race: 'troll', variant: 3, cost: 85, count: 1, hpMult: 6, speed: 0.55, size: 1.6, cooldown: 0,
+    counters: ['knight', 'spearman', 'assassin'], resist: ['wizard', 'storm', 'bomber', 'pyro', 'archmage', 'stormking'], gold: 12 },
+  { key: 'berserk', kr: '광폭 오크', desc: '체력 절반 아래면 질주', race: 'orc', variant: 7, cost: 70, count: 3, hpMult: 1.6, speed: 0.85, size: 1.05, cooldown: 0,
+    counters: ['frost', 'chrono', 'assassin'], enrage: 1.9 },
+  { key: 'witch', kr: '점멸 마녀', desc: '3초마다 앞으로 순간이동', race: 'undead', variant: 0, cost: 65, count: 3, hpMult: 1.1, speed: 0.9, size: 1, cooldown: 0,
+    counters: ['frost', 'chrono', 'storm'], blink: 110 },
+  { key: 'shaman', kr: '수호 주술사', desc: '주변 몹 받는 피해 -35%', race: 'orc', variant: 6, cost: 95, count: 1, hpMult: 3.2, speed: 0.9, size: 1.1, cooldown: 0,
+    counters: ['ranger', 'crossbow', 'assassin'], guard: 0.35, gold: 8 },
+  { key: 'slime', kr: '번식 유령', desc: '5초 뒤 한 마리씩 불어남', race: 'undead', variant: 4, cost: 75, count: 2, hpMult: 1.5, speed: 0.9, size: 1.05, cooldown: 0,
+    counters: ['ranger', 'cannoneer', 'reaper'], breed: true },
+];
+/** 몹 카드 전용 그림 (웨이브 몹 그림 변형 MOB_VARIANTS 밖의 번호) - 미리 받기용 */
+export const CARD_ONLY_VARIANTS = ATTACKS.filter((a) => a.variant >= MOB_VARIANTS[a.race]).map((a) => ({ race: a.race, variant: a.variant }));
+/** 추천 덱 (덱 화면 '추천 덱') - 없는 카드가 있으면 잠금으로 보인다 */
+export interface DeckPreset<K> { name: string; desc: string; cards: K[] }
+export const UNIT_PRESETS: DeckPreset<Job>[] = [
+  { name: '기본기', desc: '처음 시작하기 좋은 골고루 덱', cards: ['archer', 'wizard', 'warrior', 'ranger'] },
+  { name: '물량 정리', desc: '몰려오는 몹을 범위 공격으로 쓸어 담아요 · 고블린 무리·분열 알·도적', cards: ['wizard', 'bomber', 'pyro', 'frost'] },
+  { name: '거대 몹 사냥', desc: '거인·골렘·마왕처럼 큰 몹을 빨리 녹여요', cards: ['paladin', 'knight', 'assassin', 'ranger'] },
+  { name: '발 묶기', desc: '빠른 몹·점멸 마녀·광폭 오크를 붙잡아 둬요', cards: ['frost', 'warrior', 'chrono', 'storm'] },
+  { name: '저격 처형', desc: '신관·주술사 같은 핵심 몹을 먼저 끊어요', cards: ['ranger', 'crossbow', 'assassin', 'hunter'] },
+  { name: '전설 조합', desc: '전설 유닛만으로 끝까지 버텨요', cards: ['archmage', 'angel', 'dragoon', 'stormking'] },
+];
+export const ATTACK_PRESETS: DeckPreset<AttackKey>[] = [
+  { name: '물량 공세', desc: '몹 수로 밀어붙여요 · 범위 공격이 약한 상대에게', cards: ['swarm', 'egg', 'slime', 'king'] },
+  { name: '철벽 행진', desc: '단단한 몹을 회복시키며 버텨요 · 한 방이 약한 상대에게', cards: ['giant', 'golem', 'shield', 'priest'] },
+  { name: '기습', desc: '빠르고 잡기 까다로운 몹 · 둔화가 없는 상대에게', cards: ['rush', 'thief', 'witch', 'berserk'] },
+  { name: '마왕 강림', desc: '주술사 보호막 아래 마왕을 보내요', cards: ['demon', 'shaman', 'priest', 'wraith'] },
 ];
 export const ATTACK_BY_KEY = Object.fromEntries(ATTACKS.map((a) => [a.key, a])) as Record<AttackKey, AttackDef>;
 export const STARTER_ATTACKS: AttackKey[] = ['swarm', 'rush', 'giant', 'egg'];
@@ -637,7 +673,8 @@ export const CAMPAIGN: StageDef[] = STAGES;
 
 // ---------- 트로피 로드 (v1 의 진행 축) - 트로피가 오르면 보석과 유닛 해금 ----------
 export interface RoadStep { at: number; crystals?: number; unit?: Job; attack?: AttackKey; chest?: ChestKind }
-// 대전만 하는 사람(시뮬 실력 0.35, 승률 ~60%, 시간당 ~200 트로피) 기준 유닛 5종 약 4시간, 몹 카드 6종 약 6시간.
+// 대전만 하는 사람(시뮬 실력 0.35, 승률 ~60%, 시간당 ~200 트로피) 기준 유닛 5종 약 4시간, 몹 카드 12종 약 7시간.
+// 몹 카드는 트로피가 오를 때마다 하나씩 (기본 4장 + 로드 12장 = 16장).
 // 캠페인을 같이 하면 스테이지 클리어로 유닛이 더 일찍 열린다 (둘 다 하는 보상). 급하면 상점의 유닛 패키지.
 // (tools/progsim.ts 로 검증)
 export const TROPHY_ROAD: RoadStep[] = [
@@ -649,22 +686,28 @@ export const TROPHY_ROAD: RoadStep[] = [
   { at: 150, crystals: 100 },
   { at: 180, attack: 'shield' },
   { at: 220, crystals: 120 },
+  { at: 240, attack: 'berserk' },
   { at: 260, chest: 'silver' },
   { at: 300, unit: 'paladin' },
   { at: 350, crystals: 160 },
   { at: 400, attack: 'wraith' },
   { at: 450, crystals: 180 },
+  { at: 470, attack: 'thief' },
   { at: 500, chest: 'gold' },
   { at: 550, unit: 'bomber' },
   { at: 600, crystals: 220 },
   { at: 650, attack: 'priest' },
+  { at: 690, attack: 'witch' },
   { at: 720, crystals: 250 },
   { at: 800, chest: 'magic' },
   { at: 850, unit: 'assassin' },
+  { at: 900, attack: 'golem' },
   { at: 950, attack: 'king' },
   { at: 1000, crystals: 400 },
+  { at: 1050, attack: 'shaman' },
   { at: 1100, crystals: 450 },
   { at: 1200, attack: 'demon' },
+  { at: 1300, attack: 'slime' },
   { at: 1350, chest: 'legend' },
   { at: 1500, crystals: 600 },
   { at: 1700, crystals: 700 },
