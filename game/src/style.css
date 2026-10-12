@@ -658,6 +658,7 @@ b, strong { font-weight: 700; }
 }
 .tab-row button.active { border-image-source: url('/ui/frame/btn_blue.png'); }
 .tab-row button { min-height: 38px; }
+.tab-row.chap-tabs button { white-space: nowrap; font-size: 12px; padding-left: 2px; padding-right: 2px; letter-spacing: -0.3px; }
 .tier-name { text-shadow: var(--outline-thin); font-weight: 700; }
 .balance { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 16px; font-weight: 700; }
 .dialog .crystal { color: var(--gem-ink); }
@@ -666,7 +667,7 @@ b, strong { font-weight: 700; }
 .fine { color: var(--muted); font-size: 12px; margin-top: 8px; text-align: center; }
 
 /* ---------- 스테이지 맵 ---------- */
-.stage-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.stage-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding-top: 6px; } /* 보스 왕관이 위로 삐져나올 자리 */
 .stage-node {
   aspect-ratio: 1;
   border: 0; background: none;
@@ -684,7 +685,7 @@ b, strong { font-weight: 700; }
 .stage-node.next { border-image-source: url('/ui/frame/btn_gold.png'); animation: nodePulse 1s steps(2) infinite; }
 .stage-node.locked { border-image-source: url('/ui/frame/btn_gray.png'); cursor: default; }
 .stage-node.boss::after {
-  content: ''; position: absolute; top: -9px; right: -5px;
+  content: ''; position: absolute; top: -8px; right: 0; /* 오른쪽 끝 칸이라 밖으로 나가면 창에 잘린다 */
   width: 20px; height: 20px;
   background: url('/ui/icons/crown.png') center / contain no-repeat;
   image-rendering: pixelated;
