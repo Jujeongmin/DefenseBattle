@@ -671,6 +671,12 @@ export const TROPHY_ROAD: RoadStep[] = [
   { at: 2000, chest: 'legend' },
 ];
 
+/** 챕터 별 개수 목표 → 보석 보상 */
+export const CHAPTER_STAR_GOALS = [10, 20, 30];
+export function chapterStarReward(goalIdx: number): number {
+  return [100, 200, 400][goalIdx];
+}
+
 export const STAGE_BY_ID: Record<string, StageDef> = Object.fromEntries(STAGES.map((s) => [s.id, s]));
 // 별 기준: 판 도중 필드 몹 최대치 (적을수록 안정적인 방어)
 export const STAR_PEAK = { three: 40, two: 70 };

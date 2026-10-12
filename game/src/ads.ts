@@ -4,7 +4,8 @@
 //  전면형: 스테이지 결과 후 (광고 제거 구매 시 제외, 초반 스테이지 제외)
 //  Verse8 호스트 밖(로컬 개발)에서는 개발 서버에서만 가짜 광고로 흐름 테스트
 // ============================================================
-import { meta, saveMeta, todayStr, addItem } from './meta';
+import { meta, todayStr } from './meta';
+import { act } from './econ';
 import { icon } from './icons';
 
 export const AD_PLACEMENTS = {
@@ -101,9 +102,5 @@ export function freeTicketAdsLeft(): number {
 export async function watchForTickets(): Promise<boolean> {
   if (freeTicketAdsLeft() <= 0) return false;
   if (!(await showRewarded('freeTicket'))) return false;
-  const k = adKey();
-  (meta.oneTime as Record<string, unknown>)[k] = Number(meta.oneTime[k] || 0) + 1;
-  addItem('summonTicket', FREE_TICKET_AMOUNT);
-  saveMeta();
-  return true;
+  return (await act<number>('adReward', { kind: 'tickets' })) > 0; // 하루 횟수는 서버가 센다
 }

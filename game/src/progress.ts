@@ -8,7 +8,6 @@ import {
   STARTER_ATTACKS, ATTACK_DECK_SIZE, cardsNeeded, type AttackKey,
 } from './config';
 import { meta, saveMeta } from './meta';
-import { openChestNow, pendingReveals } from './chests';
 import type { Job, GameOptions } from './types';
 
 // ---------- 스테이지 ----------
@@ -33,10 +32,8 @@ export function nextStageId(): string {
 export function chapterStars(chapter: number): number {
   return STAGES.filter((s) => s.chapter === chapter).reduce((n, s) => n + stageStars(s.id), 0);
 }
-export const CHAPTER_STAR_GOALS = [10, 20, 30];
-export function chapterStarReward(goalIdx: number): number {
-  return [100, 200, 400][goalIdx];
-}
+import { CHAPTER_STAR_GOALS, chapterStarReward } from './config';
+export { CHAPTER_STAR_GOALS, chapterStarReward };
 /** 챕터 별 보상 수령 키 */
 function starKey(chapter: number, goalIdx: number): string {
   return `stars:${chapter}:${goalIdx}`;
@@ -44,40 +41,12 @@ function starKey(chapter: number, goalIdx: number): string {
 export function starRewardClaimed(chapter: number, goalIdx: number): boolean {
   return !!meta.oneTime[starKey(chapter, goalIdx)];
 }
-export function claimStarReward(chapter: number, goalIdx: number): number {
-  if (starRewardClaimed(chapter, goalIdx)) return 0;
-  if (chapterStars(chapter) < CHAPTER_STAR_GOALS[goalIdx]) return 0;
-  const r = chapterStarReward(goalIdx);
-  meta.oneTime[starKey(chapter, goalIdx)] = true;
-  meta.crystals += r;
-  saveMeta();
-  return r;
-}
-
 export interface StageResult {
   stars: number;
   firstClear: boolean;
   newBest: boolean;
   crystals: number;
   unlocked?: Job;
-}
-
-/** 스테이지 종료 처리 (클리어 시 보상/해금) */
-export function completeStage(id: string, cleared: boolean, stars: number): StageResult {
-  const st = STAGE_BY_ID[id];
-  const prev = stageStars(id);
-  if (!st || !cleared) return { stars: 0, firstClear: false, newBest: false, crystals: 0 };
-  const firstClear = prev === 0;
-  const crystals = firstClear ? st.firstReward : st.replayReward;
-  meta.stages[id] = Math.max(prev, stars);
-  meta.crystals += crystals;
-  let unlocked: Job | undefined;
-  if (firstClear && st.unlocks && !meta.units[st.unlocks]) {
-    unlocked = st.unlocks;
-    unlockUnit(st.unlocks, false);
-  }
-  saveMeta();
-  return { stars, firstClear, newBest: stars > prev, crystals, unlocked };
 }
 
 export function chapterName(chapter: number): string {
@@ -114,23 +83,6 @@ export function unitLevel(job: Job): number {
   return meta.units[job] || 0;
 }
 
-/** 유닛 해금. 덱에 빈 자리가 있으면 자동 편성 */
-export function unlockUnit(job: Job, save = true): void {
-  if (meta.units[job]) return;
-  meta.units[job] = 1;
-  if (meta.deck.length < DECK_SIZE && !meta.deck.includes(job)) meta.deck.push(job);
-  if (save) saveMeta();
-}
-
-/** 보석으로 조기 해금 */
-export function buyUnit(job: Job): boolean {
-  const def = UNIT_BY_ID[job];
-  if (unitUnlocked(job) || !def.unlockCrystals || meta.crystals < def.unlockCrystals) return false;
-  meta.crystals -= def.unlockCrystals;
-  unlockUnit(job);
-  return true;
-}
-
 /** 레벨업에 필요한 카드 / 지금 가진 카드 */
 export function unitCards(job: Job): { have: number; need: number } {
   return { have: meta.cards[job] ?? 0, need: cardsNeeded(UNIT_BY_ID[job].rarity, unitLevel(job)) };
@@ -143,23 +95,6 @@ export function cardsReady(job: Job): boolean {
 }
 export function canUpgradeUnit(job: Job): boolean {
   return cardsReady(job) && meta.crystals >= unitUpgradeCost(unitLevel(job));
-}
-export function upgradeUnit(job: Job): boolean {
-  if (!canUpgradeUnit(job)) return false;
-  const lv = unitLevel(job);
-  meta.crystals -= unitUpgradeCost(lv);
-  meta.cards[job] = (meta.cards[job] ?? 0) - unitCards(job).need;
-  meta.units[job] = lv + 1;
-  saveMeta();
-  return true;
-}
-/** 카드 받기: 없는 유닛이면 1장으로 해금하고 나머지는 레벨업 재료. 새로 해금됐으면 true */
-export function addCards(job: Job, n: number): boolean {
-  if (n <= 0) return false;
-  let fresh = false;
-  if (!meta.units[job]) { unlockUnit(job, false); n -= 1; fresh = true; }
-  meta.cards[job] = (meta.cards[job] ?? 0) + n;
-  return fresh;
 }
 
 /** 덱 토글: 덱에 있으면 빼고(최소 1), 없으면 넣는다(최대 4) */
@@ -240,20 +175,6 @@ export function endlessOptions(goldBooster: boolean): Partial<GameOptions> {
 }
 
 // ---------- 트로피 로드 ----------
-/** 현재 트로피로 도달한 로드 보상을 모두 받는다 (트로피가 다시 내려가도 받은 보상은 유지) */
-export function claimRoad(): RoadStep[] {
-  const got: RoadStep[] = [];
-  for (const step of TROPHY_ROAD) {
-    if (meta.pvp.trophies < step.at || meta.roadClaimed.includes(step.at)) continue;
-    meta.roadClaimed.push(step.at);
-    if (step.crystals) meta.crystals += step.crystals;
-    if (step.unit) unlockUnit(step.unit, false);
-    if (step.chest) pendingReveals.push(openChestNow(step.chest));
-    got.push(step);
-  }
-  if (got.length) saveMeta();
-  return got;
-}
 /** 다음 로드 보상 (없으면 null) */
 export function nextRoadStep(): RoadStep | null {
   return TROPHY_ROAD.find((s) => !meta.roadClaimed.includes(s.at) && s.at > meta.pvp.trophies) ?? null;

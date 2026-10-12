@@ -9,6 +9,7 @@ import { meta } from './meta';
 import { unitLevels } from './progress';
 import { isOnlineEnv } from './platform';
 import type { AttackPayload, Job, Rarity } from './types';
+import type { PvpReward } from './econ';
 
 export interface MatchInfo {
   roomId: string;
@@ -22,6 +23,8 @@ export interface PvpResult {
   reason: 'defeat' | 'leave' | 'cancel';
   trophyDelta: number;
   trophies: number;
+  /** 서버가 준 보상과 바뀐 경제 상태 (온라인). 오프라인 봇전은 없음 → 기기 규칙으로 */
+  reward?: PvpReward & { econ?: Record<string, unknown> };
 }
 
 export interface PvpHandlers {
@@ -108,10 +111,10 @@ class OnlineSession implements PvpSession {
       server.onRoomMessage(roomId, 'pvpAttack', (m: { from: string; payload: AttackPayload }) => {
         if (m.from !== this.me) h.onAttack(m.payload);
       }),
-      server.onRoomMessage(roomId, 'pvpResult', (r: { winner: string; reason: 'defeat' | 'leave'; delta: Record<string, number>; trophies: Record<string, number> }) => {
+      server.onRoomMessage(roomId, 'pvpResult', (r: { winner: string; reason: 'defeat' | 'leave'; delta: Record<string, number>; trophies: Record<string, number>; rewards?: Record<string, PvpResult['reward']> }) => {
         if (this.finished) return;
         this.finished = true;
-        h.onResult({ won: r.winner === this.me, reason: r.reason, trophyDelta: r.delta[this.me] ?? 0, trophies: r.trophies[this.me] ?? meta.pvp.trophies });
+        h.onResult({ won: r.winner === this.me, reason: r.reason, trophyDelta: r.delta[this.me] ?? 0, trophies: r.trophies[this.me] ?? meta.pvp.trophies, reward: r.rewards?.[this.me] });
       }),
       server.onRoomMessage(roomId, 'pvpCancel', () => {
         if (this.finished) return;
@@ -286,14 +289,15 @@ class BotSession implements PvpSession {
     if (this.timer) clearInterval(this.timer);
     let delta = trophyDelta(playerWon);
     let trophies = meta.pvp.trophies + delta;
+    let reward: PvpResult['reward'];
     if (this.ticket) {
       try {
         const net = await import('./net/server');
-        const r = await net.callGlobal<{ delta: number; trophies: number } | null>('pvpBotResult', { id: this.ticket, won: playerWon });
-        if (r) { delta = r.delta; trophies = r.trophies; } else { delta = 0; trophies = meta.pvp.trophies; }
+        const r = await net.callGlobal<{ delta: number; trophies: number; reward: PvpReward; econ: Record<string, unknown> } | null>('pvpBotResult', { id: this.ticket, won: playerWon });
+        if (r) { delta = r.delta; trophies = r.trophies; reward = { ...r.reward, econ: r.econ }; } else { delta = 0; trophies = meta.pvp.trophies; }
       } catch (e) { console.warn('[pvp] 봇전 결과 저장 실패', e); delta = 0; trophies = meta.pvp.trophies; }
     }
-    this.handlers?.onResult({ won: playerWon, reason: 'defeat', trophyDelta: delta, trophies });
+    this.handlers?.onResult({ won: playerWon, reason: 'defeat', trophyDelta: delta, trophies, reward });
   }
 
   sendSnapshot(s: BoardSnapshot): void { this.opp = s; }

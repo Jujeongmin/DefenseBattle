@@ -1,62 +1,48 @@
 // ============================================================
-//  상점 지급 로직 - 결제 완료 구매를 메타에 반영 (중복 지급 방지)
-//  + 월정액 일일 수령 / 시즌 패스 보상 수령
+//  상점 - 결제 → 지급 확인 (지급 자체는 온라인이면 서버 결제 훅, 오프라인 데모면 econ.grantLocal)
+//  + 월정액 일일 수령 / 시즌 패스 보상 수령 (모두 econ 동작)
 // ============================================================
-import {
-  PRODUCT_BY_ID, MONTHLY_DAILY_CRYSTALS, SEASON_TIERS, SEASON_XP_PER_TIER,
-  type ProductGrant, type SeasonReward,
-} from './config';
-import { meta, saveMeta, todayStr, addItem, currentSeasonId } from './meta';
-import { unlockUnit } from './progress';
-import { openChestNow, pendingReveals } from './chests';
+import { PRODUCT_BY_ID, SEASON_TIERS, SEASON_XP_PER_TIER, type SeasonReward } from './config';
+import { meta, saveMeta, todayStr, currentSeasonId } from './meta';
+import { pendingReveals } from './chests';
 import { getPlatform } from './platform';
+import { act, online, grantLocal, claimPurchasesOnline } from './econ';
+
+const DAY = 24 * 60 * 60 * 1000;
 import type { ItemKey, PurchaseRecord } from './types';
 import { icon, type IconName } from './icons';
 
-const DAY = 24 * 60 * 60 * 1000;
-
-function applyGrant(g: ProductGrant, qty: number): void {
-  if (g.crystals) meta.crystals += g.crystals * qty;
-  if (g.items) for (const [k, n] of Object.entries(g.items)) addItem(k as ItemKey, (n || 0) * qty);
-  if (g.adRemove) meta.adRemoved = true;
-  if (g.monthlyDays) {
-    const base = Math.max(Date.now(), meta.monthly.expires);
-    meta.monthly.expires = base + g.monthlyDays * DAY * qty;
-  }
-  if (g.seasonPremium) {
-    meta.season.premium = true;
-    meta.season.id = currentSeasonId();
-  }
-  if (g.chest) for (let i = 0; i < qty; i++) pendingReveals.push(openChestNow(g.chest));
-  if (g.units) for (const [j, lv] of Object.entries(g.units)) {
-    const job = j as keyof typeof meta.units;
-    if (!meta.units[job]) unlockUnit(job, false);
-    meta.units[job] = Math.max(meta.units[job] ?? 1, lv ?? 1);
-  }
-}
-
-/** 구매 기록들을 지급. 이미 지급한 purchaseId 는 건너뜀. 지급한 상품 id 목록 반환 */
-export function grantPurchases(list: PurchaseRecord[]): string[] {
+/** 오프라인 데모 결제 기록 지급 (이미 지급한 purchaseId 는 건너뜀) */
+function grantLocalPurchases(list: PurchaseRecord[]): string[] {
   const granted: string[] = [];
   for (const p of list) {
     if (meta.grantedPurchases.includes(p.purchaseId)) continue;
     const def = PRODUCT_BY_ID[p.productId];
     if (!def) { console.warn('[shop] 알 수 없는 상품', p.productId); continue; }
-    applyGrant(def.grant, Math.max(1, p.quantity || 1));
-    if (def.oneTime) meta.oneTime[def.id] = true;
-    if (def.category === 'offer') delete meta.offers[def.id]; // 산 한정 상품은 닫는다
+    pendingReveals.push(...grantLocal(def.id, Math.max(1, p.quantity || 1)));
     meta.grantedPurchases.push(p.purchaseId);
     granted.push(def.id);
   }
-  // 기록이 무한히 커지지 않게 최근 200건만 유지
   if (meta.grantedPurchases.length > 200) meta.grantedPurchases = meta.grantedPurchases.slice(-200);
   if (granted.length) saveMeta();
   return granted;
 }
 
-/** 서버/로컬의 대기 구매를 받아 지급 */
+/** 지급된 구매 받기 (온라인: 서버가 이미 지급 - 상태·상자 공개만 받음). 받은 상품 id 목록 */
 export async function syncPurchases(): Promise<string[]> {
-  return grantPurchases(await getPlatform().claimPurchases());
+  let ids: string[];
+  if (online()) {
+    try {
+      const r = await claimPurchasesOnline();
+      for (const it of r.list) pendingReveals.push(...(it.reveals ?? []));
+      ids = r.list.map((it) => it.productId);
+    } catch (e) { console.warn('[shop] 구매 수령 실패', e); return []; }
+  } else {
+    ids = grantLocalPurchases(await getPlatform().claimPurchases());
+  }
+  for (const id of ids) if (PRODUCT_BY_ID[id]?.category === 'offer') delete meta.offers[id]; // 산 한정 상품은 닫는다
+  if (ids.length) saveMeta();
+  return ids;
 }
 
 /** 결제 → 지급까지. 성공 시 지급된 상품 id 목록 */
@@ -65,7 +51,7 @@ export async function purchase(productId: string): Promise<string[]> {
   if (!def || (def.oneTime && meta.oneTime[def.id])) return [];
   const ok = await getPlatform().buy(productId);
   if (!ok) return [];
-  // Verse8 은 서버 훅이 기록하기까지 약간 지연될 수 있어 몇 번 재시도
+  // Verse8 은 서버 훅이 지급하기까지 약간 지연될 수 있어 몇 번 재시도
   for (let i = 0; i < 5; i++) {
     const got = await syncPurchases();
     if (got.length) return got;
@@ -92,39 +78,18 @@ export function monthlyDaysLeft(): number {
 export function canClaimMonthly(): boolean {
   return monthlyActive() && meta.monthly.lastClaim !== todayStr();
 }
-export function claimMonthly(): number {
+export async function claimMonthly(): Promise<number> {
   if (!canClaimMonthly()) return 0;
-  meta.monthly.lastClaim = todayStr();
-  meta.crystals += MONTHLY_DAILY_CRYSTALS;
-  saveMeta();
-  return MONTHLY_DAILY_CRYSTALS;
+  return act<number>('claimMonthly');
 }
 
 // ---------- 시즌 패스 ----------
 export function seasonTier(): number {
   return Math.min(SEASON_TIERS.length, Math.floor(meta.season.xp / SEASON_XP_PER_TIER));
 }
-export function addSeasonXp(xp: number): void {
-  if (meta.season.id !== currentSeasonId()) {
-    meta.season = { id: currentSeasonId(), xp: 0, premium: false, claimedFree: [], claimedPremium: [] };
-  }
-  meta.season.xp += xp;
-}
-function applyReward(r: SeasonReward): void {
-  if (r.crystals) meta.crystals += r.crystals;
-  if (r.items) for (const [k, n] of Object.entries(r.items)) addItem(k as ItemKey, n || 0);
-}
 /** tier: 1부터. premium 트랙은 시즌 패스 보유 시만 */
-export function claimSeasonReward(tier: number, premium: boolean): boolean {
-  if (tier < 1 || tier > seasonTier()) return false;
-  const list = premium ? meta.season.claimedPremium : meta.season.claimedFree;
-  if (list.includes(tier)) return false;
-  if (premium && !meta.season.premium) return false;
-  const def = SEASON_TIERS[tier - 1];
-  applyReward(premium ? def.premium : def.free);
-  list.push(tier);
-  saveMeta();
-  return true;
+export async function claimSeasonReward(tier: number, premium: boolean): Promise<boolean> {
+  return act<boolean>('claimSeason', { tier, premium });
 }
 export function rewardText(r: SeasonReward): string {
   const parts: string[] = [];

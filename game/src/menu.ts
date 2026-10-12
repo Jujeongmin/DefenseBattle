@@ -15,9 +15,9 @@ import { unitIconUrl, mobPortraitSrc, mobSprite } from './assets';
 import { icon, stars as starIcons } from './icons';
 import {
   stageStars, stageUnlocked, nextStageId, chapterStars, chapterUnlocked, CHAPTER_STAR_GOALS,
-  chapterStarReward, starRewardClaimed, claimStarReward, featureUnlocked, featureNew, markFeatureSeen,
-  nextRoadStep, roadUnlockAt, claimRoad,
-  unitUnlocked, unitLevel, buyUnit, canUpgradeUnit, upgradeUnit, toggleDeck,
+  chapterStarReward, starRewardClaimed, featureUnlocked, featureNew, markFeatureSeen,
+  nextRoadStep, roadUnlockAt,
+  unitUnlocked, unitLevel, canUpgradeUnit, toggleDeck,
   placeDeck, removeDeck, attackUnlocked, attackUnlockAt, placeAttack, unitCards,
 } from './progress';
 import {
@@ -28,8 +28,9 @@ import { freeTicketAdsLeft, watchForTickets, rewardedAvailable, FREE_TICKET_AMOU
 import { onlineAvailable, findMatch, type PvpSession } from './pvp';
 import { $, toast, openOverlay, closeOverlay, bindActions, spriteIcon, confirmModal } from './dom';
 import { enableDeckDrag } from './dragdeck';
+import { act, type Reveal } from './econ';
 import { showShortage, activeOffers, unitPackAvailable, timeLeft } from './offers';
-import { chestState, chestLeftMs, leftText, opening, startUnlock, openSlot, showReveal, flushReveals, pendingReveals, gacha } from './chests';
+import { chestState, chestLeftMs, leftText, opening, showReveal, flushReveals, pendingReveals } from './chests';
 import type { Job, Race, ResearchKey } from './types';
 
 export type Launch =
@@ -87,9 +88,17 @@ export class Menu {
   // ======================= 로비: 대전(아레나) 중심 + 캠페인·무한 모드 =======================
   private render(): void {
     const root = $('main-menu');
-    // 도달했지만 아직 안 받은 로드 보상 (이전 버전 저장본 등)
-    const got = claimRoad();
-    if (got.length) toast(`트로피 로드 보상: ${got.map((s) => roadRewardText(s)).join(' · ')}`, 3200);
+    // 도달했지만 아직 안 받은 로드 보상 (이전 버전 저장본 등) - 받을 게 있을 때만 서버에 요청
+    if (!this.roadBusy && TROPHY_ROAD.some((s) => meta.pvp.trophies >= s.at && !meta.roadClaimed.includes(s.at))) {
+      this.roadBusy = true;
+      void act<{ steps: RoadStep[]; reveals: Reveal[] }>('claimRoad').then((r) => {
+        this.roadBusy = false;
+        if (!r?.steps.length) return;
+        pendingReveals.push(...r.reveals);
+        toast(`트로피 로드 보상: ${r.steps.map((s) => roadRewardText(s)).join(' · ')}`, 3200);
+        this.render();
+      }).catch(() => { this.roadBusy = false; });
+    }
     const p = meta.pvp;
     const tier = pvpTier(p.trophies);
     const pvpOn = featureUnlocked('pvp');
@@ -162,7 +171,7 @@ export class Menu {
       endless: () => { markFeatureSeen('endless'); this.openEndless(); },
       shop: () => this.openShop(),
       chest: (b) => this.tapChest(Number(b.dataset.i)),
-      monthly: () => { const n = claimMonthly(); if (n) { audio.coin(); toast(`월정액 보석 +${n} ${icon('gem')}`); this.render(); } },
+      monthly: async () => { const n = await claimMonthly(); if (n) { audio.coin(); toast(`월정액 보석 +${n} ${icon('gem')}`); this.render(); } },
     });
     root.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => audio.button(), { capture: true }));
     for (const f of fresh) this.announced.add(f);
@@ -181,6 +190,7 @@ export class Menu {
   }
 
   private chestTimer: ReturnType<typeof setInterval> | null = null;
+  private roadBusy = false;
   /** 로비 상자 칸 4개 */
   private chestSlotsHtml(): string {
     return meta.chests.map((c, i) => {
@@ -198,12 +208,12 @@ export class Menu {
   private async tapChest(i: number): Promise<void> {
     const st = chestState(i);
     if (st === 'empty') return;
-    if (st === 'ready') { const r = openSlot(i, false); if (r) showReveal(r, () => this.render()); return; }
-    if (st === 'locked' && opening() < 0) { startUnlock(i); audio.button(); this.render(); return; }
+    if (st === 'ready') { const r = await act<Reveal | null>('openSlot', { i, pay: false }); if (r) showReveal(r, () => this.render()); return; }
+    if (st === 'locked' && opening() < 0) { await act('startUnlock', { i }); audio.button(); this.render(); return; }
     const cost = chestOpenCost(chestLeftMs(i));
     if (meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, () => this.render()); return; }
     if (await confirmModal('바로 열기', `${CHESTS[meta.chests[i]!.kind].kr}를 ${icon('gem')}${cost}로 바로 열까요?`)) {
-      const r = openSlot(i, true);
+      const r = await act<Reveal | null>('openSlot', { i, pay: true });
       if (r) showReveal(r, () => this.render());
     }
   }
@@ -312,8 +322,8 @@ export class Menu {
           if (!stageUnlocked(id)) { toast('이전 스테이지를 먼저 클리어하세요'); return; }
           this.openStageInfo(id);
         },
-        starGoal: (b) => {
-          const n = claimStarReward(c, Number(b.dataset.i));
+        starGoal: async (b) => {
+          const n = await act<number>('claimStarReward', { chapter: c, goal: Number(b.dataset.i) });
           if (n) { audio.coin(); toast(`별 보상 ${icon('gem')} +${n}`); draw(); }
         },
       });
@@ -397,13 +407,13 @@ export class Menu {
           else audio.button();
           draw();
         },
-        up: (b) => {
+        up: async (b) => {
           const j = b.dataset.job as Job;
           const cc = unitCards(j);
           if (cc.have < cc.need) { toast(`카드 ${cc.need - cc.have}장이 더 필요해요 · 상자와 뽑기에서 얻어요`); return; }
           const cost = unitUpgradeCost(unitLevel(j));
           if (meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, draw); return; }
-          if (upgradeUnit(j)) { audio.merge(); draw(); }
+          if (await act<boolean>('upgradeUnit', { job: j })) { audio.merge(); draw(); }
         },
         info: (b) => { const j = b.dataset.job as Job; toast(`<b>${SKILL_KR[j]}</b><br>${SKILL_DESC[j]}`, 3200); },
         buy: async (b) => {
@@ -411,7 +421,7 @@ export class Menu {
           const need = (UNIT_BY_ID[j].unlockCrystals ?? 0) - meta.crystals;
           if (need > 0) { showShortage(need, j, draw); return; } // 유닛 패키지를 먼저 제안
           if (await confirmModal('유닛 해금', `${UNIT_BY_ID[j].kr}을(를) ${icon('gem')}${UNIT_BY_ID[j].unlockCrystals}로 해금할까요?`)) {
-            if (buyUnit(j)) { audio.fanfareUnlock(); toast(`${UNIT_BY_ID[j].kr} 해금!`); }
+            if (await act<boolean>('buyUnit', { job: j })) { audio.fanfareUnlock(); toast(`${UNIT_BY_ID[j].kr} 해금!`); }
           }
           draw();
         },
@@ -511,16 +521,13 @@ export class Menu {
         <h2>연구소 <span class="crystal" style="font-size:16px">${icon('gem')} ${meta.crystals}</span></h2>
         ${rows}</div>`, () => this.render());
       bindActions(el, {
-        res: (b) => {
+        res: async (b) => {
           const key = b.dataset.key as ResearchKey;
           const lv = researchLevel(key);
           const r = RESEARCH.find((x) => x.key === key)!;
           const cost = researchCost(lv);
           if (lv < r.max && meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, draw); return; }
-          if (lv < r.max && meta.crystals >= cost) {
-            meta.crystals -= cost;
-            meta.research[key] = lv + 1;
-            saveMeta();
+          if (lv < r.max && meta.crystals >= cost && await act<boolean>('research', { key })) {
             audio.merge();
             draw();
           }
@@ -552,14 +559,13 @@ export class Menu {
         <div class="section-title">일일 퀘스트 <span class="fine">매일 0시(UTC) 초기화</span></div>${daily}${adRow}
         <div class="section-title">업적</div>${ach}</div>`, () => this.render());
       bindActions(el, {
-        daily: (b) => {
+        daily: async (b) => {
           const key = b.dataset.key!;
           const q = DAILY_QUESTS.find((x) => x.key === key)!;
           if ((meta.daily.progress[key] || 0) >= q.goal && !meta.daily.claimed[key]) {
             meta.daily.claimed[key] = true;
-            meta.crystals += q.reward;
             saveMeta();
-            audio.coin();
+            if (await act<number>('claimQuest', { key })) audio.coin();
             draw();
           }
         },
@@ -633,11 +639,11 @@ export class Menu {
           draw();
           if (pendingReveals.length) flushReveals(draw); // 상자를 샀으면 바로 공개
         },
-        gacha: (b) => {
+        gacha: async (b) => {
           const n = Number(b.dataset.n) as 1 | 10;
           const cost = n === 1 ? GACHA.one : GACHA.ten;
           if (meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, draw); return; }
-          const r = gacha(n);
+          const r = await act<Reveal | null>('gacha', { n });
           if (r) { draw(); showReveal(r, draw); }
         },
       });
@@ -676,8 +682,8 @@ export class Menu {
         <h2>${tab === 'pass' ? '시즌 패스' : '랭킹'}</h2>
         <div id="pvp-body">${body}</div></div>`, () => this.render());
       bindActions(el, {
-        claim: (b) => {
-          const ok = claimSeasonReward(Number(b.dataset.n), b.dataset.p === '1');
+        claim: async (b) => {
+          const ok = await claimSeasonReward(Number(b.dataset.n), b.dataset.p === '1');
           if (ok) { audio.coin(); toast('시즌 보상 획득!'); void draw(); }
         },
         buyPass: async () => {

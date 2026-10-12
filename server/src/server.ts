@@ -9,7 +9,14 @@
  *
  * 각 클라이언트가 자기 필드를 시뮬레이션하고, 서버는 매칭·중계·승패/트로피만 권위적으로 처리한다.
  * (같은 seed 로 양쪽 웨이브 구성이 동일)
+ *
+ * 경제(보석·아이템·카드·유닛 레벨·연구·상자·보상)는 서버 권위:
+ *  - 계정별 'econ' 상태에만 있고, 기기는 읽기만 한다 (SDK 는 상태를 쓸 수 없고 서버 함수만 부를 수 있다)
+ *  - 바꾸는 방법은 econ(동작) / 결제 훅 / 대전·스테이지 결과뿐. 규칙은 game/src/econ/rules.ts (기기 오프라인 모드와 공용)
+ *  - saveProfile 로 올라온 저장본의 경제 필드는 버린다
  */
+import * as R from '../../game/src/econ/rules';
+import { STAGE_BY_ID, RESEARCH, UNITS, CHESTS } from '../../game/src/config';
 
 const QUEUE_KEY = 'pvpQueue';
 const QUEUE_TTL = 15_000;        // 대기열 하트비트 만료(ms) - 클라이언트가 2초마다 poll
@@ -37,6 +44,85 @@ function cleanNick(n: unknown): string {
   return (s || '용사').slice(0, 12);
 }
 
+// ---------------- 경제 ----------------
+type Econ = R.Econ;
+const ECON_VERSION = 1;
+/** 스테이지/무한 결과를 받기 위한 최소 진행 시간 (웨이브당, 3배속 기준으로 넉넉히) */
+const MS_PER_WAVE = 2500;
+
+function freshEcon(): Omit<Econ, 'deck' | 'daily' | 'pvp'> {
+  return {
+    crystals: 0,
+    items: { summonTicket: 0, mythicTicket: 0, goldBooster: 0 },
+    cards: {},
+    units: { archer: 1, wizard: 1, warrior: 1 },
+    research: Object.fromEntries(RESEARCH.map((r) => [r.key, 0])) as Econ['research'],
+    chests: [{ kind: 'wood' }, null, null, null],
+    chestCycle: 0,
+    roadClaimed: [],
+    stages: {},
+    oneTime: {},
+    monthly: { expires: 0, lastClaim: '' },
+    season: { id: R.seasonOf(Date.now()), xp: 0, premium: false, claimedFree: [], claimedPremium: [] },
+    achievements: {},
+    adRemoved: false,
+  };
+}
+const clampN = (v: unknown, max: number) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
+/** 경제 도입 전 저장본(기기가 올린 값)을 한 번만 받아들인다 - 값은 상한으로 자른다 */
+function migrateEcon(old: Record<string, any> | null | undefined): Omit<Econ, 'deck' | 'daily' | 'pvp'> {
+  const e = freshEcon();
+  if (!old) return e;
+  e.crystals = clampN(old.crystals, 20000);
+  for (const k of Object.keys(e.items) as (keyof Econ['items'])[]) e.items[k] = clampN(old.items?.[k], 100);
+  for (const u of UNITS) {
+    const lv = clampN(old.units?.[u.id], 10);
+    if (lv) e.units[u.id] = lv;
+    const c = clampN(old.cards?.[u.id], 2000);
+    if (c) e.cards[u.id] = c;
+  }
+  for (const r of RESEARCH) e.research[r.key] = clampN(old.research?.[r.key], r.max);
+  if (Array.isArray(old.chests)) e.chests = [0, 1, 2, 3].map((i) => {
+    const c = old.chests[i];
+    return c && CHESTS[c.kind as keyof typeof CHESTS] ? { kind: c.kind } : null;
+  });
+  e.chestCycle = clampN(old.chestCycle, 1e6);
+  if (Array.isArray(old.roadClaimed)) e.roadClaimed = old.roadClaimed.filter((n: unknown) => typeof n === 'number').slice(0, 100);
+  if (old.stages && typeof old.stages === 'object') for (const [id, n] of Object.entries(old.stages)) if (STAGE_BY_ID[id]) e.stages[id] = clampN(n, 3);
+  if (old.oneTime && typeof old.oneTime === 'object') for (const [k, v] of Object.entries(old.oneTime)) if (typeof v === 'boolean' || typeof v === 'number') e.oneTime[k] = v;
+  if (old.achievements && typeof old.achievements === 'object') for (const [k, v] of Object.entries(old.achievements)) if (v === true) e.achievements[k] = true;
+  e.adRemoved = old.adRemoved === true;
+  return e;
+}
+interface EconRec { v: number; data: Omit<Econ, 'deck' | 'daily' | 'pvp'> }
+/** 계정 경제 불러오기 (없으면 예전 저장본에서 한 번 옮김) */
+async function loadEcon(account: string): Promise<Econ> {
+  const st = await $global.getUserState(account, ['econ', 'meta', 'pvp']);
+  const rec = st.econ as EconRec | undefined;
+  const data = rec?.v === ECON_VERSION ? rec.data : migrateEcon(st.meta);
+  const deck = Array.isArray(st.meta?.deck) ? [...st.meta.deck] : ['archer', 'wizard', 'warrior'];
+  return { ...data, deck, daily: st.meta?.daily ?? { date: '', progress: {}, claimed: {} }, pvp: { ...freshStats(), ...(st.pvp || {}) } } as Econ;
+}
+async function saveEcon(account: string, e: Econ): Promise<void> {
+  const { deck: _d, daily: _y, pvp: _p, ...data } = e;
+  await $global.updateUserState(account, { econ: { v: ECON_VERSION, data } });
+}
+/** 기기로 보내는 경제 상태 */
+function publicEcon(e: Econ): Record<string, unknown> {
+  const { deck: _d, daily: _y, pvp: _p, ...data } = e;
+  return data;
+}
+const econCtx = (): R.Ctx => ({ now: Date.now(), rng: Math.random });
+/** 계정 잠금 안에서 경제를 바꾸고 저장 → 바뀐 상태와 결과 */
+async function withEcon<T>(account: string, fn: (e: Econ) => T | Promise<T>): Promise<{ econ: Record<string, unknown>; result: T }> {
+  return $lock(`econ:${account}`, async () => {
+    const e = await loadEcon(account);
+    const result = await fn(e);
+    await saveEcon(account, e);
+    return { econ: publicEcon(e), result };
+  });
+}
+
 function freshStats(): PvpStats {
   return { trophies: 0, wins: 0, losses: 0, streak: 0 };
 }
@@ -51,9 +137,9 @@ export class Server {
   async loadProfile(): Promise<{ account: string; meta: Record<string, any> | null; pvp: PvpStats }> {
     const st = await $global.getMyState(['meta', 'pvp']);
     const pvp = { ...freshStats(), ...(st.pvp || {}) };
-    const meta = st.meta || null;
-    // PvP 기록은 서버 값이 권위 (클라이언트 저장본 덮어쓰기)
-    if (meta) meta.pvp = pvp;
+    const { econ } = await withEcon($sender.account, () => null); // 처음이면 여기서 옮겨 둔다
+    // PvP 기록·경제는 서버 값이 권위 (기기 저장본 덮어쓰기)
+    const meta = st.meta ? { ...st.meta, ...econ, pvp } : null;
     return { account: $sender.account, meta, pvp };
   }
 
@@ -61,36 +147,85 @@ export class Server {
     if (!meta || typeof meta !== 'object') throw new Error('invalid meta');
     if (JSON.stringify(meta).length > MAX_META_BYTES) throw new Error('meta too large');
     delete meta.pvp; // 서버 권위 필드는 저장하지 않음
+    // 경제 필드도 버린다 (기기가 올린 보석·카드·레벨은 믿지 않는다). 단, 경제 도입 전 계정의 첫 이전용 값은 econ 이 없을 때만 남긴다
+    const st = await $global.getMyState(['econ']);
+    if (st.econ) for (const k of R.ECON_KEYS) delete meta[k];
     await $global.updateMyState({ meta }, { returnState: false });
     return true;
+  }
+
+  // ================= 경제 =================
+  /** 경제 상태 받기 */
+  async econSync(): Promise<{ econ: Record<string, unknown> }> {
+    const { econ } = await withEcon($sender.account, () => null);
+    return { econ };
+  }
+
+  /** 기기가 부르는 경제 동작 (상자·뽑기·강화·연구·해금·보상 수령 등) - 규칙은 rules.ts */
+  async econ(opts: { action?: string; args?: Record<string, unknown> } = {}): Promise<{ econ: Record<string, unknown>; result: unknown }> {
+    const fn = R.CLIENT_ACTIONS[String(opts.action)];
+    if (!fn) throw new Error('unknown action');
+    const args = opts.args && typeof opts.args === 'object' ? opts.args : {};
+    return withEcon($sender.account, (e) => fn(e, args, econCtx()));
+  }
+
+  /** 스테이지·무한 모드 시작 기록 - 결과는 이 기록으로 한 번만, 웨이브 수에 맞는 시간이 지난 뒤에만 */
+  async runStart(opts: { kind?: 'stage' | 'endless'; id?: string } = {}): Promise<{ id: string }> {
+    const kind = opts.kind === 'endless' ? 'endless' : 'stage';
+    if (kind === 'stage' && !STAGE_BY_ID[String(opts.id)]) throw new Error('unknown stage');
+    const id = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    await $global.updateMyState({ run: { id, kind, stage: opts.id ?? null, t: Date.now() } });
+    return { id };
+  }
+
+  /** 스테이지·무한 모드 결과 → 보상 (기록이 없거나 너무 빠르면 보상 없음) */
+  async runEnd(opts: { id?: string; cleared?: boolean; stars?: number; wave?: number } = {}): Promise<{ econ: Record<string, unknown>; result: unknown } | null> {
+    const me = $sender.account;
+    const st = await $global.getMyState(['run']);
+    const run = st.run as { id: string; kind: 'stage' | 'endless'; stage: string | null; t: number } | null | undefined;
+    if (!run || run.id !== opts.id) return null;
+    await $global.updateMyState({ run: null });
+    const elapsed = Date.now() - run.t;
+    const cleared = opts.cleared === true;
+    let wave = clampN(opts.wave, 999);
+    if (run.kind === 'stage') {
+      const def = STAGE_BY_ID[run.stage!];
+      if (cleared && elapsed < def.waves * MS_PER_WAVE) return null; // 클리어인데 너무 빠름
+      wave = Math.min(wave, Math.floor(elapsed / MS_PER_WAVE));
+      return withEcon(me, (e) => R.stageEnd(e, run.stage!, cleared, clampN(opts.stars, 3), wave, econCtx()));
+    }
+    wave = Math.min(wave, Math.floor(elapsed / MS_PER_WAVE));
+    return withEcon(me, (e) => R.endlessEnd(e, wave, econCtx()));
   }
 
   // ================= VX Shop 결제 =================
   /** 결제 완료 시 플랫폼이 호출 ($sender 가 아닌 event.account 로 사용자 식별) */
   async $onItemPurchased(event: { account: string; purchaseId: number | string; productId: string; quantity?: number }): Promise<boolean> {
     const account = event.account;
-    await $lock(`purchase:${account}`, async () => {
-      const st = await $global.getUserState(account, ['pendingPurchases']);
-      const list: PurchaseRecord[] = Array.isArray(st.pendingPurchases) ? st.pendingPurchases : [];
-      const purchaseId = String(event.purchaseId);
-      if (!list.some((p) => p.purchaseId === purchaseId)) {
-        list.push({ purchaseId, productId: event.productId, quantity: Math.max(1, event.quantity || 1) });
-      }
-      await $global.updateUserState(account, { pendingPurchases: list });
+    const purchaseId = String(event.purchaseId);
+    // 지급은 여기서 바로 (서버 권위). 같은 purchaseId 는 한 번만
+    await withEcon(account, async (e) => {
+      const st = await $global.getUserState(account, ['pendingPurchases', 'grantedIds']);
+      const granted: string[] = Array.isArray(st.grantedIds) ? st.grantedIds : [];
+      if (granted.includes(purchaseId)) return;
+      const reveals = R.grantProduct(e, event.productId, Math.max(1, event.quantity || 1), econCtx());
+      const list: Array<PurchaseRecord & { reveals?: R.Reveal[] }> = Array.isArray(st.pendingPurchases) ? st.pendingPurchases : [];
+      list.push({ purchaseId, productId: event.productId, quantity: Math.max(1, event.quantity || 1), reveals });
+      await $global.updateUserState(account, { pendingPurchases: list.slice(-50), grantedIds: [...granted, purchaseId].slice(-500) });
     });
     $global.sendMessageToUser('purchase', account, { productId: event.productId });
     return true;
   }
 
-  /** 대기 중인 구매를 가져가고 비운다 (클라이언트가 purchaseId 로 중복 지급 방지) */
-  async claimPurchases(): Promise<PurchaseRecord[]> {
+  /** 지급된 구매 알림을 가져가고 비운다 (지급은 이미 훅에서 끝남 - 기기는 화면 표시·상자 공개만) */
+  async claimPurchases(): Promise<{ list: Array<PurchaseRecord & { reveals?: R.Reveal[] }>; econ: Record<string, unknown> }> {
     const account = $sender.account;
-    return $lock(`purchase:${account}`, async () => {
+    return withEcon(account, async () => {
       const st = await $global.getMyState(['pendingPurchases']);
-      const list: PurchaseRecord[] = Array.isArray(st.pendingPurchases) ? st.pendingPurchases : [];
+      const list = Array.isArray(st.pendingPurchases) ? st.pendingPurchases : [];
       if (list.length) await $global.updateMyState({ pendingPurchases: [] });
       return list;
-    });
+    }).then(({ econ, result }) => ({ list: result, econ }));
   }
 
   // ================= PvP 매칭 =================
@@ -231,6 +366,7 @@ export class Server {
       const winner = accounts.find((a) => a !== loser) || null;
       const delta: Record<string, number> = {};
       const trophies: Record<string, number> = {};
+      const rewards: Record<string, unknown> = {};
       for (const acc of accounts) {
         const s = await getStats(acc);
         const won = acc === winner;
@@ -240,11 +376,14 @@ export class Server {
         delta[acc] = d;
         trophies[acc] = s.trophies;
         await $global.updateUserState(acc, { pvp: s });
+        // 보상(보석·시즌 XP·승리 상자·트로피 로드)도 서버가 지급
+        const r = await withEcon(acc, (e) => { e.pvp = s; return R.pvpReward(e, won, econCtx()); });
+        rewards[acc] = { ...r.result, econ: r.econ };
         const nick = room.players[acc]?.nick || '용사';
         await $global.addCollectionItem(RANKING, { account: acc, nick, trophies: s.trophies, wins: s.wins }, { id: acc })
           .catch(() => $global.updateCollectionItem(RANKING, { __id: acc, account: acc, nick, trophies: s.trophies, wins: s.wins }));
       }
-      const result = { winner, loser, reason, delta, trophies };
+      const result = { winner, loser, reason, delta, trophies, rewards };
       await $room.updateRoomState({ status: 'done', result });
       $room.broadcastToRoom('pvpResult', result);
       return result;
@@ -260,7 +399,7 @@ export class Server {
   }
 
   /** 봇전 결과 - 트로피 규칙은 실제 대전과 같다. 잘못된 id/너무 짧은 경기는 null */
-  async pvpBotResult(opts: { id?: string; won?: boolean } = {}): Promise<{ delta: number; trophies: number } | null> {
+  async pvpBotResult(opts: { id?: string; won?: boolean } = {}): Promise<{ delta: number; trophies: number; reward: unknown; econ: Record<string, unknown> } | null> {
     const me = $sender.account;
     const st = await $global.getMyState(['pvpBot', 'nick']);
     const rec = st.pvpBot as { id: string; t: number } | null | undefined;
@@ -275,7 +414,8 @@ export class Server {
     const nick = cleanNick(st.nick);
     await $global.addCollectionItem(RANKING, { account: me, nick, trophies: s.trophies, wins: s.wins }, { id: me })
       .catch(() => $global.updateCollectionItem(RANKING, { __id: me, account: me, nick, trophies: s.trophies, wins: s.wins }));
-    return { delta: d, trophies: s.trophies };
+    const r = await withEcon(me, (e) => { e.pvp = s; return R.pvpReward(e, won, econCtx()); });
+    return { delta: d, trophies: s.trophies, reward: r.result, econ: r.econ };
   }
 
   // ================= 랭킹 =================

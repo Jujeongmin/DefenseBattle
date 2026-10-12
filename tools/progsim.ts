@@ -13,8 +13,11 @@ import { botSkill, botDeck, botAttackDeck, botAtkMult, botLevel } from '../game/
 import {
   PVP, PLAY_SPEED, UNITS, STAGES, RESEARCH, researchCost, unitUpgradeCost, UNIT_MAX_LEVEL, DECK_SIZE, starsFor,
 } from '../game/src/config';
-import { completeStage, claimRoad, nextStageId, stageStars, stageOptions, unitLevels, canUpgradeUnit, upgradeUnit } from '../game/src/progress';
-import { giveWinChest, chestState, startUnlock, openSlot, opening, gacha, pendingReveals } from '../game/src/chests';
+import { nextStageId, stageStars, stageOptions, unitLevels, canUpgradeUnit } from '../game/src/progress';
+import { chestState, opening } from '../game/src/chests';
+import * as R from '../game/src/econ/rules';
+const E = () => meta as unknown as R.Econ;
+const C = (): R.Ctx => ({ now: Date.now(), rng: Math.random });
 import type { BoardSnapshot } from '../game/src/engine';
 import type { Job } from '../game/src/types';
 
@@ -54,9 +57,8 @@ function chooseDeck(): Job[] {
 }
 /** 상자: 다 된 건 열고, 여는 중이 없으면 하나 열기 시작 */
 function tendChests(): void {
-  for (let i = 0; i < meta.chests.length; i++) if (chestState(i) === 'ready') openSlot(i, false);
-  if (opening() < 0) { const i = meta.chests.findIndex((c) => c && !c.openAt); if (i >= 0) startUnlock(i); }
-  pendingReveals.length = 0;
+  for (let i = 0; i < meta.chests.length; i++) if (chestState(i) === 'ready') R.openSlot(E(), i, false, C());
+  if (opening() < 0) { const i = meta.chests.findIndex((c) => c && !c.openAt); if (i >= 0) R.startUnlock(E(), i, C()); }
 }
 /** 보석 쓰기: 연구·덱 유닛 강화 중 가장 싼 것부터 */
 function spend(): void {
@@ -68,14 +70,14 @@ function spend(): void {
     }
     for (const j of meta.deck) {
       const lv = meta.units[j] ?? 0;
-      if (canUpgradeUnit(j)) opts.push({ cost: unitUpgradeCost(lv), buy: () => { meta.crystals += unitUpgradeCost(lv); upgradeUnit(j); } });
+      if (canUpgradeUnit(j)) opts.push({ cost: unitUpgradeCost(lv), buy: () => { meta.crystals += unitUpgradeCost(lv); R.upgradeUnit(E(), j); } });
     }
     const pick = opts.filter((o) => o.cost <= meta.crystals).sort((a, b) => a.cost - b.cost)[0];
     if (!pick) break;
     meta.crystals -= pick.cost;
     pick.buy();
   }
-  while (meta.crystals >= GACHA_RESERVE + 100) { gacha(1); pendingReveals.length = 0; }
+  while (meta.crystals >= GACHA_RESERVE + 100) R.gacha(E(), 1, C());
 }
 
 /** 캠페인 한 판 (사람 손 속도) */
@@ -88,7 +90,7 @@ function playStage(id: string): boolean {
     if (act >= HUMAN_THINK * PLAY_SPEED) { act = 0; aiStep(g, skill); }
   }
   clock += t / PLAY_SPEED + OVERHEAD;
-  completeStage(id, g.cleared, g.cleared ? starsFor(g.peakMobs) : 0);
+  R.stageEnd(E(), id, g.cleared, g.cleared ? starsFor(g.peakMobs) : 0, g.wave, C());
   noteUnlocks(`스테이지 ${id}`);
   return g.cleared;
 }
@@ -117,11 +119,9 @@ function playPvp(): boolean {
   const won = b.over && !a.over ? true : a.over && !b.over ? false : a.mobs.length < b.mobs.length;
   clock += t / PLAY_SPEED + OVERHEAD;
   const p = meta.pvp;
-  if (won) { p.trophies += PVP.trophyWin + Math.min(10, p.streak * 2); p.wins++; p.streak++; p.lossStreak = 0; meta.crystals += PVP.rewardWin; }
-  else { p.trophies -= Math.min(PVP.trophyLoss, p.trophies); p.losses++; p.streak = 0; p.lossStreak = (p.lossStreak ?? 0) + 1; meta.crystals += PVP.rewardLoss; }
-  if (won) giveWinChest();
-  claimRoad();
-  pendingReveals.length = 0;
+  if (won) { p.trophies += PVP.trophyWin + Math.min(10, p.streak * 2); p.wins++; p.streak++; p.lossStreak = 0; }
+  else { p.trophies -= Math.min(PVP.trophyLoss, p.trophies); p.losses++; p.streak = 0; p.lossStreak = (p.lossStreak ?? 0) + 1; }
+  R.pvpReward(E(), won, C()); // 보석·시즌 XP·승리 상자·트로피 로드 (서버와 같은 규칙)
   noteUnlocks(`트로피 ${p.trophies}`);
   return won;
 }

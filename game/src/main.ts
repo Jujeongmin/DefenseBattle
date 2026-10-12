@@ -10,14 +10,15 @@ import { Menu, roadRewardIcon, type Launch } from './menu';
 import { preloadAll, preloadUnits, warmTints } from './assets';
 import { audio } from './audio';
 import { getPlatform } from './platform';
-import { meta, saveMeta, reloadMeta, useItem } from './meta';
-import { crystalReward, starsFor, STAGE_BY_ID, STAGES, PVP, PLAY_SPEED, PVP_TIERS, CHESTS } from './config';
+import { meta, saveMeta, reloadMeta } from './meta';
+import { starsFor, STAGE_BY_ID, STAGES, PVP, PLAY_SPEED, PVP_TIERS, CHESTS } from './config';
 import { afterMatch } from './offers';
-import { giveWinChest } from './chests';
-import { completeStage, stageOptions, endlessOptions, stageUnlocked, unitLevels, claimRoad } from './progress';
-import { syncPurchases, addSeasonXp } from './shop';
+import { pendingReveals } from './chests';
+import { stageOptions, endlessOptions, stageUnlocked, unitLevels } from './progress';
+import { syncPurchases } from './shop';
+import { act, runStart, stageResult, endlessResult, applyEcon, online, pvpRewardLocal, syncEcon } from './econ';
 import { showRewarded, rewardedAvailable, maybeInterstitial } from './ads';
-import type { PvpSession } from './pvp';
+import type { PvpSession, PvpResult } from './pvp';
 import { $, toast } from './dom';
 import type { GameOverData } from './types';
 import { icon } from './icons';
@@ -44,7 +45,10 @@ const menu = new Menu(launch);
 function launch(l: Launch): void {
   current = l;
   let booster = false;
-  if (l.kind !== 'pvp' && l.goldBooster) booster = useItem('goldBooster');
+  // 골드 부스터: 바로 쓰고(화면) 서버에 차감 요청 (없으면 서버가 거절 - 다음 동기화 때 바로잡힘)
+  if (l.kind !== 'pvp' && l.goldBooster && meta.items.goldBooster > 0) { booster = true; meta.items.goldBooster -= 1; void act('useItem', { key: 'goldBooster' }); }
+  if (l.kind === 'stage') void runStart('stage', l.stageId);
+  else if (l.kind === 'endless') void runStart('endless');
   if (l.kind === 'stage') game = new Game(stageOptions(l.stageId, booster));
   else if (l.kind === 'endless') game = new Game(endlessOptions(booster));
   else {
@@ -112,31 +116,30 @@ function startPvp(g: Game, u: UI, s: PvpSession): void {
   });
 }
 
-function showPvpResult(g: Game, u: UI, s: PvpSession, r: { won: boolean; trophyDelta: number; trophies: number; reason: string }): void {
+function showPvpResult(g: Game, u: UI, s: PvpSession, r: PvpResult): void {
   // 봇전도 실제 대전과 똑같이 처리한다 (상대가 봇인지 화면에 드러내지 않음)
-  const crystals = r.won ? PVP.rewardWin : PVP.rewardLoss;
-  const xp = r.won ? PVP.seasonXpWin : PVP.seasonXpLoss;
-  meta.crystals += crystals;
-  addSeasonXp(xp);
   if (r.reason !== 'cancel') {
     meta.pvp.trophies = r.trophies;
     if (r.won) { meta.pvp.wins += 1; meta.pvp.streak += 1; meta.pvp.lossStreak = 0; }
     else { meta.pvp.losses += 1; meta.pvp.streak = 0; meta.pvp.lossStreak = (meta.pvp.lossStreak ?? 0) + 1; }
   }
-  const road = claimRoad(); // 트로피 로드 도달 보상 (보석 / 유닛 해금)
+  // 보상(보석·시즌 XP·승리 상자·트로피 로드): 온라인은 서버가 이미 지급, 오프라인 봇전만 기기 규칙으로
+  let reward: PvpResult['reward'] = r.reward;
+  if (reward?.econ) applyEcon(reward.econ);
+  else if (!online() && r.reason !== 'cancel') reward = pvpRewardLocal(r.won);
+  const crystals = reward?.crystals ?? 0;
+  const road = reward?.road ?? [];
+  pendingReveals.push(...(reward?.reveals ?? []));
   // 결제 팝업 조건: 새 아레나 승급 / 2연패
   const tierIdx = PVP_TIERS.filter((t) => meta.pvp.trophies >= t.min).length - 1;
   const tierUp = tierIdx > meta.arenaMax;
   if (tierUp) meta.arenaMax = tierIdx;
   saveMeta();
   audio.gameEnd(r.won);
-  const rewards = [`${icon('trophy')} ${r.trophyDelta >= 0 ? '+' : ''}${r.trophyDelta}`, `${icon('gem')} +${crystals}`];
+  const rewards = [`${icon('trophy')} ${r.trophyDelta >= 0 ? '+' : ''}${r.trophyDelta}`, ...(crystals ? [`${icon('gem')} +${crystals}`] : [])];
   for (const st of road) if (st.crystals) rewards.push(`${icon('gem')} +${st.crystals} 로드`);
   for (const st of road) if (st.attack) rewards.push(`${roadRewardIcon(st)} 새 몹 카드!`);
-  if (r.won) {
-    const chest = giveWinChest();
-    rewards.push(chest ? `${icon('chest')} ${CHESTS[chest].kr}` : `${icon('chest')} 상자 칸 가득`);
-  }
+  if (r.won && reward) rewards.push(reward.chest ? `${icon('chest')} ${CHESTS[reward.chest].kr}` : `${icon('chest')} 상자 칸 가득`);
   const roadUnit = road.find((st) => st.unit)?.unit;
   u.showResult({
     win: r.won,
@@ -145,7 +148,7 @@ function showPvpResult(g: Game, u: UI, s: PvpSession, r: { won: boolean; trophyD
     rewards,
     unlocked: roadUnit,
     buttons: [
-      ...(rewardedAvailable() ? [{ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward(crystals) }] : []),
+      ...(crystals && rewardedAvailable() ? [{ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward() }] : []),
       { label: `${icon('sword')} 다시 대전`, cls: 'red', action: () => { void exitGame(true).then(() => menu.quickMatch()); } },
       { label: '로비로', cls: '', action: () => void exitGame(true) },
     ],
@@ -173,26 +176,23 @@ function onGameOver(g: Game, d: GameOverData): void {
           if (await showRewarded('revive') && g.revive()) { u.hideResult(); audio.merge(); }
           else toast('광고를 끝까지 보면 부활할 수 있어요');
         } },
-        { label: '포기하기', cls: '', action: () => finishSolo(u, d) },
+        { label: '포기하기', cls: '', action: () => void finishSolo(u, d) },
       ],
     });
     return;
   }
-  finishSolo(u, d);
+  void finishSolo(u, d);
 }
 
-function finishSolo(u: UI, d: GameOverData): void {
+async function finishSolo(u: UI, d: GameOverData): Promise<void> {
   const l = current!;
   if (l.kind === 'stage') {
     const st = STAGE_BY_ID[l.stageId];
     const stars = d.cleared ? starsFor(d.peakMobs) : 0;
-    const res = completeStage(l.stageId, d.cleared, stars);
-    let crystals = res.crystals;
-    if (!d.cleared) { crystals = Math.floor(d.wave / 2); meta.crystals += crystals; }
-    if (d.cleared) {
-      addSeasonXp(30);
-      if (l.stageId === '1-1' && meta.tutorial < 2) meta.tutorial = 2;
-    }
+    // 보상은 서버가 (시작 기록·진행 시간 확인). 거부되면 보상 없이 결과만
+    const res = (await stageResult(l.stageId, d.cleared, stars, d.wave)) ?? { stars, firstClear: false, newBest: false, crystals: 0 };
+    const crystals = res.crystals;
+    if (d.cleared && l.stageId === '1-1' && meta.tutorial < 2) meta.tutorial = 2;
     meta.stageFailStreak = d.cleared ? 0 : meta.stageFailStreak + 1;
     saveMeta();
     const next = STAGES[st.index + 1];
@@ -209,7 +209,7 @@ function finishSolo(u: UI, d: GameOverData): void {
       extraHtml: '',
       buttons: [],
     };
-    if (crystals > 0 && rewardedAvailable()) view.buttons.push({ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward(crystals) });
+    if (crystals > 0 && rewardedAvailable()) view.buttons.push({ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward() });
     if (canNext) view.buttons.push({ label: `${icon('play')} 다음 스테이지 ${next.id}`, cls: 'red', action: () => void exitGame(true, st.index).then(() => menu.openStage(next.id)) });
     view.buttons.push({ label: '다시 하기', cls: canNext ? '' : 'red', action: () => void exitGame(true, st.index).then(() => menu.openStage(l.stageId)) });
     view.buttons.push({ label: '로비로', cls: '', action: () => void exitGame(true, st.index) });
@@ -217,16 +217,14 @@ function finishSolo(u: UI, d: GameOverData): void {
     // 결제 팝업 조건: 새 챕터 도달 / 2연속 실패 (튜토리얼 직후는 제외)
     if (l.stageId !== '1-1') afterMatch({ chapterUp: res.firstClear && !!next && next.chapter > st.chapter, losing: meta.stageFailStreak >= 2 });
   } else {
-    const reward = crystalReward(d.wave);
-    meta.crystals += reward;
-    saveMeta();
+    const reward = await endlessResult(d.wave);
     u.showResult({
       win: d.cleared,
       title: d.cleared ? '50웨이브 클리어!' : '게임 오버',
       sub: `${d.reason} · 최고 기록 ${meta.bestWave}웨이브`,
       rewards: [`Wave ${d.wave}`, `${icon('gem')} +${reward}`],
       buttons: [
-        ...(reward > 0 && rewardedAvailable() ? [{ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${reward} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward(reward) }] : []),
+        ...(reward > 0 && rewardedAvailable() ? [{ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${reward} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward() }] : []),
         { label: '다시 하기', cls: 'red', action: () => void exitGame(true).then(() => launch({ kind: 'endless', goldBooster: false })) },
         { label: '로비로', cls: '', action: () => void exitGame(true) },
       ],
@@ -234,12 +232,11 @@ function finishSolo(u: UI, d: GameOverData): void {
   }
 }
 
-async function doubleReward(amount: number): Promise<void> {
+async function doubleReward(): Promise<void> {
   const btn = document.getElementById('btn-double') as HTMLButtonElement | null;
   if (btn) btn.disabled = true;
   if (await showRewarded('doubleReward')) {
-    meta.crystals += amount;
-    saveMeta();
+    const amount = await act<number>('adReward', { kind: 'double' }); // 직전 판 보상 한 번 더 (서버가 금액 결정)
     audio.coin();
     toast(`보상 2배! ${icon('gem')} +${amount}`);
     if (btn) btn.innerHTML = `${icon('check')} 2배 보상 받음`;
@@ -358,6 +355,7 @@ async function boot(): Promise<void> {
   try {
     await getPlatform().init();
     reloadMeta();
+    await syncEcon(); // 경제는 서버 값 (보석·카드·레벨·상자)
   } catch (e) {
     console.warn('[boot] platform init failed', e);
   }

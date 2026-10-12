@@ -6,7 +6,8 @@ import {
 } from './config';
 import { MAP, Game, pathPosNear, type BoardSnapshot } from './engine';
 import { mobPortraitSrc, unitIconUrl, mobSprite, preloadUnits } from './assets';
-import { meta, useItem } from './meta';
+import { meta } from './meta';
+import { act } from './econ';
 import { audio } from './audio';
 import { $, toast, spriteIcon, popIn } from './dom';
 import { icon } from './icons';
@@ -325,10 +326,10 @@ export class UI {
     if (meta.items.mythicTicket > 0) chips.push(`<button class="ticket-chip mythic" data-t="mythicTicket" title="신화 확정 소환권" aria-label="신화 확정 소환권">${icon('star')}×${meta.items.mythicTicket}</button>`);
     row.innerHTML = chips.join('');
     row.querySelectorAll<HTMLButtonElement>('[data-t]').forEach((b) => {
-      b.onclick = () => {
-        if (this.game.over) return;
+      b.onclick = async () => {
+        if (this.game.over || (meta.items[b.dataset.t as 'summonTicket'] ?? 0) <= 0) return;
         const t = b.dataset.t as 'summonTicket' | 'mythicTicket';
-        if (!useItem(t)) return;
+        if (!(await act<boolean>('useItem', { key: t }))) return; // 서버가 차감해야 소환
         const u = this.game.summonFree(t === 'mythicTicket' ? 'mythic' : undefined);
         if (u) audio.summon(u.gradeIndex >= GRADE_INDEX['mythic']);
         this.renderTickets();

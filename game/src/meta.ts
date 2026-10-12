@@ -4,7 +4,7 @@
 // ============================================================
 import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS, FEATURE_UNLOCK, STARTER_ATTACKS, ATTACK_BY_KEY, PVP_TIERS } from './config';
 import { getPlatform } from './platform';
-import type { MetaData, ResearchKey, QuestStat, AchievementDef, ItemKey } from './types';
+import type { MetaData, ResearchKey, QuestStat, AchievementDef } from './types';
 
 export function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -130,23 +130,12 @@ export function setDailyBestWave(wave: number): void {
   }
 }
 
+/** 업적 달성 → 보상 수령 요청 (보상은 econ - 온라인이면 서버). 띄울 알림용 정의 반환 (이미 받았거나 받는 중이면 null) */
+const achievePending = new Set<string>();
 export function unlockAchievement(key: string): AchievementDef | null {
   const a = ACHIEVEMENTS.find((x) => x.key === key);
-  if (!a || meta.achievements[key]) return null;
-  meta.achievements[key] = true;
-  meta.crystals += a.reward;
-  saveMeta();
+  if (!a || meta.achievements[key] || achievePending.has(key)) return null;
+  achievePending.add(key);
+  void import('./econ').then((m) => m.act('claimAchievement', { key })).finally(() => achievePending.delete(key));
   return a;
-}
-
-export function addItem(key: ItemKey, n: number): void {
-  meta.items[key] = Math.max(0, (meta.items[key] || 0) + n);
-}
-
-/** 아이템 1개 사용. 부족하면 false */
-export function useItem(key: ItemKey): boolean {
-  if ((meta.items[key] || 0) <= 0) return false;
-  meta.items[key] -= 1;
-  saveMeta();
-  return true;
 }
