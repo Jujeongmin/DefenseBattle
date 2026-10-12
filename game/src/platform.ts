@@ -217,6 +217,3 @@ export function getPlatform(): PlatformAdapter {
   return active;
 }
 
-export function setPlatform(p: PlatformAdapter): void {
-  active = p;
-}

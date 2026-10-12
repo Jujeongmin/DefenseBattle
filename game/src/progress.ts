@@ -4,7 +4,7 @@
 // ============================================================
 import {
   STAGES, STAGE_BY_ID, CAMPAIGN, UNITS, UNIT_BY_ID, DECK_SIZE, UNIT_MAX_LEVEL, unitUpgradeCost,
-  FEATURE_UNLOCK, CHAPTERS, STAGES_PER_CHAPTER, TROPHY_ROAD, type RoadStep,
+  FEATURE_UNLOCK, STAGES_PER_CHAPTER, TROPHY_ROAD, type RoadStep,
   STARTER_ATTACKS, ATTACK_DECK_SIZE, cardsNeeded, type AttackKey,
 } from './config';
 import { meta, saveMeta } from './meta';
@@ -49,9 +49,6 @@ export interface StageResult {
   unlocked?: Job;
 }
 
-export function chapterName(chapter: number): string {
-  return CHAPTERS[chapter - 1]?.kr ?? '';
-}
 export function chapterUnlocked(chapter: number): boolean {
   if (chapter === 1) return true;
   return stageCleared(`${chapter - 1}-${STAGES_PER_CHAPTER}`);
@@ -61,9 +58,6 @@ export function chapterUnlocked(chapter: number): boolean {
 export type Feature = keyof typeof FEATURE_UNLOCK;
 export function featureUnlocked(f: Feature): boolean {
   return stageCleared(FEATURE_UNLOCK[f]);
-}
-export function featureHint(f: Feature): string {
-  return `스테이지 ${FEATURE_UNLOCK[f]} 클리어 시 해금`;
 }
 /** 해금됐지만 아직 로비에서 눌러 보지 않은 기능 (NEW 표시) */
 export function featureNew(f: Feature): boolean {

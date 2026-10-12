@@ -118,7 +118,6 @@ export const CHESTS: Record<ChestKind, ChestDef> = {
 };
 /** 대전 승리 시 받는 상자 순서 (반복) */
 export const CHEST_CYCLE: ChestKind[] = ['wood', 'wood', 'silver', 'wood', 'silver', 'gold', 'wood', 'silver', 'silver', 'wood', 'gold', 'magic'];
-export const CHEST_SLOTS = 4;
 /** 보석으로 바로 열기: 남은 3분마다 1 */
 export function chestOpenCost(msLeft: number): number {
   return Math.max(1, Math.ceil(msLeft / (3 * 60 * 1000)));
