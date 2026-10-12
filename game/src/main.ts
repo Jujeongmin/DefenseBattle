@@ -7,7 +7,7 @@ import { Renderer } from './render';
 import { UI, type ResultView } from './ui';
 import { Spotlight, type SpotStep } from './tutorial';
 import { Menu, roadRewardIcon, type Launch } from './menu';
-import { preloadAll, warmTints } from './assets';
+import { preloadAll, preloadUnits, warmTints } from './assets';
 import { audio } from './audio';
 import { getPlatform } from './platform';
 import { meta, saveMeta, reloadMeta, useItem } from './meta';
@@ -22,7 +22,7 @@ import { $, toast } from './dom';
 import type { GameOverData } from './types';
 import { icon } from './icons';
 
-preloadAll();
+preloadAll(meta.deck);
 warmTints();
 audio.installUnlock();
 
@@ -51,6 +51,7 @@ function launch(l: Launch): void {
     game = new Game({ mode: 'pvp', seed: l.session.match.seed, useResearch: false, deck: [...meta.deck], attackDeck: [...meta.attackDeck], unitLevels: unitLevels() });
     game.paused = true; // 카운트다운 후 동시에 시작
   }
+  preloadUnits(game.opts.deck); // 이 판에 나올 유닛 (등급 6개)
   renderer = new Renderer(canvas, game);
   ui = new UI(game, {
     kind: l.kind,

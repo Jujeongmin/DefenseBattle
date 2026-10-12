@@ -5,7 +5,7 @@ import {
   JOB_KR, RACE_KR, GRADES, DMG_MULT, ECONOMY, WAVE, GRADE_INDEX, MERGE_COUNT, PLAY_SPEED, ATTACKS, JOBS,
 } from './config';
 import { MAP, Game, pathPosNear, type BoardSnapshot } from './engine';
-import { mobPortraitSrc, unitIconUrl, mobSprite } from './assets';
+import { mobPortraitSrc, unitIconUrl, mobSprite, preloadUnits } from './assets';
 import { meta, useItem } from './meta';
 import { audio } from './audio';
 import { $, toast, spriteIcon, popIn } from './dom';
@@ -475,7 +475,9 @@ export class UI {
       this.oppDeckKey = key;
       const atk = s.atk.map((c) => ATTACKS[c]).filter(Boolean)
         .map((a) => spriteIcon(mobSprite(a.race, a.variant).url, 'frame-sprite', '')).join('');
-      const deck = (s.deck ?? []).map((j) => JOBS[j]).filter(Boolean).map((j) => spriteIcon(unitIconUrl(j))).join('');
+      const oppJobs = (s.deck ?? []).map((j) => JOBS[j]).filter(Boolean);
+      preloadUnits(oppJobs); // 상대 전장 그림
+      const deck = oppJobs.map((j) => spriteIcon(unitIconUrl(j))).join('');
       $('opp-deck').innerHTML = `<div class="od-row" title="상대 몹 카드">${atk}</div><div class="od-row units" title="상대 유닛">${deck}</div>`;
     }
   }

@@ -4,7 +4,7 @@
 //  해금 유닛(레인저/빙결술사 등)은 기본 3종 시트를 색조 회전한 캔버스로 생성
 //  (전용 아트가 준비되면 UNITS 의 hue 를 0 으로 두고 시트만 추가하면 된다)
 // ============================================================
-import { JOB_SPRITE, GRADES, RACE_SPRITE, UNITS, UNIT_BY_ID, MOB_VARIANTS } from './config';
+import { JOB_SPRITE, GRADES, RACE_SPRITE, UNITS, UNIT_BY_ID, MOB_VARIANTS, STARTER_UNITS } from './config';
 import type { Job, Race, GradeKey } from './types';
 
 export interface SpriteEntry {
@@ -117,13 +117,20 @@ export function mobPortraitSrc(race: Race): string {
   return `sprites/${RACE_SPRITE[race]}_0.png`;
 }
 
-export function preloadAll(): void {
-  for (const u of UNITS) {
-    for (const g of GRADES) loadImage(`${JOB_SPRITE[u.id]}_${g.spriteIndex}`);
-  }
+/** 시작할 때: 덱 유닛·몹·타일만 (유닛 32종 x 6등급을 다 받으면 모바일 첫 로딩이 느리다. 나머지는 처음 보일 때 받는다) */
+export function preloadAll(deck: Job[] = []): void {
+  preloadUnits([...new Set([...deck, ...STARTER_UNITS])]);
   for (const race of Object.keys(RACE_SPRITE) as Race[]) for (let v = 0; v < MOB_VARIANTS[race]; v++) loadImage(`${RACE_SPRITE[race]}_${v}`);
   for (const t of ['terrain', 'dirtpath', 'deco']) tileSprite(t);
   uiSprite('coin');
+}
+
+/** 이 유닛들의 6등급 시트를 미리 받는다 (판 시작·상대 덱을 알았을 때) */
+export function preloadUnits(jobs: Job[]): void {
+  for (const j of jobs) {
+    if (!UNIT_BY_ID[j]) continue;
+    for (const g of GRADES) loadImage(`${JOB_SPRITE[j]}_${g.spriteIndex}`);
+  }
 }
 
 /** 모든 기본 스프라이트 로드 완료 후 색조 변형 시트 미리 생성 (첫 표시 지연 방지) */
