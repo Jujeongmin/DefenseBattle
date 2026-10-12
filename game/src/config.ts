@@ -4,7 +4,7 @@
 // ============================================================
 import type { IconName } from './icons';
 import type {
-  Job, Race, GradeKey, Grade, ResearchDef, DailyQuestDef, AchievementDef, ResearchKey, ItemKey, BaseJob,
+  Job, Race, Rarity, GradeKey, Grade, ResearchDef, DailyQuestDef, AchievementDef, ResearchKey, ItemKey, BaseJob,
 } from './types';
 
 
@@ -16,26 +16,60 @@ import type {
 export interface UnitDef {
   id: Job;
   kr: string;
-  base: BaseJob;
+  base: BaseJob;      // 투사체 모양 (archer=화살, wizard=마법구, warrior=근접)
   sheet?: string;
   hue: number;
   cooldown: number;
   rangeMult: number;
   atkMult: number;
   role: string;
+  rarity: Rarity;
+  tint: string;       // 구역·투사체 색
+  fav?: Race;         // 상성 유리 종족 (1.0, 나머지 0.9). 없으면 모두 0.9
   unlockStage?: string;
-  unlockCrystals?: number;
+  unlockCrystals?: number; // 보석으로 바로 해금 (전설은 상자·뽑기로만)
 }
+// 등급은 '얻기 어려움'이다 (같은 레벨이면 비슷한 전력). 상자·뽑기에서 나오는 확률과 레벨업 카드 수가 다르다.
 export const UNITS: UnitDef[] = [
-  { id: 'archer',   kr: '궁수',     base: 'archer',  hue: 0,    cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: '다중 사격' },
-  { id: 'wizard',   kr: '마법사',   base: 'wizard',  hue: 0,    cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: '범위 폭발' },
-  { id: 'warrior',  kr: '전사',     base: 'warrior', hue: 0,    cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: '둔화' },
-  { id: 'ranger',   kr: '레인저',   base: 'archer', sheet: 'Ranger',  hue: 0,  cooldown: 1.25, rangeMult: 1.3,  atkMult: 1.15, role: '저격·치명타', unlockStage: '1-3', unlockCrystals: 300 },
-  { id: 'frost',    kr: '빙결술사', base: 'wizard', sheet: 'Frost',  hue: 0,  cooldown: 1.1,  rangeMult: 1.0,  atkMult: 0.7,  role: '범위 빙결', unlockStage: '1-6', unlockCrystals: 500 },
-  { id: 'paladin',  kr: '성기사',   base: 'warrior', sheet: 'Paladin', hue: 0,   cooldown: 1.1,  rangeMult: 1.0,  atkMult: 1.0,  role: '보스 특화', unlockStage: '1-10', unlockCrystals: 800 },
-  { id: 'bomber',   kr: '폭격수',   base: 'wizard', sheet: 'Bomber',  hue: 0,  cooldown: 1.7,  rangeMult: 1.05, atkMult: 1.25, role: '대형 폭발', unlockStage: '2-5', unlockCrystals: 1200 },
-  { id: 'assassin', kr: '암살자',   base: 'warrior', sheet: 'Assassin', hue: 0,  cooldown: 0.7,  rangeMult: 0.9,  atkMult: 0.8,  role: '처형', unlockStage: '3-1', unlockCrystals: 1800 },
+  // ---- 일반 ----
+  { id: 'archer',   kr: '궁수',     base: 'archer',  hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: '다중 사격', rarity: 'common', tint: '#3fae4a', fav: 'orc' },
+  { id: 'wizard',   kr: '마법사',   base: 'wizard',  hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: '범위 폭발', rarity: 'common', tint: '#8e5bd8', fav: 'undead' },
+  { id: 'warrior',  kr: '전사',     base: 'warrior', hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: '둔화', rarity: 'common', tint: '#c9a13b', fav: 'troll' },
+  { id: 'spearman', kr: '창병',     base: 'warrior', hue: 0, cooldown: 1.05, rangeMult: 1.05, atkMult: 0.95, role: '관통', rarity: 'common', tint: '#b8864b', fav: 'troll', unlockCrystals: 200 },
+  { id: 'slinger',  kr: '투석병',   base: 'archer',  hue: 0, cooldown: 1.1,  rangeMult: 1.0,  atkMult: 0.95, role: '넉백', rarity: 'common', tint: '#9a8a6a', fav: 'orc', unlockCrystals: 200 },
+  { id: 'monk',     kr: '수도승',   base: 'warrior', hue: 0, cooldown: 0.6,  rangeMult: 0.9,  atkMult: 0.55, role: '연타', rarity: 'common', tint: '#e0a050', fav: 'troll', unlockCrystals: 200 },
+  { id: 'hunter',   kr: '사냥꾼',   base: 'archer',  hue: 0, cooldown: 1.0,  rangeMult: 1.1,  atkMult: 0.9,  role: '표식', rarity: 'common', tint: '#6a9a3a', fav: 'orc', unlockCrystals: 200 },
+  { id: 'acolyte',  kr: '견습 사제', base: 'wizard', hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.9,  role: '언데드 특화', rarity: 'common', tint: '#f0e0a0', unlockCrystals: 200 },
+  // ---- 희귀 ----
+  { id: 'ranger',   kr: '레인저',   base: 'archer', sheet: 'Ranger',  hue: 0, cooldown: 1.25, rangeMult: 1.3,  atkMult: 1.15, role: '저격·치명타', rarity: 'rare', tint: '#3fa7c9', fav: 'troll', unlockStage: '1-3', unlockCrystals: 300 },
+  { id: 'frost',    kr: '빙결술사', base: 'wizard', sheet: 'Frost',   hue: 0, cooldown: 1.1,  rangeMult: 1.0,  atkMult: 0.7,  role: '범위 빙결', rarity: 'rare', tint: '#7fe0ff', unlockStage: '1-6', unlockCrystals: 500 },
+  { id: 'poisoner', kr: '독술사',   base: 'wizard',  hue: 0, cooldown: 1.1,  rangeMult: 1.0,  atkMult: 0.7,  role: '중독', rarity: 'rare', tint: '#7ac943', fav: 'troll', unlockCrystals: 500 },
+  { id: 'storm',    kr: '번개술사', base: 'wizard',  hue: 0, cooldown: 1.2,  rangeMult: 1.0,  atkMult: 0.85, role: '연쇄 번개', rarity: 'rare', tint: '#7fb0ff', fav: 'orc', unlockCrystals: 500 },
+  { id: 'crossbow', kr: '석궁병',   base: 'archer',  hue: 0, cooldown: 1.3,  rangeMult: 1.15, atkMult: 1.1,  role: '일직선 관통', rarity: 'rare', tint: '#8a6a4a', fav: 'troll', unlockCrystals: 500 },
+  { id: 'knight',   kr: '기사',     base: 'warrior', hue: 0, cooldown: 1.1,  rangeMult: 0.95, atkMult: 1.0,  role: '단단한 몹 특화', rarity: 'rare', tint: '#a0b0c0', fav: 'orc', unlockCrystals: 500 },
+  { id: 'berserker', kr: '광전사',  base: 'warrior', hue: 0, cooldown: 0.9,  rangeMult: 0.9,  atkMult: 0.85, role: '몹 많을수록 강함', rarity: 'rare', tint: '#d04a3a', fav: 'troll', unlockCrystals: 500 },
+  { id: 'merchant', kr: '상인',     base: 'archer',  hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.65, role: '처치 골드 +', rarity: 'rare', tint: '#ffcf3f', unlockCrystals: 500 },
+  { id: 'drummer',  kr: '북치기',   base: 'warrior', hue: 0, cooldown: 1.1,  rangeMult: 0.95, atkMult: 0.6,  role: '아군 공속 +', rarity: 'rare', tint: '#e07a3a', unlockCrystals: 500 },
+  { id: 'houndmaster', kr: '조련사', base: 'archer', hue: 0, cooldown: 0.9,  rangeMult: 1.0,  atkMult: 0.85, role: '빠른 몹 특화', rarity: 'rare', tint: '#9a6a3a', fav: 'orc', unlockCrystals: 500 },
+  // ---- 영웅 ----
+  { id: 'paladin',  kr: '성기사',   base: 'warrior', sheet: 'Paladin', hue: 0, cooldown: 1.1, rangeMult: 1.0,  atkMult: 1.0,  role: '보스 특화', rarity: 'epic', tint: '#ffd54f', fav: 'undead', unlockStage: '1-10', unlockCrystals: 800 },
+  { id: 'bomber',   kr: '폭격수',   base: 'wizard', sheet: 'Bomber',  hue: 0, cooldown: 1.7,  rangeMult: 1.05, atkMult: 1.25, role: '대형 폭발', rarity: 'epic', tint: '#ff7a3d', fav: 'orc', unlockStage: '2-5', unlockCrystals: 1200 },
+  { id: 'assassin', kr: '암살자',   base: 'warrior', sheet: 'Assassin', hue: 0, cooldown: 0.7, rangeMult: 0.9,  atkMult: 0.8,  role: '처형', rarity: 'epic', tint: '#a35bd8', fav: 'orc', unlockStage: '3-1', unlockCrystals: 1800 },
+  { id: 'pyro',     kr: '화염술사', base: 'wizard',  hue: 0, cooldown: 1.3,  rangeMult: 1.0,  atkMult: 0.85, role: '불 장판', rarity: 'epic', tint: '#ff5a2a', fav: 'troll', unlockCrystals: 1500 },
+  { id: 'reaper',   kr: '사신',     base: 'warrior', hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.95, role: '처치 시 강화', rarity: 'epic', tint: '#5a4a7a', fav: 'undead', unlockCrystals: 1500 },
+  { id: 'cleric',   kr: '성직자',   base: 'wizard',  hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.85, role: '회복·부활 차단', rarity: 'epic', tint: '#fff0c0', fav: 'undead', unlockCrystals: 1500 },
+  { id: 'cannoneer', kr: '대포병',  base: 'wizard',  hue: 0, cooldown: 2.2,  rangeMult: 1.1,  atkMult: 1.9,  role: '강타·기절', rarity: 'epic', tint: '#6a6a6a', fav: 'troll', unlockCrystals: 1500 },
+  { id: 'chrono',   kr: '시간술사', base: 'wizard',  hue: 0, cooldown: 1.6,  rangeMult: 1.0,  atkMult: 1.2,  role: '범위 정지', rarity: 'epic', tint: '#c0a0ff', unlockCrystals: 1500 },
+  // ---- 전설 (상자·뽑기로만) ----
+  { id: 'dragoon',  kr: '용기사',   base: 'warrior', hue: 0, cooldown: 1.4,  rangeMult: 1.1,  atkMult: 1.1,  role: '화염 숨결', rarity: 'legendary', tint: '#ff4a2a', fav: 'troll' },
+  { id: 'archmage', kr: '대마법사', base: 'wizard',  hue: 0, cooldown: 2.0,  rangeMult: 1.1,  atkMult: 1.3,  role: '운석', rarity: 'legendary', tint: '#ff7ad8', fav: 'undead' },
+  { id: 'shadow',   kr: '그림자 군주', base: 'warrior', hue: 0, cooldown: 0.9, rangeMult: 0.95, atkMult: 0.9, role: '분신', rarity: 'legendary', tint: '#3a2a5a', fav: 'orc' },
+  { id: 'angel',    kr: '천사',     base: 'wizard',  hue: 0, cooldown: 1.0,  rangeMult: 1.05, atkMult: 0.85, role: '아군 공격력 +', rarity: 'legendary', tint: '#fff8d0', fav: 'undead' },
+  { id: 'stormking', kr: '폭풍왕',  base: 'wizard',  hue: 0, cooldown: 1.5,  rangeMult: 1.0,  atkMult: 1.0,  role: '맵 전체 번개', rarity: 'legendary', tint: '#4fa0ff', fav: 'orc' },
+  { id: 'alchemist', kr: '연금술사', base: 'wizard', hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.8,  role: '합성 보너스', rarity: 'legendary', tint: '#4adfa0' },
 ];
+export const RARITY_KR: Record<Rarity, string> = { common: '일반', rare: '희귀', epic: '영웅', legendary: '전설' };
+export const RARITY_COLOR: Record<Rarity, string> = { common: '#9aa0a8', rare: '#4f9dff', epic: '#b06bff', legendary: '#ffb93f' };
 export const UNIT_BY_ID: Record<Job, UnitDef> = Object.fromEntries(UNITS.map((u) => [u.id, u])) as Record<Job, UnitDef>;
 export const JOBS: Job[] = UNITS.map((u) => u.id);
 export const STARTER_UNITS: Job[] = ['archer', 'wizard', 'warrior'];
@@ -65,16 +99,12 @@ export const MOB_VARIANTS: Record<Race, number> = { troll: 3, orc: 6, undead: 4 
 
 // ---------- 직업 x 종족 데미지 배율 ----------
 // 상성: 유리 1.0 / 불리 0.9. 차이를 작게 둬서 상성을 몰라도 크게 손해 보지 않게 한다 (화면엔 ▲/▼ 만 표시).
-export const DMG_MULT: Record<Job, Record<Race, number>> = {
-  archer:   { troll: 0.9, orc: 1.0, undead: 0.9 },
-  wizard:   { troll: 0.9, orc: 0.9, undead: 1.0 },
-  warrior:  { troll: 1.0, orc: 0.9, undead: 0.9 },
-  ranger:   { troll: 1.0, orc: 0.9, undead: 0.9 },
-  frost:    { troll: 0.9, orc: 0.9, undead: 0.9 },
-  paladin:  { troll: 0.9, orc: 0.9, undead: 1.0 },
-  bomber:   { troll: 0.9, orc: 1.0, undead: 0.9 },
-  assassin: { troll: 0.9, orc: 1.0, undead: 0.9 },
-};
+export const DMG_MULT: Record<Job, Record<Race, number>> = Object.fromEntries(UNITS.map((u) => [u.id,
+  Object.fromEntries((['troll', 'orc', 'undead'] as Race[]).map((r) => [r, u.fav === r ? 1.0 : 0.9])),
+])) as Record<Job, Record<Race, number>>;
+// 언데드 특화: 견습 사제·성직자는 언데드에 큰 피해
+DMG_MULT.acolyte.undead = 1.4;
+DMG_MULT.cleric.undead = 1.25;
 
 // ---------- 등급 ----------
 // 공격력은 등급마다 3배: 같은 등급 3마리 합성 = 합친 공격력 그대로 + 사거리·스킬 보너스.
@@ -171,6 +201,31 @@ export const SKILLS = {
   bomber: { radius: 95, radiusHigh: 125, ratio: 0.6 },
   // 암살자: 처형 - 체력 비율 이하면 즉사 (보스 제외)
   assassin: { execute: 0.12, executeHigh: 0.2 },
+  // ---- 새 유닛 (정예+ 발동, 전설+ 강화) ----
+  spearman: { pierce: 1, pierceHigh: 2, ratio: 0.6 },          // 대상 뒤 일직선 n명 관통
+  slinger: { push: 26, pushHigh: 40 },                          // 길 뒤로 밀어냄(px)
+  monk: { hits: 2, hitsHigh: 3, ratio: 0.45 },                  // 연타 추가 타수
+  hunter: { markDur: 3, markDurHigh: 4.5, markMult: 1.2 },      // 표식: 모든 피해 +20%
+  acolyte: { radius: 60, radiusHigh: 80, ratio: 0.4 },          // 언데드에게만 성광 범위 피해
+  poisoner: { dps: 0.35, dpsHigh: 0.5, dur: 4, maxStack: 3 },   // 공격력 대비 초당 피해, 중첩
+  storm: { bounces: 2, bouncesHigh: 3, range: 110, ratio: 0.6 }, // 연쇄 번개
+  crossbow: { length: 260, width: 26, ratio: 0.7, ratioHigh: 0.9 }, // 일직선 관통
+  knight: { armoredMult: 1.6, armoredMultHigh: 2.0 },           // 단단한 몹(방패병·거인·킹·마왕·탱커)
+  berserker: { perMob: 0.012, cap: 0.8 },                       // 필드 몹 1마리당 +1.2% (최대 +80%)
+  merchant: { gold: 1, goldHigh: 2 },                           // 막타 시 골드 추가
+  drummer: { radius: 170, haste: 0.15, hasteHigh: 0.22 },       // 주변 아군 공격 간격 감소
+  houndmaster: { fastMult: 1.7, fastMultHigh: 2.1 },            // 빠른 몹(질주 엘프·빠른 몹) 특화
+  pyro: { radius: 55, radiusHigh: 75, dps: 0.4, dur: 2.5 },     // 불 장판
+  reaper: { soulMult: 2.0, maxSouls: 3 },                       // 처치마다 영혼 → 다음 공격 강화, 부활 차단
+  cleric: { purifyDur: 3, purifyDurHigh: 5 },                   // 정화: 회복·부활 막음
+  cannoneer: { stun: 0.5, stunHigh: 0.8, radius: 45, ratio: 0.5 }, // 강타 + 기절 + 작은 폭발
+  chrono: { radius: 85, radiusHigh: 110, stop: 0.7, stopHigh: 1.0 }, // 범위 정지
+  dragoon: { length: 240, width: 34, ratio: 0.6, ratioHigh: 0.85 }, // 화염 숨결 직선
+  archmage: { radius: 115, radiusHigh: 150, ratio: 0.8 },       // 운석
+  shadow: { cloneRatio: 0.6, cloneRatioHigh: 0.9 },              // 분신 추가 타격 (다른 대상 우선)
+  angel: { aura: 0.08, auraHigh: 0.12, cap: 0.3 },               // 아군 전체 공격력 + (천사 여럿이면 합, 최대 30%)
+  stormking: { strikes: 3, strikesHigh: 5, ratio: 0.45 },        // 맵 어디든 무작위 번개
+  alchemist: { chance: 0.06, chanceHigh: 0.1, cap: 0.3 },        // 합성 시 한 등급 더 (여럿이면 합)
   // 공통 치명타
   critChance: 0.1,
   critMult: 2,
@@ -178,6 +233,11 @@ export const SKILLS = {
 export const SKILL_KR: Record<Job, string> = {
   archer: '다중 사격', wizard: '마력 폭발', warrior: '둔화 강타',
   ranger: '저격', frost: '눈보라', paladin: '심판', bomber: '대폭발', assassin: '처형',
+  spearman: '관통 찌르기', slinger: '넉백', monk: '연타', hunter: '표식', acolyte: '성광',
+  poisoner: '맹독', storm: '연쇄 번개', crossbow: '관통 화살', knight: '방패 부수기', berserker: '광폭화',
+  merchant: '전리품', drummer: '진군 북소리', houndmaster: '사냥개',
+  pyro: '불바다', reaper: '영혼 수확', cleric: '정화', cannoneer: '포격', chrono: '시간 정지',
+  dragoon: '화염 숨결', archmage: '운석', shadow: '분신', angel: '축복', stormking: '폭풍', alchemist: '연성',
 };
 export const SKILL_DESC: Record<Job, string> = {
   archer: '정예+: 주변 적 1명(전설+ 2명)에게 50% 추가 피해',
@@ -188,6 +248,30 @@ export const SKILL_DESC: Record<Job, string> = {
   paladin: '정예+: 보스·정예 몹에게 1.6배(전설+ 2배) 피해',
   bomber: '느린 공격. 정예+: 넓은 범위에 60% 폭발 피해',
   assassin: '빠른 공격. 정예+: 체력 12%(전설+ 20%) 이하 적 즉시 처치',
+  spearman: '정예+: 대상 뒤 일직선 1명(전설+ 2명) 관통 60%',
+  slinger: '정예+: 맞은 적을 길 뒤로 밀어냄',
+  monk: '아주 빠른 약공. 정예+: 2연타(전설+ 3연타)',
+  hunter: '정예+: 표식 - 그 적이 받는 모든 피해 +20%',
+  acolyte: '언데드에 강함. 정예+: 주변 언데드에 성광 피해',
+  poisoner: '정예+: 중독 - 4초간 지속 피해, 3번까지 겹침',
+  storm: '정예+: 번개가 주변 적 2명(전설+ 3명)에게 튐',
+  crossbow: '정예+: 화살이 일직선의 적을 모두 관통',
+  knight: '정예+: 방패병·거인·킹·마왕·탱커에게 1.6배(전설+ 2배)',
+  berserker: '정예+: 필드 몹이 많을수록 강해짐 (최대 +80%)',
+  merchant: '공격력 낮음. 정예+: 막타마다 골드 +1(전설+ +2)',
+  drummer: '공격력 낮음. 정예+: 주변 아군 공격 속도 +15%(전설+ +22%)',
+  houndmaster: '정예+: 빠른 몹(질주 엘프 등)에게 1.7배(전설+ 2.1배)',
+  pyro: '정예+: 맞은 자리에 불 장판 - 지나가는 적에게 지속 피해',
+  reaper: '정예+: 처치하면 영혼 - 다음 공격 2배, 망령 부활 막음',
+  cleric: '언데드에 강함. 정예+: 정화 - 신관 회복·망령 부활 막음',
+  cannoneer: '느린 강타. 정예+: 기절 + 작은 폭발',
+  chrono: '정예+: 주변 적의 시간을 잠깐 멈춤',
+  dragoon: '정예+: 일직선 화염 숨결로 줄지어 오는 적을 태움',
+  archmage: '느린 공격. 정예+: 넓은 운석 폭발 80%',
+  shadow: '정예+: 분신이 다른 적을 한 번 더 공격',
+  angel: '정예+: 모든 아군 공격력 +8%(전설+ +12%), 여럿이면 합산',
+  stormking: '정예+: 공격마다 맵 어디든 번개 3개(전설+ 5개)',
+  alchemist: '정예+: 합성할 때 6%(전설+ 10%) 확률로 한 등급 더',
 };
 
 // ---------- 합성 (같은 직업·등급 3개 → 상위 등급 1개) ----------

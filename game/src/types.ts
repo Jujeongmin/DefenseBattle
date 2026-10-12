@@ -2,7 +2,13 @@
 //  공용 타입 정의
 // ============================================================
 // 유닛 종류 (기본 3종 + 해금 5종). 스프라이트는 base 3종 시트를 색조 변형해 사용
-export type Job = 'archer' | 'wizard' | 'warrior' | 'ranger' | 'frost' | 'paladin' | 'assassin' | 'bomber';
+export type Job = 'archer' | 'wizard' | 'warrior' | 'ranger' | 'frost' | 'paladin' | 'assassin' | 'bomber'
+  | 'spearman' | 'slinger' | 'monk' | 'hunter' | 'acolyte' | 'poisoner'
+  | 'storm' | 'crossbow' | 'knight' | 'berserker' | 'merchant' | 'drummer'
+  | 'houndmaster' | 'pyro' | 'reaper' | 'cleric' | 'cannoneer' | 'chrono'
+  | 'dragoon' | 'archmage' | 'shadow' | 'angel' | 'stormking' | 'alchemist';
+/** 유닛 등급 (얻기 어려움 - 상자·뽑기 확률, 레벨업에 필요한 카드 수) */
+export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
 export type BaseJob = 'archer' | 'wizard' | 'warrior';
 export type Race = 'troll' | 'orc' | 'undead';
 import type { AttackKey } from './config';
@@ -59,6 +65,7 @@ export interface Unit {
   moveElapsed: number;
   moveDur: number;
   _newZone?: number;
+  souls?: number;      // 사신: 모은 영혼 (다음 공격 강화)
 }
 
 export type MobKind = 'normal' | 'fast' | 'tank' | 'card';
@@ -72,6 +79,10 @@ export interface Mob {
   tick?: number;       // 회복·소환 주기 타이머
   ghost?: boolean;     // 반투명 (유령)
   gold?: number;       // 처치 골드 덮어쓰기 (분열·졸개는 적게)
+  markUntil?: number;  // 사냥꾼 표식 (받는 피해 +)
+  poison?: { dps: number; until: number; stacks: number }; // 독술사 중독
+  purifyUntil?: number; // 성직자 정화 (회복·부활 막음)
+  noRevive?: boolean;  // 사신에게 처치됨 → 부활 못 함
   x: number;
   y: number;
   seg: number;
@@ -107,7 +118,8 @@ export type Effect =
   | { type: 'merge'; x: number; y: number; ttl: number; color: string }
   | { type: 'summon'; x: number; y: number; ttl: number; color: string; big: boolean }
   | { type: 'burst'; x: number; y: number; ttl: number; seed: number } // 태초 등급 타격 연출
-  | { type: 'drop'; x: number; y: number; ttl: number; dur: number; card: number; seed: number }; // 상대가 던진 몹이 떨어지는 중 (착지 지점 경고)
+  | { type: 'drop'; x: number; y: number; ttl: number; dur: number; card: number; seed: number } // 상대가 던진 몹이 떨어지는 중 (착지 지점 경고)
+  | { type: 'beam'; x1: number; y1: number; x2: number; y2: number; ttl: number; dur: number; color: string; w: number }; // 직선 공격·번개
 
 export interface LogEntry {
   text: string;

@@ -5,13 +5,10 @@ import { MAP, Game, pathAt } from './engine';
 
 const GAP_SAMPLES = 160; // 길 한 바퀴를 몇 점으로 나눠 사거리 구멍을 볼지
 import { unitSprite, mobSprite, tileSprite, uiSprite } from './assets';
-import { GRADES, UNIT_BY_ID, PLAY_SPEED, ATTACKS } from './config';
+import { GRADES, UNIT_BY_ID, PLAY_SPEED, ATTACKS, UNITS } from './config';
 import type { Job, Mob, Effect } from './types';
 
-export const JOB_TINT: Record<Job, string> = {
-  archer: '#3fae4a', wizard: '#8e5bd8', warrior: '#c9a13b', ranger: '#3fa7c9',
-  frost: '#7fe0ff', paladin: '#ffd54f', bomber: '#ff7a3d', assassin: '#a35bd8',
-};
+export const JOB_TINT: Record<Job, string> = Object.fromEntries(UNITS.map((u) => [u.id, u.tint])) as Record<Job, string>;
 
 // 스프라이트 시트: 32x32 프레임, 3열(걷기) x 4행(하/좌/우/상)
 export const FRAME = 32;
@@ -143,6 +140,7 @@ export class Renderer {
     this.drawBackground();
     this.drawZones();
     this.drawGaps();
+    this.drawBurns();
     this.drawUnitAuras();
     this.drawMobs();
     this.drawUnits();
@@ -217,6 +215,20 @@ export class Renderer {
     ctx.lineTo(t[1].x, t[1].y);
     ctx.lineTo(t[2].x, t[2].y);
     ctx.closePath();
+  }
+
+  /** 화염술사 불 장판 */
+  private drawBurns(): void {
+    const ctx = this.ctx;
+    for (const b of this.game.burns) {
+      const left = Math.min(1, (b.until - this.game.time) / 0.6);
+      const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
+      g.addColorStop(0, `rgba(255,190,60,${0.45 * left})`);
+      g.addColorStop(0.6, `rgba(255,90,30,${0.3 * left})`);
+      g.addColorStop(1, 'rgba(255,60,20,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r * (0.95 + Math.sin(this.t * 9 + b.x) * 0.05), 0, Math.PI * 2); ctx.fill();
+    }
   }
 
   /** 어떤 유닛도 닿지 않는 길 구간을 빨갛게 - 어디가 뚫렸는지 보고 구역을 바꾼다 (0.4초마다 다시 계산) */
@@ -360,6 +372,17 @@ export class Renderer {
         this.frame(spr.img, col, m.dir, m.x - s / 2, m.y - s / 2, s);
         ctx.restore();
         // 상태 색 덧칠 (ctx.filter 는 사파리 미지원이라 source-atop 대신 반투명 원으로 표시)
+        // 중독(초록)·표식(붉은 과녁)
+        if (m.poison && m.poison.until > this.game.time) {
+          ctx.fillStyle = `rgba(120,220,80,${0.18 + m.poison.stacks * 0.07})`;
+          ctx.beginPath(); ctx.arc(m.x, m.y, s * 0.34, 0, Math.PI * 2); ctx.fill();
+        }
+        if (m.markUntil && m.markUntil > this.game.time) {
+          ctx.strokeStyle = 'rgba(255,80,60,0.9)';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(m.x, m.y - s * 0.62, 6, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(m.x - 9, m.y - s * 0.62); ctx.lineTo(m.x + 9, m.y - s * 0.62); ctx.moveTo(m.x, m.y - s * 0.62 - 9); ctx.lineTo(m.x, m.y - s * 0.62 + 9); ctx.stroke();
+        }
         if (m.slow > 0) {
           ctx.fillStyle = 'rgba(120,200,255,0.28)';
           ctx.beginPath(); ctx.arc(m.x, m.y, s * 0.36, 0, Math.PI * 2); ctx.fill();
@@ -580,6 +603,20 @@ export class Renderer {
         }
         case 'burst': this.drawBurst(e); break;
         case 'drop': this.drawDrop(e); break;
+        case 'beam': {
+          const k = e.ttl / e.dur;
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, k);
+          ctx.strokeStyle = e.color;
+          ctx.lineCap = 'round';
+          ctx.lineWidth = e.w;
+          ctx.beginPath(); ctx.moveTo(e.x1, e.y1); ctx.lineTo(e.x2, e.y2); ctx.stroke();
+          ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+          ctx.lineWidth = Math.max(1, e.w * 0.35);
+          ctx.beginPath(); ctx.moveTo(e.x1, e.y1); ctx.lineTo(e.x2, e.y2); ctx.stroke();
+          ctx.restore();
+          break;
+        }
         case 'dmg': {
           const p = 1 - e.ttl / 0.7;            // 0→1 진행
           const alpha = Math.max(0, Math.min(1, (e.ttl / 0.7) * 1.6));

@@ -165,6 +165,13 @@ export class Game {
   sentCount = 0;                  // PvP: 보낸 공격 수
   peakMobs = 0;                   // 필드 몹 최대치 (별 판정)
   private pending: { card: number; hp: number; delay: number; pos: number }[] = []; // PvP: 도착 대기 몹
+  /** 화염술사 불 장판 */
+  burns: { x: number; y: number; r: number; dps: number; until: number }[] = [];
+  /** 지금 공격 중인 유닛 (처치 보상·부활 차단 판정용) */
+  private hitter: Unit | null = null;
+  /** 프레임마다 다시 계산하는 오라: 천사 공격력 배수, 북치기 위치 */
+  private angelMult = 1;
+  private drummers: Unit[] = [];
   private rng: () => number = Math.random;
   private _listeners: { [K in EventName]?: Listener<K>[] } = {};
 
@@ -217,6 +224,7 @@ export class Game {
     this.sentCount = 0;
     this.peakMobs = 0;
     this.pending = [];
+    this.burns = [];
     this.attackReadyAt = {};
     this._listeners = {};
   }
@@ -459,7 +467,12 @@ export class Game {
         removed += 1;
       }
     }
-    const next = GRADES[GRADE_INDEX[gradeKey] + 1];
+    let next = GRADES[GRADE_INDEX[gradeKey] + 1];
+    // 연금술사: 확률로 한 등급 더 (여럿이면 합산)
+    let alch = 0;
+    for (const a of this.units) if (a.job === 'alchemist' && a.gradeIndex >= SKILL_FROM_INDEX) alch += a.gradeIndex >= FULL_RANGE_FROM_INDEX ? SKILLS.alchemist.chanceHigh : SKILLS.alchemist.chance;
+    const skip = GRADES[GRADE_INDEX[next.key] + 1];
+    if (skip && Math.random() < Math.min(SKILLS.alchemist.cap, alch)) { next = skip; this.pushLog(`연금술! ${GRADE_BY_KEY[skip.key].kr} 등급`); }
     const unit = this.createUnit(job, next.key, 'merge');
     const z = this.zones[zoneId];
     this.effects.push({ type: 'merge', x: unit.x, y: unit.y, ttl: 0.7, color: next.color });
@@ -650,13 +663,25 @@ export class Game {
   /** 컬렉션(영구) 레벨 */
   collectionLevel(job: Job): number { return this.opts.unitLevels[job] || 1; }
 
-  unitDamage(u: Unit, mob: { race: Race; boss: boolean; kind?: MobKind; card?: number }): number {
+  unitDamage(u: Unit, mob: { race: Race; boss: boolean; kind?: MobKind; card?: number; markUntil?: number; speedMult?: number }): number {
     const level = this.unitLevel(u);
     let dmg = u.baseAtk * (1 + (level - 1) * ECONOMY.upgradePerLevel);
     dmg *= UNIT_BY_ID[u.job].atkMult * (1 + (this.collectionLevel(u.job) - 1) * UNIT_LEVEL_ATK);
     dmg *= DMG_MULT[u.job][mob.race];
     const def = mob.card !== undefined ? ATTACKS[mob.card] : null;
     if (def?.resist?.includes(u.job)) dmg *= RESIST_MULT; // 유령(물리)·방패병(화살)
+    if (mob.markUntil && mob.markUntil > this.time) dmg *= SKILLS.hunter.markMult;
+    if (u.gradeIndex >= SKILL_FROM_INDEX) {
+      const high = u.gradeIndex >= FULL_RANGE_FROM_INDEX;
+      if (u.job === 'knight' && (mob.kind === 'tank' || (def && ['shield', 'giant', 'king', 'demon'].includes(def.key)))) {
+        dmg *= high ? SKILLS.knight.armoredMultHigh : SKILLS.knight.armoredMult;
+      } else if (u.job === 'houndmaster' && (mob.speedMult ?? 1) > 1.2) {
+        dmg *= high ? SKILLS.houndmaster.fastMultHigh : SKILLS.houndmaster.fastMult;
+      } else if (u.job === 'berserker') {
+        dmg *= 1 + Math.min(SKILLS.berserker.cap, this.mobs.length * SKILLS.berserker.perMob);
+      }
+    }
+    dmg *= this.angelMult;
     // 성기사: 보스와 큰 몹 카드(거인·킹·마왕) 특화
     if (u.job === 'paladin' && u.gradeIndex >= SKILL_FROM_INDEX && (mob.boss || (def && def.hpMult >= 5))) {
       const m = u.gradeIndex >= FULL_RANGE_FROM_INDEX ? SKILLS.paladin.bossMultHigh : SKILLS.paladin.bossMult;
@@ -691,6 +716,7 @@ export class Game {
     this.updateMobs(dt);
     this.updateUnitMovement(dt);
     this.updateCombat(dt);
+    this.updateDots(dt);
     this.updateEffects(dt);
 
     if (this.mobs.length > this.peakMobs) this.peakMobs = this.mobs.length;
@@ -759,6 +785,59 @@ export class Game {
     }
   }
 
+  /** 유닛 → 대상 방향 직선에서 대상 뒤 length 안, 폭 width 안의 몹 (가까운 순) */
+  private lineTargets(u: Unit, target: Mob, length: number, width: number): Mob[] {
+    const d = Math.hypot(target.x - u.x, target.y - u.y) || 1;
+    const dx = (target.x - u.x) / d, dy = (target.y - u.y) / d;
+    const out: { m: Mob; t: number }[] = [];
+    for (const m of this.mobs) {
+      if (m === target || m.dead) continue;
+      const rx = m.x - u.x, ry = m.y - u.y;
+      const t = rx * dx + ry * dy;
+      if (t < d - 10 || t > d + length) continue;
+      if (Math.abs(rx * dy - ry * dx) <= width) out.push({ m, t });
+    }
+    return out.sort((a, b) => a.t - b.t).map((o) => o.m);
+  }
+  /** 길을 거슬러 dist 만큼 뒤로 (지난 모서리를 넘지 않음) */
+  private pushBack(m: Mob, dist: number): void {
+    if (m.dead || m.boss) return;
+    const c = PATH.corners;
+    const prev = c[(m.seg - 1 + c.length) % c.length];
+    const d = Math.hypot(prev.x - m.x, prev.y - m.y);
+    const k = d > 0 ? Math.min(1, dist / d) : 0;
+    m.x += (prev.x - m.x) * k;
+    m.y += (prev.y - m.y) * k;
+    m.pause = Math.max(m.pause, 0.15);
+  }
+  /** 주변 북치기 → 공격 간격 배수 (가장 센 북 하나) */
+  private hasteFor(u: Unit): number {
+    let best = 0;
+    for (const d of this.drummers) {
+      if (d === u || Math.hypot(d.x - u.x, d.y - u.y) > SKILLS.drummer.radius) continue;
+      best = Math.max(best, d.gradeIndex >= FULL_RANGE_FROM_INDEX ? SKILLS.drummer.hasteHigh : SKILLS.drummer.haste);
+    }
+    return 1 - best;
+  }
+  /** 중독·불 장판 지속 피해 (막타 보상 없이 처치) */
+  private updateDots(dt: number): void {
+    const dot = (m: Mob, dmg: number) => {
+      if (m.dead) return;
+      m.hp -= dmg;
+      if (m.hp <= 0) this.killMob(m);
+    };
+    for (const m of this.mobs) {
+      if (m.poison && m.poison.until > this.time) dot(m, m.poison.dps * m.poison.stacks * dt);
+    }
+    if (this.burns.length) {
+      this.burns = this.burns.filter((b) => b.until > this.time);
+      for (const b of this.burns) for (const m of this.mobs) {
+        if (Math.hypot(m.x - b.x, m.y - b.y) <= b.r) dot(m, b.dps * dt);
+      }
+    }
+    if (this.mobs.some((m) => m.dead)) this.mobs = this.mobs.filter((m) => !m.dead);
+  }
+
   /** 몹 카드 능력: 신관 회복, 킹 졸개 소환 */
   private cardAbility(m: Mob, dt: number): void {
     const def = ATTACKS[m.card!];
@@ -767,7 +846,7 @@ export class Game {
     if (def.heal && m.tick >= 1) {
       m.tick -= 1;
       for (const o of this.mobs) {
-        if (o.dead || o.boss || o.hp >= o.maxHp || Math.hypot(o.x - m.x, o.y - m.y) > 130) continue;
+        if (o.dead || o.boss || o.hp >= o.maxHp || (o.purifyUntil ?? 0) > this.time || Math.hypot(o.x - m.x, o.y - m.y) > 130) continue;
         o.hp = Math.min(o.maxHp, o.hp + o.maxHp * def.heal);
       }
       this.addEffect({ type: 'splash', x: m.x, y: m.y, ttl: 0.4, r: 130, color: '#7ee87e' });
@@ -786,6 +865,16 @@ export class Game {
   }
 
   updateCombat(dt: number): void {
+    // 오라: 천사(공격력)·북치기(공속) - 스킬은 정예 등급부터
+    let angel = 0;
+    this.drummers = [];
+    for (const u of this.units) {
+      if (u.gradeIndex < SKILL_FROM_INDEX) continue;
+      const high = u.gradeIndex >= FULL_RANGE_FROM_INDEX;
+      if (u.job === 'angel') angel += high ? SKILLS.angel.auraHigh : SKILLS.angel.aura;
+      else if (u.job === 'drummer') this.drummers.push(u);
+    }
+    this.angelMult = 1 + Math.min(SKILLS.angel.cap, angel);
     for (const u of this.units) {
       if (u.flash > 0) u.flash -= dt;
       u.cooldown -= dt;
@@ -800,8 +889,10 @@ export class Game {
       }
       if (!best) continue;
       const crit = Math.random() < this.critChance(u);
-      const dmg = this.unitDamage(u, best) * (crit ? SKILLS.critMult : 1);
-      u.cooldown = UNIT_BY_ID[u.job].cooldown;
+      let dmg = this.unitDamage(u, best) * (crit ? SKILLS.critMult : 1);
+      if (u.job === 'reaper' && u.souls) { dmg *= SKILLS.reaper.soulMult; u.souls -= 1; } // 영혼 소모
+      u.cooldown = UNIT_BY_ID[u.job].cooldown * this.hasteFor(u);
+      this.hitter = u;
       u.flash = 0.1;
       this.emit('shoot', u.job);
       // 투사체: 거리에 비례한 비행 시간 (시각 전용)
@@ -814,6 +905,7 @@ export class Game {
 
       // 직업 스킬 (정예 이상)
       if (u.gradeIndex >= SKILL_FROM_INDEX) this.applySkill(u, best, range);
+      this.hitter = null;
 
       // 태초 등급: 몹 이동 경로(사각 링) 전체에 촘촘히 폭발 이펙트 (시각 전용 - 데미지는 단일 대상 그대로)
       if (u.gradeIndex === GRADE_INDEX['eternal'] && this.effects.length < 160) {
@@ -920,6 +1012,120 @@ export class Game {
         }
         break;
       }
+      case 'spearman': {
+        const n = high ? SKILLS.spearman.pierceHigh : SKILLS.spearman.pierce;
+        const hits = this.lineTargets(u, target, 140, 26).slice(0, n);
+        this.addEffect({ type: 'beam', x1: u.x, y1: u.y, x2: target.x + (target.x - u.x) * 0.3, y2: target.y + (target.y - u.y) * 0.3, ttl: 0.15, dur: 0.15, color: '#e8d0a0', w: 5 });
+        for (const m of hits) this.hit(m, this.unitDamage(u, m) * SKILLS.spearman.ratio * perk, false);
+        break;
+      }
+      case 'crossbow':
+      case 'dragoon': {
+        const sk = u.job === 'crossbow' ? SKILLS.crossbow : SKILLS.dragoon;
+        const ratio = (high ? sk.ratioHigh : sk.ratio) * perk;
+        const hits = this.lineTargets(u, target, sk.length, sk.width);
+        const d = Math.hypot(target.x - u.x, target.y - u.y) || 1;
+        const ex = u.x + ((target.x - u.x) / d) * (d + sk.length), ey = u.y + ((target.y - u.y) / d) * (d + sk.length);
+        this.addEffect({ type: 'beam', x1: u.x, y1: u.y, x2: ex, y2: ey, ttl: 0.25, dur: 0.25, color: u.job === 'dragoon' ? '#ff6a2a' : '#d8c8a0', w: u.job === 'dragoon' ? 22 : 4 });
+        for (const m of hits) this.hit(m, this.unitDamage(u, m) * ratio, false);
+        break;
+      }
+      case 'slinger':
+        this.pushBack(target, (high ? SKILLS.slinger.pushHigh : SKILLS.slinger.push) * perk);
+        break;
+      case 'monk': {
+        const n = (high ? SKILLS.monk.hitsHigh : SKILLS.monk.hits) - 1;
+        for (let i = 0; i < n && !target.dead; i++) this.hit(target, this.unitDamage(u, target) * SKILLS.monk.ratio * perk, false);
+        this.addEffect({ type: 'slash', x: target.x, y: target.y, ttl: 0.2, seed: Math.random() * Math.PI });
+        break;
+      }
+      case 'hunter':
+        target.markUntil = this.time + (high ? SKILLS.hunter.markDurHigh : SKILLS.hunter.markDur) * perk;
+        break;
+      case 'acolyte':
+      case 'cleric': {
+        if (u.job === 'cleric') target.purifyUntil = this.time + (high ? SKILLS.cleric.purifyDurHigh : SKILLS.cleric.purifyDur) * perk;
+        if (u.job === 'acolyte') {
+          const r = high ? SKILLS.acolyte.radiusHigh : SKILLS.acolyte.radius;
+          this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.35, r, color: '#fff2a8' });
+          for (const m of this.mobs) {
+            if (m === target || m.dead || m.race !== 'undead' || Math.hypot(m.x - target.x, m.y - target.y) > r) continue;
+            this.hit(m, this.unitDamage(u, m) * SKILLS.acolyte.ratio * perk, false);
+          }
+        } else this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.35, r: 34, color: '#fff0c0' });
+        break;
+      }
+      case 'poisoner': {
+        const dps = this.unitDamage(u, target) * (high ? SKILLS.poisoner.dpsHigh : SKILLS.poisoner.dps) * perk;
+        const p = target.poison;
+        const stacks = Math.min(SKILLS.poisoner.maxStack, (p && p.until > this.time ? p.stacks : 0) + 1);
+        target.poison = { dps: Math.max(dps, p && p.until > this.time ? p.dps : 0), until: this.time + SKILLS.poisoner.dur, stacks };
+        this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.3, r: 26, color: '#7ac943' });
+        break;
+      }
+      case 'storm': {
+        let from = target;
+        const done = new Set<Mob>([target]);
+        const n = high ? SKILLS.storm.bouncesHigh : SKILLS.storm.bounces;
+        for (let i = 0; i < n; i++) {
+          let next: Mob | null = null, nd: number = SKILLS.storm.range;
+          for (const m of this.mobs) {
+            if (m.dead || done.has(m)) continue;
+            const d = Math.hypot(m.x - from.x, m.y - from.y);
+            if (d < nd) { nd = d; next = m; }
+          }
+          if (!next) break;
+          done.add(next);
+          this.addEffect({ type: 'beam', x1: from.x, y1: from.y, x2: next.x, y2: next.y, ttl: 0.2, dur: 0.2, color: '#a8d0ff', w: 3 });
+          this.hit(next, this.unitDamage(u, next) * SKILLS.storm.ratio * perk, false);
+          from = next;
+        }
+        break;
+      }
+      case 'pyro': {
+        const r = high ? SKILLS.pyro.radiusHigh : SKILLS.pyro.radius;
+        if (this.burns.length < 24) this.burns.push({ x: target.x, y: target.y, r, dps: this.unitDamage(u, target) * SKILLS.pyro.dps * perk, until: this.time + SKILLS.pyro.dur });
+        break;
+      }
+      case 'cannoneer': {
+        target.pause = Math.max(target.pause, (high ? SKILLS.cannoneer.stunHigh : SKILLS.cannoneer.stun) * perk);
+        this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.4, r: SKILLS.cannoneer.radius, color: '#c8c8c8' });
+        this.splashAround(u, target, SKILLS.cannoneer.radius, SKILLS.cannoneer.ratio * perk);
+        this.shake = Math.max(this.shake, 2);
+        break;
+      }
+      case 'chrono': {
+        const r = high ? SKILLS.chrono.radiusHigh : SKILLS.chrono.radius;
+        const stop = (high ? SKILLS.chrono.stopHigh : SKILLS.chrono.stop) * perk;
+        this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.5, r, color: '#c0a0ff' });
+        for (const m of this.mobs) if (!m.boss && Math.hypot(m.x - target.x, m.y - target.y) <= r) m.pause = Math.max(m.pause, stop);
+        break;
+      }
+      case 'archmage': {
+        const r = high ? SKILLS.archmage.radiusHigh : SKILLS.archmage.radius;
+        this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.5, r, color: '#ff7ad8' });
+        this.splashAround(u, target, r, SKILLS.archmage.ratio * perk);
+        this.shake = Math.max(this.shake, 2.5);
+        break;
+      }
+      case 'shadow': {
+        const other = this.mobs.find((m) => m !== target && !m.dead && Math.hypot(m.x - u.x, m.y - u.y) <= range) ?? (target.dead ? null : target);
+        if (other) {
+          this.addEffect({ type: 'slash', x: other.x, y: other.y, ttl: 0.25, seed: Math.random() * Math.PI });
+          this.hit(other, this.unitDamage(u, other) * (high ? SKILLS.shadow.cloneRatioHigh : SKILLS.shadow.cloneRatio) * perk, false);
+        }
+        break;
+      }
+      case 'stormking': {
+        const n = high ? SKILLS.stormking.strikesHigh : SKILLS.stormking.strikes;
+        const alive = this.mobs.filter((m) => !m.dead);
+        for (let i = 0; i < n && alive.length; i++) {
+          const m = alive[Math.floor(Math.random() * alive.length)];
+          this.addEffect({ type: 'beam', x1: m.x + (Math.random() - 0.5) * 30, y1: m.y - 140, x2: m.x, y2: m.y, ttl: 0.2, dur: 0.2, color: '#a8d8ff', w: 4 });
+          this.hit(m, this.unitDamage(u, m) * SKILLS.stormking.ratio * perk, false);
+        }
+        break;
+      }
       default:
         // ranger(치명타)·paladin(보스 피해)은 critChance/unitDamage 에서 처리
         if (u.job === 'paladin' || u.job === 'ranger') {
@@ -931,8 +1137,14 @@ export class Game {
   killMob(m: Mob): void {
     if (m.dead) return;
     const def = m.card !== undefined ? ATTACKS[m.card] : null;
-    // 망령: 한 번 되살아남
-    if (def?.revive && m.gold === undefined) {
+    const by = this.hitter;
+    const bySkill = !!by && by.gradeIndex >= SKILL_FROM_INDEX;
+    if (bySkill && by!.job === 'reaper') {
+      m.noRevive = true;
+      by!.souls = Math.min(SKILLS.reaper.maxSouls, (by!.souls ?? 0) + 1);
+    }
+    // 망령: 한 번 되살아남 (사신·정화로 막을 수 있음)
+    if (def?.revive && m.gold === undefined && !m.noRevive && !((m.purifyUntil ?? 0) > this.time)) {
       m.gold = ECONOMY.killGold;
       m.hp = m.maxHp * 0.5;
       m.pause = 0.6;
@@ -945,7 +1157,8 @@ export class Game {
       for (let i = 0; i < def.split; i++) this.spawnFrom(m, m.card!, m.maxHp * 0.25, 1, 0.6);
     }
     const goldMult = 1 + this.res('goldGain') * RESEARCH_PER.goldGain;
-    const base = m.boss ? ECONOMY.bossGold : m.gold ?? def?.gold ?? ECONOMY.killGold;
+    let base = m.boss ? ECONOMY.bossGold : m.gold ?? def?.gold ?? ECONOMY.killGold;
+    if (bySkill && by!.job === 'merchant') base += by!.gradeIndex >= FULL_RANGE_FROM_INDEX ? SKILLS.merchant.goldHigh : SKILLS.merchant.gold;
     const gained = Math.round(base * goldMult);
     this.gold += gained;
     this.kills += 1;
