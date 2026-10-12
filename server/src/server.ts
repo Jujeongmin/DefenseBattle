@@ -1,5 +1,5 @@
 /**
- * Mob Toss (몹 토스) - Verse8(Agent8) GameServer
+ * Defense Battle (디펜스 배틀) - Verse8(Agent8) GameServer
  *
  * 기능
  *  - 클라우드 저장: loadProfile / saveProfile  (계정별 메타 진행도)

@@ -351,7 +351,7 @@ setInterval(() => {
 // ---------------------------------------------------------------
 async function boot(): Promise<void> {
   $('main-menu').classList.remove('hidden');
-  $('main-menu').innerHTML = '<div style="margin:auto;text-align:center"><div class="game-title">몹 토스</div><div class="spinner"></div></div>';
+  $('main-menu').innerHTML = '<div style="margin:auto;text-align:center"><div class="game-title">디펜스 배틀</div><div class="spinner"></div></div>';
   try {
     await getPlatform().init();
     reloadMeta();

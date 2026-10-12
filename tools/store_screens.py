@@ -87,6 +87,6 @@ if __name__ == '__main__':
         d = ImageDraw.Draw(img)
         text(d, (cx, H // 2 - 70), title, 58, (255, 214, 90))
         text(d, (cx, H // 2 + 40), sub, 28, (255, 244, 220))
-        text(d, (cx, H - 60), '몹 토스 · MOB TOSS', 22, (220, 200, 160))
+        text(d, (cx, H - 60), '디펜스 배틀 · DEFENSE BATTLE', 22, (220, 200, 160))
         p = save(img.convert('RGB'), n)
         print(p.name, p.stat().st_size)

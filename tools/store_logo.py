@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 STORE = ROOT / 'launch/store'
 FONT = sys.argv[1]
 INK = (52, 28, 14, 255)
+NAME_EN, NAME_KR = 'DEFENSE BATTLE', '디펜스 배틀'
 
 
 def pixel_word(text: str, px: int, scale: int, top=(255, 236, 120), mid=(255, 196, 40), low=(232, 120, 24)) -> Image.Image:
@@ -50,6 +51,13 @@ def pixel_word(text: str, px: int, scale: int, top=(255, 236, 120), mid=(255, 19
     return img.resize((w * scale, h * scale), Image.NEAREST)
 
 
+def fit_word(text: str, max_w: int, scale: int) -> Image.Image:
+    """가장 큰 정수 배율로 (max_w 안에 들어가게)"""
+    while scale > 1 and pixel_word(text, 22, scale).width > max_w:
+        scale -= 1
+    return pixel_word(text, 22, scale)
+
+
 def nine(src: str, w: int, h: int, edge: int) -> Image.Image:
     """9-slice 프레임 늘리기"""
     im = Image.open(ROOT / f'game/public/ui/frame/{src}.png').convert('RGBA')
@@ -67,8 +75,8 @@ def nine(src: str, w: int, h: int, edge: int) -> Image.Image:
 def variant(base: Image.Image, kind: str) -> Image.Image:
     img = base.convert('RGBA').copy()
     W, H = img.size
-    word = pixel_word('MOB TOSS', 22, 6)
-    kr = pixel_word('몹 토스', 22, 3, top=(255, 255, 255), mid=(255, 248, 230), low=(225, 208, 182))
+    word = fit_word(NAME_EN, W - 90, 6)
+    kr = pixel_word(NAME_KR, 22, 3, top=(255, 255, 255), mid=(255, 248, 230), low=(225, 208, 182))
     bottom = H - kr.height - 30  # 한글 이름은 아래 (위쪽은 날아가는 고블린 자리)
     if kind == 'A':
         img.alpha_composite(word, ((W - word.width) // 2, 40))
@@ -108,9 +116,9 @@ if __name__ == '__main__':
         g = Image.open(STORE / 'graphic_raw.png').convert('RGB')
         h = round(g.width * 578 / 1024)
         g = g.crop((0, 20, g.width, 20 + h)).resize((1024, 578), Image.LANCZOS).convert('RGBA')
-        word = pixel_word('MOB TOSS', 22, 4)
+        word = fit_word(NAME_EN, 1024 - 120, 4)
         g.alpha_composite(word, ((1024 - word.width) // 2, 18))
-        kr = pixel_word('몹 토스', 22, 2, top=(255, 255, 255), mid=(255, 248, 230), low=(225, 208, 182))
+        kr = pixel_word(NAME_KR, 22, 2, top=(255, 255, 255), mid=(255, 248, 230), low=(225, 208, 182))
         by = 578 - kr.height - 22
         plate = Image.new('RGBA', (kr.width + 40, kr.height + 18), (0, 0, 0, 0))
         ImageDraw.Draw(plate).rectangle((0, 0, plate.width - 1, plate.height - 1), fill=(42, 26, 16, 235), outline=(255, 196, 40, 255), width=4)
