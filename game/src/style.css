@@ -426,7 +426,8 @@ b, strong { font-weight: 700; }
 .lobby-nav {
   display: flex;
   justify-content: space-around;
-  border-image: url('/ui/frame/wood.png') 96 fill / 22px 22px 0 22px;
+  /* 여백을 잘라낸 나무판: 화면 좌우 끝까지 나무로 채운다 (wood.png 는 둘레에 투명 여백 44px) */
+  border-image: url('/ui/frame/wood_tight.png') 53 52 71 52 fill / 14px 12px 0 12px;
   padding: 12px 6px calc(8px + env(safe-area-inset-bottom));
 }
 .lobby-nav button {
