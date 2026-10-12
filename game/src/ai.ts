@@ -3,7 +3,7 @@
 //  skill(0~1): 높을수록 판단이 빠르고 합성/강화/몹 보내기를 잘 활용
 // ============================================================
 import { GRADE_INDEX, ECONOMY, ATTACKS, JOBS, PLAY_SPEED } from './config';
-import { MAP, SEG_ZONE, type Game, type BoardSnapshot } from './engine';
+import { MAP, SEG_ZONE, pathAt, type Game, type BoardSnapshot } from './engine';
 import type { Job } from './types';
 
 /** 상대 스냅샷에서 구역(0=상 1=우 2=하 3=좌)별 전력 (등급이 높을수록 크게) */
@@ -54,11 +54,49 @@ export function throwInterval(skill: number): number {
   return 44 - skill * 30;
 }
 
+/** 구역 정리 - 사거리가 짧아 배치가 중요하다. 가끔(사람처럼) 길 전체를 가장 고르게 덮는 구역 교환 하나를 한다.
+ *  상대가 던진 몹이 떨어지는 자리(경고 고리)는 더 중요하게 본다. 교환했으면 true */
+const nextZoneCheck = new WeakMap<Game, number>();
+const SAMPLES = Array.from({ length: 48 }, (_, i) => pathAt(i / 48));
+function tidyZones(game: Game, skill: number): boolean {
+  if (game.time < (nextZoneCheck.get(game) ?? 0) || game.units.length < 6) return false;
+  nextZoneCheck.set(game, game.time + (16 - skill * 10) * PLAY_SPEED);
+  if (Math.random() > 0.25 + skill * 0.65) return false;
+  const drops = game.effects.filter((e) => e.type === 'drop') as { x: number; y: number }[];
+  const weight = SAMPLES.map((p) => (drops.some((d) => Math.hypot(d.x - p.x, d.y - p.y) < 160) ? 3 : 1));
+  // swap: 구역 번호 → 실제로 서게 될 구역 번호
+  const score = (place: number[]) => {
+    let s = 0;
+    SAMPLES.forEach((p, i) => {
+      let power = 0;
+      for (const u of game.units) {
+        const z = game.zones[place[u.zoneId]];
+        if (Math.hypot(z.cx - p.x, z.cy - p.y) <= game.unitRange(u)) power += Math.pow(3, u.gradeIndex);
+      }
+      s += weight[i] * Math.log(1 + power); // 빈 곳(0)이 크게 깎인다
+    });
+    return s;
+  };
+  const base = score([0, 1, 2, 3]);
+  let best: [number, number] | null = null, bestS = base * 1.06; // 6% 이상 나아질 때만
+  for (let a = 0; a < 4; a++) for (let b = a + 1; b < 4; b++) {
+    const place = [0, 1, 2, 3];
+    place[a] = b; place[b] = a;
+    const s = score(place);
+    if (s > bestS) { bestS = s; best = [a, b]; }
+  }
+  if (!best) return false;
+  game.swapZones(best[0], best[1]);
+  return true;
+}
+
 export function aiStep(game: Game, skill: number, opp: BoardSnapshot | null = null): void {
   if (game.over) return;
   // 실수: 낮은 실력일수록 행동을 자주 건너뜀
   if (Math.random() > 0.35 + skill * 0.6) return;
 
+  // 0) 구역 정리 (가끔)
+  if (tidyZones(game, skill)) return;
   // 1) 합성 (낮은 등급부터)
   if (Math.random() < 0.3 + skill * 0.6) {
     const m = game.mergeable().sort((a, b) => GRADE_INDEX[a.grade] - GRADE_INDEX[b.grade])[0];
