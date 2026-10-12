@@ -22,7 +22,8 @@ export type Econ = Pick<MetaData, EconKey> & { deck: MetaData['deck']; daily: Me
 
 export interface Ctx { now: number; rng: () => number }
 export interface CardDrop { job: Job; n: number; fresh: boolean }
-export interface Reveal { title: string; drops: CardDrop[]; gems: number }
+/** kind: 연출용 (어떤 상자 / 뽑기) */
+export interface Reveal { title: string; drops: CardDrop[]; gems: number; kind?: ChestKind | 'gacha' }
 
 const DAY = 24 * 60 * 60 * 1000;
 const HOUR = 60 * 60 * 1000;
@@ -110,7 +111,7 @@ function grantDrops(e: Econ, cards: Map<Job, number>, gems: number): CardDrop[] 
 }
 export function openChestNow(e: Econ, kind: ChestKind, ctx: Ctx): Reveal {
   const r = rollChest(e, kind, ctx.rng);
-  return { title: CHESTS[kind].kr, drops: grantDrops(e, r.cards, r.gems), gems: r.gems };
+  return { title: CHESTS[kind].kr, drops: grantDrops(e, r.cards, r.gems), gems: r.gems, kind };
 }
 /** 대전 승리 상자 → 빈 칸 (가득이면 null) */
 export function giveWinChest(e: Econ): ChestKind | null {
@@ -154,7 +155,7 @@ export function gacha(e: Econ, n: 1 | 10, ctx: Ctx): Reveal | null {
   if (n === 10 && !rolls.some((r) => r === 'epic' || r === 'legendary')) rolls[rolls.length - 1] = 'epic';
   const cards = new Map<Job, number>();
   for (const r of rolls) { const p = pool(r); const j = p[Math.floor(ctx.rng() * p.length)]; cards.set(j, (cards.get(j) ?? 0) + GACHA.count[r]); }
-  return { title: `유닛 뽑기 ${n}회`, drops: grantDrops(e, cards, 0), gems: 0 };
+  return { title: `유닛 뽑기 ${n}회`, drops: grantDrops(e, cards, 0), gems: 0, kind: 'gacha' };
 }
 
 // ---------------- 보상 ----------------
