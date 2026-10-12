@@ -231,6 +231,12 @@ export interface MetaData {
   pvp: { trophies: number; wins: number; losses: number; streak: number; lossStreak?: number };
   /** 해금한 유닛과 영구 레벨 (없으면 미해금) */
   units: Partial<Record<Job, number>>;
+  /** 레벨업용으로 모은 카드 (해금에 쓴 1장 제외) */
+  cards: Partial<Record<Job, number>>;
+  /** 상자 칸 (null = 빈 칸). openAt = 열리는 시각 (열기 시작 전엔 없음) */
+  chests: ({ kind: 'wood' | 'silver' | 'gold' | 'magic' | 'legend'; openAt?: number } | null)[];
+  /** 다음 승리 상자 순서 번호 (CHEST_CYCLE) */
+  chestCycle: number;
   /** 출전 덱 (최대 4 = 배치 구역 수) */
   deck: Job[];
   /** PvP 공격 덱 (몹 카드 4장) */

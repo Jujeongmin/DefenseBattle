@@ -11,8 +11,9 @@ import { preloadAll, warmTints } from './assets';
 import { audio } from './audio';
 import { getPlatform } from './platform';
 import { meta, saveMeta, reloadMeta, useItem } from './meta';
-import { crystalReward, starsFor, STAGE_BY_ID, STAGES, PVP, PLAY_SPEED, PVP_TIERS } from './config';
+import { crystalReward, starsFor, STAGE_BY_ID, STAGES, PVP, PLAY_SPEED, PVP_TIERS, CHESTS } from './config';
 import { afterMatch } from './offers';
+import { giveWinChest } from './chests';
 import { completeStage, stageOptions, endlessOptions, stageUnlocked, unitLevels, claimRoad } from './progress';
 import { syncPurchases, addSeasonXp } from './shop';
 import { showRewarded, rewardedAvailable, maybeInterstitial } from './ads';
@@ -131,6 +132,10 @@ function showPvpResult(g: Game, u: UI, s: PvpSession, r: { won: boolean; trophyD
   const rewards = [`${icon('trophy')} ${r.trophyDelta >= 0 ? '+' : ''}${r.trophyDelta}`, `${icon('gem')} +${crystals}`];
   for (const st of road) if (st.crystals) rewards.push(`${icon('gem')} +${st.crystals} 로드`);
   for (const st of road) if (st.attack) rewards.push(`${roadRewardIcon(st)} 새 몹 카드!`);
+  if (r.won) {
+    const chest = giveWinChest();
+    rewards.push(chest ? `${icon('chest')} ${CHESTS[chest].kr}` : `${icon('chest')} 상자 칸 가득`);
+  }
   const roadUnit = road.find((st) => st.unit)?.unit;
   u.showResult({
     win: r.won,

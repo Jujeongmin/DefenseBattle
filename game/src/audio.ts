@@ -21,6 +21,12 @@ const SFX_VOL = 0.8;  // 모든 효과음 공통 (겹칠 때 여유)
 type BgmTrack = 'menu' | 'battle' | 'boss' | 'pvp';
 const BGM_VOL = 0.45; // 효과음보다 약 7dB 아래
 
+/** 설정 저장 (사생활 모드·저장 차단·노드 시뮬레이터에서도 멈추지 않게) */
+const store = {
+  get(k: string): string | null { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k: string, v: string): void { try { localStorage.setItem(k, v); } catch { /* 저장 못 해도 계속 */ } },
+};
+
 class AudioManager {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
@@ -35,23 +41,23 @@ class AudioManager {
   private sfxOff: boolean;
 
   constructor() {
-    this.muted = localStorage.getItem(MUTE_KEY) === '1';
-    this.bgmOff = localStorage.getItem(BGM_KEY) === '0';
-    this.sfxOff = localStorage.getItem(SFX_KEY) === '0';
+    this.muted = store.get(MUTE_KEY) === '1';
+    this.bgmOff = store.get(BGM_KEY) === '0';
+    this.sfxOff = store.get(SFX_KEY) === '0';
   }
 
   isBgmOn(): boolean { return !this.bgmOff; }
   isSfxOn(): boolean { return !this.sfxOff; }
   setBgm(on: boolean): void {
     this.bgmOff = !on;
-    localStorage.setItem(BGM_KEY, on ? '1' : '0');
+    store.set(BGM_KEY, on ? '1' : '0');
     if (!this.bgm) return;
     if (on && !this.muted) void this.bgm.play().catch(() => {});
     else this.bgm.pause();
   }
   setSfx(on: boolean): void {
     this.sfxOff = !on;
-    localStorage.setItem(SFX_KEY, on ? '1' : '0');
+    store.set(SFX_KEY, on ? '1' : '0');
   }
 
   // 첫 사용자 입력에서 오디오 해제 (브라우저 자동재생 정책). 그 전에 요청된 BGM 도 이때 재생.
@@ -111,7 +117,7 @@ class AudioManager {
   isMuted(): boolean { return this.muted; }
   toggleMute(): boolean {
     this.muted = !this.muted;
-    localStorage.setItem(MUTE_KEY, this.muted ? '1' : '0');
+    store.set(MUTE_KEY, this.muted ? '1' : '0');
     if (this.master) this.master.gain.value = this.muted ? 0 : 1;
     if (this.bgm) {
       if (this.muted || this.bgmOff) this.bgm.pause();

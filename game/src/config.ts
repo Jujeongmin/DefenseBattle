@@ -85,6 +85,53 @@ export const UNIT_PERK_LEVELS = [5, 10];
 export function unitUpgradeCost(level: number): number {
   return 40 + (level - 1) * 40; // Lv1→2: 40, ... Lv9→10: 360
 }
+// ---------- 유닛 카드 (중복으로 레벨업) ----------
+// 카드 1장 = 해금, 그 뒤 카드는 레벨업 재료. 레벨업 = 카드 + 보석.
+/** Lv n → n+1 에 필요한 카드 (일반 기준, 인덱스 0 = Lv1→2) */
+export const CARD_NEED = [2, 4, 10, 20, 50, 100, 200, 400, 800];
+/** 등급별 나눗수 - 희귀할수록 적게 필요 */
+export const RARITY_DIV: Record<Rarity, number> = { common: 1, rare: 2, epic: 5, legendary: 10 };
+export function cardsNeeded(rarity: Rarity, level: number): number {
+  return Math.ceil(CARD_NEED[Math.max(0, Math.min(CARD_NEED.length - 1, level - 1))] / RARITY_DIV[rarity]);
+}
+
+// ---------- 상자 ----------
+export type ChestKind = 'wood' | 'silver' | 'gold' | 'magic' | 'legend';
+export interface ChestDef {
+  kind: ChestKind;
+  kr: string;
+  hours: number;              // 열리는 데 걸리는 시간
+  cards: number;              // 카드 장수 (아레나마다 + perArena)
+  perArena: number;
+  gems: [number, number];     // 보석 범위
+  rare: number;               // 희귀 카드 장수 (cards 중)
+  epic: number;               // 영웅 카드 기대 장수 (소수 = 확률)
+  legendary: number;          // 전설 카드 확률
+  color: string;
+}
+export const CHESTS: Record<ChestKind, ChestDef> = {
+  wood:   { kind: 'wood',   kr: '나무 상자', hours: 0.5, cards: 6,   perArena: 2,  gems: [8, 15],    rare: 1,  epic: 0.05, legendary: 0,    color: '#b8864b' },
+  silver: { kind: 'silver', kr: '은 상자',   hours: 3,   cards: 15,  perArena: 5,  gems: [25, 45],   rare: 3,  epic: 0.25, legendary: 0.01, color: '#c8d0d8' },
+  gold:   { kind: 'gold',   kr: '금 상자',   hours: 8,   cards: 40,  perArena: 10, gems: [70, 110],  rare: 8,  epic: 1,    legendary: 0.04, color: '#ffcf3f' },
+  magic:  { kind: 'magic',  kr: '마법 상자', hours: 12,  cards: 90,  perArena: 20, gems: [150, 220], rare: 20, epic: 4,    legendary: 0.2,  color: '#b06bff' },
+  legend: { kind: 'legend', kr: '전설 상자', hours: 24,  cards: 30,  perArena: 5,  gems: [200, 300], rare: 6,  epic: 2,    legendary: 1,    color: '#ffb93f' },
+};
+/** 대전 승리 시 받는 상자 순서 (반복) */
+export const CHEST_CYCLE: ChestKind[] = ['wood', 'wood', 'silver', 'wood', 'silver', 'gold', 'wood', 'silver', 'silver', 'wood', 'gold', 'magic'];
+export const CHEST_SLOTS = 4;
+/** 보석으로 바로 열기: 남은 3분마다 1 */
+export function chestOpenCost(msLeft: number): number {
+  return Math.max(1, Math.ceil(msLeft / (3 * 60 * 1000)));
+}
+
+// ---------- 뽑기 (보석) ----------
+export const GACHA = {
+  one: 100, ten: 900,
+  rates: { common: 0.7, rare: 0.22, epic: 0.07, legendary: 0.01 } as Record<Rarity, number>,
+  /** 한 번 뽑을 때 나오는 카드 장수 (등급별) */
+  count: { common: 6, rare: 3, epic: 1, legendary: 1 } as Record<Rarity, number>,
+};
+
 /** 퍽 개수에 따른 스킬 위력 배수 */
 export function perkMult(level: number): number {
   return 1 + UNIT_PERK_LEVELS.filter((l) => level >= l).length * 0.3;
@@ -403,9 +450,10 @@ export interface ProductGrant {
   monthlyDays?: number;     // 월정액 기간(일)
   seasonPremium?: boolean;  // 현재 시즌 패스 프리미엄
   units?: Partial<Record<Job, number>>; // 유닛 즉시 해금 + 이 레벨까지 (이미 더 높으면 그대로)
+  chest?: ChestKind;        // 상자 바로 열기
 }
 // offer = 팝업으로 뜨는 24시간 한정 상품 (뜬 동안만 상점에도 보임), unit = 유닛 패키지
-export type ProductCategory = 'crystal' | 'package' | 'booster' | 'pass' | 'offer' | 'unit';
+export type ProductCategory = 'crystal' | 'package' | 'booster' | 'pass' | 'offer' | 'unit' | 'chest';
 export interface ProductDef {
   id: string;
   kr: string;
@@ -483,6 +531,13 @@ export const PRODUCTS: ProductDef[] = [
     desc: '폭격수 즉시 해금 + Lv5', grant: { units: { bomber: 5 } } },
   { id: 'unit_assassin', kr: '암살자 패키지', icon: 'helmet', category: 'unit', vx: 700, oneTime: true,
     desc: '암살자 즉시 해금 + Lv5', grant: { units: { assassin: 5 } } },
+  // 상자 (사면 바로 열림)
+  { id: 'chest_gold', kr: '금 상자', icon: 'chest', category: 'chest', vx: 300,
+    desc: '바로 열림 · 카드 40장+ · 영웅 1장', grant: { chest: 'gold' } },
+  { id: 'chest_magic', kr: '마법 상자', icon: 'chest', category: 'chest', vx: 700,
+    desc: '바로 열림 · 카드 90장+ · 영웅 4장', grant: { chest: 'magic' } },
+  { id: 'chest_legend', kr: '전설 상자', icon: 'crown', category: 'chest', vx: 1000,
+    desc: '바로 열림 · 전설 카드 1장 보장', grant: { chest: 'legend' } },
   // 보석
   { id: 'crystal_100', kr: '보석 100', icon: 'gem', category: 'crystal', vx: 100, desc: '', grant: { crystals: 100 } },
   { id: 'crystal_550', kr: '보석 550', icon: 'gem', category: 'crystal', vx: 500, desc: '', grant: { crystals: 550 } },
@@ -581,7 +636,7 @@ export const STAGES: StageDef[] = CHAPTERS.flatMap((ch, ci) =>
 export const CAMPAIGN: StageDef[] = STAGES;
 
 // ---------- 트로피 로드 (v1 의 진행 축) - 트로피가 오르면 보석과 유닛 해금 ----------
-export interface RoadStep { at: number; crystals?: number; unit?: Job; attack?: AttackKey }
+export interface RoadStep { at: number; crystals?: number; unit?: Job; attack?: AttackKey; chest?: ChestKind }
 // 대전만 하는 사람(시뮬 실력 0.35, 승률 ~60%, 시간당 ~200 트로피) 기준 유닛 5종 약 4시간, 몹 카드 6종 약 6시간.
 // 캠페인을 같이 하면 스테이지 클리어로 유닛이 더 일찍 열린다 (둘 다 하는 보상). 급하면 상점의 유닛 패키지.
 // (tools/progsim.ts 로 검증)
@@ -594,26 +649,26 @@ export const TROPHY_ROAD: RoadStep[] = [
   { at: 150, crystals: 100 },
   { at: 180, attack: 'shield' },
   { at: 220, crystals: 120 },
-  { at: 260, crystals: 140 },
+  { at: 260, chest: 'silver' },
   { at: 300, unit: 'paladin' },
   { at: 350, crystals: 160 },
   { at: 400, attack: 'wraith' },
   { at: 450, crystals: 180 },
-  { at: 500, crystals: 200 },
+  { at: 500, chest: 'gold' },
   { at: 550, unit: 'bomber' },
   { at: 600, crystals: 220 },
   { at: 650, attack: 'priest' },
   { at: 720, crystals: 250 },
-  { at: 800, crystals: 300 },
+  { at: 800, chest: 'magic' },
   { at: 850, unit: 'assassin' },
   { at: 950, attack: 'king' },
   { at: 1000, crystals: 400 },
   { at: 1100, crystals: 450 },
   { at: 1200, attack: 'demon' },
-  { at: 1350, crystals: 500 },
+  { at: 1350, chest: 'legend' },
   { at: 1500, crystals: 600 },
   { at: 1700, crystals: 700 },
-  { at: 2000, crystals: 1000 },
+  { at: 2000, chest: 'legend' },
 ];
 
 export const STAGE_BY_ID: Record<string, StageDef> = Object.fromEntries(STAGES.map((s) => [s.id, s]));

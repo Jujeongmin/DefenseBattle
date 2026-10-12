@@ -3,12 +3,12 @@
 //  두 구현이 같은 인터페이스를 가져 UI/게임 흐름은 상대 종류를 신경 쓰지 않는다.
 // ============================================================
 import { Game, type BoardSnapshot } from './engine';
-import { PVP, JOBS, PLAY_SPEED, STARTER_UNITS, TROPHY_ROAD, DECK_SIZE, ATTACKS, STARTER_ATTACKS, ATTACK_DECK_SIZE, type AttackKey } from './config';
+import { PVP, JOBS, PLAY_SPEED, STARTER_UNITS, TROPHY_ROAD, DECK_SIZE, ATTACKS, STARTER_ATTACKS, ATTACK_DECK_SIZE, UNIT_BY_ID, type AttackKey } from './config';
 import { aiStep, thinkInterval } from './ai';
 import { meta } from './meta';
 import { unitLevels } from './progress';
 import { isOnlineEnv } from './platform';
-import type { AttackPayload, Job } from './types';
+import type { AttackPayload, Job, Rarity } from './types';
 
 export interface MatchInfo {
   roomId: string;
@@ -212,8 +212,10 @@ export function botAtkMult(skill: number): number {
 }
 
 /** 봇 덱: 그 트로피에서 열려 있을 유닛만 (기본 3종 + 트로피 로드로 열린 유닛) */
+/** 봇 덱: 그 트로피의 사람이 가졌을 법한 유닛 (기본·로드 해금 + 등급별 트로피 기준: 희귀 80, 영웅 300, 전설 800) */
 export function botDeck(trophies: number): Job[] {
-  const pool = JOBS.filter((j) => STARTER_UNITS.includes(j) || TROPHY_ROAD.some((s) => s.unit === j && s.at <= trophies));
+  const tierOk = (r: Rarity) => r === 'common' || (r === 'rare' && trophies >= 80) || (r === 'epic' && trophies >= 300) || (r === 'legendary' && trophies >= 800);
+  const pool = JOBS.filter((j) => STARTER_UNITS.includes(j) || TROPHY_ROAD.some((s) => s.unit === j && s.at <= trophies) || tierOk(UNIT_BY_ID[j].rarity));
   return [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(DECK_SIZE, pool.length));
 }
 

@@ -13,7 +13,8 @@ import { botSkill, botDeck, botAttackDeck, botAtkMult, botLevel } from '../game/
 import {
   PVP, PLAY_SPEED, UNITS, STAGES, RESEARCH, researchCost, unitUpgradeCost, UNIT_MAX_LEVEL, DECK_SIZE, starsFor,
 } from '../game/src/config';
-import { completeStage, claimRoad, nextStageId, stageStars, stageOptions, unitLevels } from '../game/src/progress';
+import { completeStage, claimRoad, nextStageId, stageStars, stageOptions, unitLevels, canUpgradeUnit, upgradeUnit } from '../game/src/progress';
+import { giveWinChest, chestState, startUnlock, openSlot, opening, gacha, pendingReveals } from '../game/src/chests';
 import type { BoardSnapshot } from '../game/src/engine';
 import type { Job } from '../game/src/types';
 
@@ -33,6 +34,13 @@ meta.pvp = { trophies: 0, wins: 0, losses: 0, streak: 0, lossStreak: 0 };
 for (const r of RESEARCH) meta.research[r.key] = 0;
 
 let clock = 0; // 실시간(초)
+// 상자 시간은 Date.now() 를 쓰므로 시뮬레이션 시계로 바꾼다
+const T0 = Date.now();
+Date.now = () => T0 + clock * 1000;
+meta.cards = {};
+meta.chests = [{ kind: 'wood' }, null, null, null];
+meta.chestCycle = 0;
+const GACHA_RESERVE = 400; // 이만큼 넘는 보석은 뽑기에 쓴다 (사람처럼)
 const log: string[] = [];
 const at = () => `${(clock / 3600).toFixed(1)}h`;
 const unlockedBefore = new Set(Object.keys(meta.units));
@@ -44,6 +52,12 @@ function chooseDeck(): Job[] {
   const owned = UNITS.map((u) => u.id).filter((j) => meta.units[j]);
   return owned.sort((a, b) => (meta.units[b] ?? 0) - (meta.units[a] ?? 0)).slice(0, DECK_SIZE);
 }
+/** 상자: 다 된 건 열고, 여는 중이 없으면 하나 열기 시작 */
+function tendChests(): void {
+  for (let i = 0; i < meta.chests.length; i++) if (chestState(i) === 'ready') openSlot(i, false);
+  if (opening() < 0) { const i = meta.chests.findIndex((c) => c && !c.openAt); if (i >= 0) startUnlock(i); }
+  pendingReveals.length = 0;
+}
 /** 보석 쓰기: 연구·덱 유닛 강화 중 가장 싼 것부터 */
 function spend(): void {
   for (;;) {
@@ -54,13 +68,14 @@ function spend(): void {
     }
     for (const j of meta.deck) {
       const lv = meta.units[j] ?? 0;
-      if (lv > 0 && lv < UNIT_MAX_LEVEL) opts.push({ cost: unitUpgradeCost(lv), buy: () => { meta.units[j] = lv + 1; } });
+      if (canUpgradeUnit(j)) opts.push({ cost: unitUpgradeCost(lv), buy: () => { meta.crystals += unitUpgradeCost(lv); upgradeUnit(j); } });
     }
     const pick = opts.filter((o) => o.cost <= meta.crystals).sort((a, b) => a.cost - b.cost)[0];
-    if (!pick) return;
+    if (!pick) break;
     meta.crystals -= pick.cost;
     pick.buy();
   }
+  while (meta.crystals >= GACHA_RESERVE + 100) { gacha(1); pendingReveals.length = 0; }
 }
 
 /** 캠페인 한 판 (사람 손 속도) */
@@ -104,7 +119,9 @@ function playPvp(): boolean {
   const p = meta.pvp;
   if (won) { p.trophies += PVP.trophyWin + Math.min(10, p.streak * 2); p.wins++; p.streak++; p.lossStreak = 0; meta.crystals += PVP.rewardWin; }
   else { p.trophies -= Math.min(PVP.trophyLoss, p.trophies); p.losses++; p.streak = 0; p.lossStreak = (p.lossStreak ?? 0) + 1; meta.crystals += PVP.rewardLoss; }
+  if (won) giveWinChest();
   claimRoad();
+  pendingReveals.length = 0;
   noteUnlocks(`트로피 ${p.trophies}`);
   return won;
 }
@@ -136,6 +153,7 @@ while (clock < hours * 3600) {
     while (marks.length && meta.pvp.trophies >= marks[0] && before < marks[0] + 1) log.push(`${at()}  트로피 ${marks.shift()} 도달`);
     pvpDebt = Math.max(0, pvpDebt - 1);
   }
+  tendChests();
   spend();
 }
 
@@ -146,3 +164,4 @@ console.log(`\n시간별 대전 승률: ${hourly.map((x, i) => `${i}h ${x ? Math
 console.log(`끝: 트로피 ${meta.pvp.trophies} · ${meta.pvp.wins}승 ${meta.pvp.losses}패 · 캠페인 ${STAGES.filter((s) => stageStars(s.id) > 0).length}/30 · 보석 ${meta.crystals}`);
 console.log(`유닛 레벨: ${Object.entries(meta.units).map(([j, l]) => `${j} ${l}`).join(', ')}`);
 console.log(`연구: ${res}`);
+console.log(`덱: ${meta.deck.join(', ')} · 해금 유닛 ${Object.keys(meta.units).length}/${UNITS.length}`);

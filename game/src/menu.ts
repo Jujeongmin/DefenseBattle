@@ -3,8 +3,8 @@
 // ============================================================
 import {
   RESEARCH, researchCost, DAILY_QUESTS, ACHIEVEMENTS, PRODUCTS, ITEM_KR,
-  UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, UNIT_PERK_LEVELS, unitUpgradeCost, SKILL_DESC, SKILL_KR,
-  DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, UNIT_PACK, type RoadStep, type AttackKey,
+  UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, unitUpgradeCost, SKILL_DESC, SKILL_KR,
+  DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, UNIT_PACK, CHESTS, RARITY_KR, RARITY_COLOR, GACHA, chestOpenCost, type RoadStep, type AttackKey,
   SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, FEATURE_KR, productEfficiency,
   CAMPAIGN, TROPHY_ROAD, PVP_TIERS,
 } from './config';
@@ -18,7 +18,7 @@ import {
   chapterStarReward, starRewardClaimed, claimStarReward, featureUnlocked, featureNew, markFeatureSeen,
   nextRoadStep, roadUnlockAt, claimRoad,
   unitUnlocked, unitLevel, buyUnit, canUpgradeUnit, upgradeUnit, toggleDeck,
-  placeDeck, removeDeck, attackUnlocked, attackUnlockAt, placeAttack,
+  placeDeck, removeDeck, attackUnlocked, attackUnlockAt, placeAttack, unitCards,
 } from './progress';
 import {
   purchase, productOwned, monthlyActive, monthlyDaysLeft, canClaimMonthly, claimMonthly,
@@ -29,6 +29,7 @@ import { onlineAvailable, findMatch, type PvpSession } from './pvp';
 import { $, toast, openOverlay, closeOverlay, bindActions, spriteIcon, confirmModal } from './dom';
 import { enableDeckDrag } from './dragdeck';
 import { showShortage, activeOffers, unitPackAvailable, timeLeft } from './offers';
+import { chestState, chestLeftMs, leftText, opening, startUnlock, openSlot, showReveal, flushReveals, pendingReveals, gacha } from './chests';
 import type { Job, Race, ResearchKey } from './types';
 
 export type Launch =
@@ -45,11 +46,13 @@ type LobbyFeature = 'units' | 'research' | 'quests' | 'pvp' | 'endless';
 export function roadRewardIcon(s: RoadStep): string {
   if (s.unit) return spriteIcon(unitIconUrl(s.unit), 'frame-sprite road-unit');
   if (s.attack) { const a = ATTACK_BY_KEY[s.attack]; return spriteIcon(mobSprite(a.race, a.variant).url, 'frame-sprite road-unit'); }
+  if (s.chest) return `<span class="chest-ic" style="--cc:${CHESTS[s.chest].color}">${icon('chest')}</span>`;
   return `${icon('gem')}${s.crystals}`;
 }
 export function roadRewardText(s: RoadStep): string {
   if (s.unit) return UNIT_BY_ID[s.unit].kr;
   if (s.attack) return `몹 카드 ${ATTACK_BY_KEY[s.attack].kr}`;
+  if (s.chest) return CHESTS[s.chest].kr;
   return `${icon('gem')}${s.crystals}`;
 }
 
@@ -124,6 +127,7 @@ export class Menu {
           <div class="arena-sub">${p.wins}승 ${p.losses}패${p.streak > 1 ? ` · ${p.streak}연승` : ''}
             <button class="btn small gold pass-btn" data-act="pass">${icon('trophy')} 시즌 패스${this.seasonClaimable() ? dot : ''}</button></div>
         </div>
+        <div class="chest-row">${this.chestSlotsHtml()}</div>
         <div class="mode-row">
           <button class="mode-card camp" data-act="stages">
             <div class="ic">${icon('map')}</div><div class="t">캠페인</div><div class="d">${allCleared ? `${icon('check')} 모두 클리어` : `스테이지 ${nextStage.id}`}</div>
@@ -157,11 +161,51 @@ export class Menu {
       quests: () => { markFeatureSeen('quests'); this.openQuests(); },
       endless: () => { markFeatureSeen('endless'); this.openEndless(); },
       shop: () => this.openShop(),
+      chest: (b) => this.tapChest(Number(b.dataset.i)),
       monthly: () => { const n = claimMonthly(); if (n) { audio.coin(); toast(`월정액 보석 +${n} ${icon('gem')}`); this.render(); } },
     });
     root.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => audio.button(), { capture: true }));
     for (const f of fresh) this.announced.add(f);
     if (fresh.length) toast(`새로 열림: <b>${fresh.map((f) => FEATURE_KR[f]).join(', ')}</b>`, 2800);
+    // 트로피 로드·결제로 받은 상자 공개 (쌓여 있으면 차례로)
+    if (pendingReveals.length && $('modal').classList.contains('hidden')) flushReveals(() => this.render());
+    // 여는 중인 상자 남은 시간
+    if (!this.chestTimer) this.chestTimer = setInterval(() => {
+      if ($('main-menu').classList.contains('hidden')) return;
+      document.querySelectorAll<HTMLElement>('[data-chest-left]').forEach((el) => {
+        const i = Number(el.dataset.chestLeft);
+        if (chestState(i) === 'ready') { this.render(); return; }
+        el.textContent = leftText(chestLeftMs(i));
+      });
+    }, 1000);
+  }
+
+  private chestTimer: ReturnType<typeof setInterval> | null = null;
+  /** 로비 상자 칸 4개 */
+  private chestSlotsHtml(): string {
+    return meta.chests.map((c, i) => {
+      const st = chestState(i);
+      if (!c) return `<div class="chest-slot empty">빈 칸</div>`;
+      const d = CHESTS[c.kind];
+      const ic = `<span class="chest-ic" style="--cc:${d.color}">${icon('chest')}</span>`;
+      const label = st === 'ready' ? '<b class="open">열기!</b>'
+        : st === 'opening' ? `<span data-chest-left="${i}">${leftText(chestLeftMs(i))}</span><small>${icon('gem')}${chestOpenCost(chestLeftMs(i))}</small>`
+        : `<span>${leftText(chestLeftMs(i))}</span><small>${opening() < 0 ? '탭해서 열기' : '대기'}</small>`;
+      return `<button class="chest-slot ${st}" data-act="chest" data-i="${i}">${ic}<span class="cn">${d.kr}</span>${label}</button>`;
+    }).join('');
+  }
+  /** 상자 칸 누르기: 다 됐으면 열기, 잠겨 있으면 열기 시작(다른 게 여는 중이면 보석으로 바로), 여는 중이면 보석으로 바로 */
+  private async tapChest(i: number): Promise<void> {
+    const st = chestState(i);
+    if (st === 'empty') return;
+    if (st === 'ready') { const r = openSlot(i, false); if (r) showReveal(r, () => this.render()); return; }
+    if (st === 'locked' && opening() < 0) { startUnlock(i); audio.button(); this.render(); return; }
+    const cost = chestOpenCost(chestLeftMs(i));
+    if (meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, () => this.render()); return; }
+    if (await confirmModal('바로 열기', `${CHESTS[meta.chests[i]!.kind].kr}를 ${icon('gem')}${cost}로 바로 열까요?`)) {
+      const r = openSlot(i, true);
+      if (r) showReveal(r, () => this.render());
+    }
   }
 
   // 트로피 로드: 아레나 구간과 보상 (도달하면 대전 결과에서 자동 수령)
@@ -355,6 +399,8 @@ export class Menu {
         },
         up: (b) => {
           const j = b.dataset.job as Job;
+          const cc = unitCards(j);
+          if (cc.have < cc.need) { toast(`카드 ${cc.need - cc.have}장이 더 필요해요 · 상자와 뽑기에서 얻어요`); return; }
           const cost = unitUpgradeCost(unitLevel(j));
           if (meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, draw); return; }
           if (upgradeUnit(j)) { audio.merge(); draw(); }
@@ -392,8 +438,13 @@ export class Menu {
       const lv = unitLevel(u.id);
       const unlocked = lv > 0;
       const inDeck = meta.deck.includes(u.id);
-      const pips = Array.from({ length: UNIT_MAX_LEVEL }, (_, i) =>
-        `<i class="${i < lv ? 'on' : ''} ${UNIT_PERK_LEVELS.includes(i + 1) ? 'perk' : ''}"></i>`).join('');
+      // 카드 막대: 다음 레벨까지 모은 카드 (다 모이면 초록 + '레벨업')
+      const cc = unitCards(u.id);
+      const maxLv = lv >= UNIT_MAX_LEVEL;
+      const ready = unlocked && !maxLv && cc.have >= cc.need;
+      const bar = unlocked
+        ? `<div class="card-bar ${ready ? 'ready' : ''}"><div style="width:${maxLv ? 100 : Math.min(100, (cc.have / cc.need) * 100)}%"></div><span>${maxLv ? 'MAX' : `${icon('ticket')}${cc.have}/${cc.need}`}</span></div>`
+        : `<div class="card-bar locked"><span>${u.unlockCrystals || roadUnlockAt(u.id) || u.unlockStage ? '' : '상자·뽑기에서'}</span></div>`;
       let acts: string;
       if (!unlocked) {
         acts = u.unlockCrystals
@@ -402,12 +453,13 @@ export class Menu {
       } else {
         const maxed = lv >= UNIT_MAX_LEVEL;
         acts = `<button class="btn small ${inDeck ? 'red' : 'blue'}" data-act="toggle" data-job="${u.id}">${inDeck ? '빼기' : '넣기'}</button>
-          <button class="btn small green ${!maxed && meta.crystals < unitUpgradeCost(lv) ? 'short' : ''}" data-act="up" data-job="${u.id}" ${maxed ? 'disabled' : ''}>${maxed ? 'MAX' : `${icon('gem')}${unitUpgradeCost(lv)}`}</button>`;
+          <button class="btn small ${ready ? 'green' : 'gray-btn'} ${ready && meta.crystals < unitUpgradeCost(lv) ? 'short' : ''}" data-act="up" data-job="${u.id}" ${maxed ? 'disabled' : ''}>${maxed ? 'MAX' : `${icon('gem')}${unitUpgradeCost(lv)}`}</button>`;
       }
-      return `<div class="unit-card ${inDeck ? 'in-deck' : ''} ${unlocked ? '' : 'locked'}" ${unlocked ? `data-drag="${u.id}"` : ''}>
+      return `<div class="unit-card ${inDeck ? 'in-deck' : ''} ${unlocked ? '' : 'locked'} ${ready ? 'can-level' : ''}" ${unlocked ? `data-drag="${u.id}"` : ''} style="--rc:${RARITY_COLOR[u.rarity]}">
+        <span class="rarity-tag">${RARITY_KR[u.rarity]}</span>
         <div class="head">${spriteIcon(unitIconUrl(u.id))}
-          <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : `${icon('lock')} ${[roadUnlockAt(u.id) ? `${icon('trophy')}${roadUnlockAt(u.id)}` : '', u.unlockStage ?? ''].filter(Boolean).join(' / ')}`}</div></div></div>
-        <div class="lv-pips">${pips}</div>
+          <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : `${icon('lock')} ${[roadUnlockAt(u.id) ? `${icon('trophy')}${roadUnlockAt(u.id)}` : '', u.unlockStage ?? ''].filter(Boolean).join(' / ') || icon('chest')}`}</div></div></div>
+        ${bar}
         <div class="sk" data-act="info" data-job="${u.id}"><b>${SKILL_KR[u.id]}</b> <span class="info-dot">?</span></div>
         <div class="acts">${acts}</div></div>`;
     }).join('');
@@ -549,6 +601,14 @@ export class Menu {
         <div class="balance"><span class="crystal">${icon('gem')} ${meta.crystals.toLocaleString()}</span>${vx !== null ? `<span class="vx-badge">VX ${vx.toLocaleString()}</span>` : ''}</div>
         <div class="fine" style="margin:-4px 0 6px">보유: ${items}</div>
         ${activeOffers().length ? `<div class="section-title hot-title">${icon('timer')} 한정 특가</div>${activeOffers().map((o) => card(o.id, true)).join('')}` : ''}
+        <div class="section-title">유닛 뽑기 <span class="fine">카드로 해금·레벨업</span></div>
+        <div class="gacha-row">
+          <button class="btn blue gacha-btn" data-act="gacha" data-n="1">1회<small>${icon('gem')}${GACHA.one}</small></button>
+          <button class="btn gold gacha-btn" data-act="gacha" data-n="10">10회<small>${icon('gem')}${GACHA.ten} · 영웅+ 보장</small></button>
+        </div>
+        <div class="fine" style="margin:-4px 0 8px">${(['common', 'rare', 'epic', 'legendary'] as const).map((r) => `<span style="color:${RARITY_COLOR[r]}">${RARITY_KR[r]} ${Math.round(GACHA.rates[r] * 100)}%</span>`).join(' · ')}</div>
+        <div class="section-title">상자 <span class="fine">사면 바로 열림</span></div>
+        ${card('chest_gold')}${card('chest_magic')}${card('chest_legend', true)}
         <div class="section-title">추천 패키지</div>
         ${!productOwned('starter_pack') ? card('starter_pack', true) : ''}
         ${card('monthly_pass', true)}
@@ -571,6 +631,14 @@ export class Menu {
             toast('결제가 완료되지 않았어요');
           }
           draw();
+          if (pendingReveals.length) flushReveals(draw); // 상자를 샀으면 바로 공개
+        },
+        gacha: (b) => {
+          const n = Number(b.dataset.n) as 1 | 10;
+          const cost = n === 1 ? GACHA.one : GACHA.ten;
+          if (meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, draw); return; }
+          const r = gacha(n);
+          if (r) { draw(); showReveal(r, draw); }
         },
       });
     };

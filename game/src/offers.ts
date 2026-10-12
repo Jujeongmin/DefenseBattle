@@ -11,6 +11,7 @@ import {
 } from './config';
 import { meta, saveMeta } from './meta';
 import { purchase, productOwned } from './shop';
+import { pendingReveals, flushReveals } from './chests';
 import { getPlatform } from './platform';
 import { unitIconUrl } from './assets';
 import { audio } from './audio';
@@ -87,6 +88,7 @@ function popup(id: string, title: string, why: string, onDone?: () => void): voi
         audio.fanfareUnlock();
         toast(`구매 완료: ${p.kr}`);
         closeOverlay('modal');
+        if (pendingReveals.length) setTimeout(() => flushReveals(), 250); // 상자 상품이면 공개
       } else {
         toast('결제가 완료되지 않았어요');
         (b as HTMLButtonElement).disabled = false;

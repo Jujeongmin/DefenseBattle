@@ -5,9 +5,10 @@
 import {
   STAGES, STAGE_BY_ID, CAMPAIGN, UNITS, UNIT_BY_ID, DECK_SIZE, UNIT_MAX_LEVEL, unitUpgradeCost,
   FEATURE_UNLOCK, CHAPTERS, STAGES_PER_CHAPTER, TROPHY_ROAD, type RoadStep,
-  STARTER_ATTACKS, ATTACK_DECK_SIZE, type AttackKey,
+  STARTER_ATTACKS, ATTACK_DECK_SIZE, cardsNeeded, type AttackKey,
 } from './config';
 import { meta, saveMeta } from './meta';
+import { openChestNow, pendingReveals } from './chests';
 import type { Job, GameOptions } from './types';
 
 // ---------- 스테이지 ----------
@@ -130,17 +131,35 @@ export function buyUnit(job: Job): boolean {
   return true;
 }
 
-export function canUpgradeUnit(job: Job): boolean {
+/** 레벨업에 필요한 카드 / 지금 가진 카드 */
+export function unitCards(job: Job): { have: number; need: number } {
+  return { have: meta.cards[job] ?? 0, need: cardsNeeded(UNIT_BY_ID[job].rarity, unitLevel(job)) };
+}
+/** 카드가 다 모였나 (보석은 따로) */
+export function cardsReady(job: Job): boolean {
   const lv = unitLevel(job);
-  return lv > 0 && lv < UNIT_MAX_LEVEL && meta.crystals >= unitUpgradeCost(lv);
+  const c = unitCards(job);
+  return lv > 0 && lv < UNIT_MAX_LEVEL && c.have >= c.need;
+}
+export function canUpgradeUnit(job: Job): boolean {
+  return cardsReady(job) && meta.crystals >= unitUpgradeCost(unitLevel(job));
 }
 export function upgradeUnit(job: Job): boolean {
   if (!canUpgradeUnit(job)) return false;
   const lv = unitLevel(job);
   meta.crystals -= unitUpgradeCost(lv);
+  meta.cards[job] = (meta.cards[job] ?? 0) - unitCards(job).need;
   meta.units[job] = lv + 1;
   saveMeta();
   return true;
+}
+/** 카드 받기: 없는 유닛이면 1장으로 해금하고 나머지는 레벨업 재료. 새로 해금됐으면 true */
+export function addCards(job: Job, n: number): boolean {
+  if (n <= 0) return false;
+  let fresh = false;
+  if (!meta.units[job]) { unlockUnit(job, false); n -= 1; fresh = true; }
+  meta.cards[job] = (meta.cards[job] ?? 0) + n;
+  return fresh;
 }
 
 /** 덱 토글: 덱에 있으면 빼고(최소 1), 없으면 넣는다(최대 4) */
@@ -229,6 +248,7 @@ export function claimRoad(): RoadStep[] {
     meta.roadClaimed.push(step.at);
     if (step.crystals) meta.crystals += step.crystals;
     if (step.unit) unlockUnit(step.unit, false);
+    if (step.chest) pendingReveals.push(openChestNow(step.chest));
     got.push(step);
   }
   if (got.length) saveMeta();

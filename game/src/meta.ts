@@ -37,6 +37,9 @@ function freshMeta(): MetaData {
     oneTime: {},
     pvp: { trophies: 0, wins: 0, losses: 0, streak: 0 },
     units: { archer: 1, wizard: 1, warrior: 1 },
+    cards: {},
+    chests: [{ kind: 'wood' }, null, null, null],
+    chestCycle: 0,
     deck: ['archer', 'wizard', 'warrior'],
     attackDeck: [...STARTER_ATTACKS],
     stages: {},
@@ -74,6 +77,9 @@ function load(): MetaData {
   // 예전 저장본: 지금 아레나에서 시작 (이미 오른 아레나로 승급 팝업이 뜨지 않게)
   m.arenaMax = m.arenaMax ?? PVP_TIERS.filter((t) => (m.pvp?.trophies ?? 0) >= t.min).length - 1;
   m.stageFailStreak = m.stageFailStreak ?? 0;
+  m.cards = m.cards || {};
+  m.chests = Array.isArray(m.chests) ? m.chests : [{ kind: 'wood' }, null, null, null];
+  m.chestCycle = m.chestCycle ?? 0;
   // 이 필드가 생기기 전 저장본: 이미 열린 메뉴에 NEW 가 갑자기 뜨지 않게 해금된 것은 본 것으로 둔다
   if (!Array.isArray(m.seenFeatures)) {
     m.seenFeatures = Object.entries(FEATURE_UNLOCK).filter(([, st]) => (m.stages[st] || 0) > 0).map(([f]) => f);

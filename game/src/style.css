@@ -285,6 +285,54 @@ b, strong { font-weight: 700; }
 .play-btn .pi { width: 20px; height: 20px; vertical-align: -3px; }
 .play-btn small { display: block; font-size: 13px; margin-top: 2px; }
 .mode-row { display: flex; gap: 10px; width: 100%; }
+/* ---------- 상자 칸 (chests.ts) ---------- */
+.chest-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
+.chest-slot {
+  position: relative; min-width: 0; height: 90px; border: 0; cursor: pointer;
+  border-image: url('/ui/frame/paper_dark.png') 44 fill / 12px;
+  padding: 10px 4px 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  color: var(--cream); text-shadow: var(--outline-thin); font-size: 11px; font-weight: 700; background: none;
+}
+.chest-slot.empty { opacity: 0.45; cursor: default; font-size: 11px; }
+.chest-slot .cn { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.chest-slot small { font-size: 9px; color: var(--cream-2); display: flex; align-items: center; gap: 1px; }
+.chest-slot small .pi { width: 10px; height: 10px; }
+.chest-slot.opening { box-shadow: 0 0 0 2px var(--gold) inset; }
+.chest-slot.ready { animation: chestReady 0.9s ease-in-out infinite; }
+.chest-slot.ready .open { color: var(--gold); font-size: 13px; }
+@keyframes chestReady { 50% { transform: translateY(-3px) rotate(-2deg); } }
+.chest-ic { display: inline-flex; padding: 2px 5px; background: var(--cc); border: 2px solid var(--edge); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
+.chest-ic .pi { width: 20px; height: 20px; }
+/* ---------- 유닛 카드: 등급·카드 막대 ---------- */
+.unit-card { position: relative; }
+.unit-card .rarity-tag { position: absolute; top: 4px; right: 4px; font-size: 9px; font-weight: 700; color: #fff; background: var(--rc); padding: 1px 4px; text-shadow: none; }
+.unit-card .nm { color: var(--ink); }
+.unit-card.can-level { box-shadow: 0 0 0 3px var(--green) inset; }
+.card-bar { position: relative; height: 16px; background: rgba(42, 29, 22, 0.25); border: 2px solid var(--edge); overflow: hidden; }
+.card-bar > div { position: absolute; inset: 0 auto 0 0; background: #4f9dff; }
+.card-bar.ready > div { background: var(--green); }
+.card-bar span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 10px; font-weight: 700; color: #fff; text-shadow: var(--outline-thin); }
+.card-bar span .pi { width: 10px; height: 10px; }
+.card-bar.locked { background: rgba(42, 29, 22, 0.12); }
+.card-bar.locked span { color: var(--ink-2); text-shadow: none; }
+.btn.gray-btn { border-image-source: url('/ui/frame/btn_gray.png'); }
+/* ---------- 카드 공개 창 ---------- */
+.reveal-dialog { text-align: center; }
+.rv-gems { font-size: 16px; font-weight: 700; color: var(--gem-ink); margin: -6px 0 8px; display: flex; justify-content: center; align-items: center; gap: 4px; }
+.rv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.rv-card { position: relative; padding: 6px 4px; background: rgba(255, 255, 255, 0.3); border: 3px solid var(--rc); display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+.rv-card.r-legendary { box-shadow: 0 0 12px var(--rc); }
+.rv-card .frame-sprite { width: 48px; height: 48px; }
+.rv-n { position: absolute; top: 4px; right: 5px; font-size: 13px; font-weight: 700; color: var(--rc); text-shadow: var(--outline-thin); }
+.rv-new { position: absolute; top: -8px; left: -6px; background: var(--red); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 4px; transform: rotate(-8deg); }
+.rv-name { font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.rv-bar { position: relative; width: 100%; height: 12px; background: rgba(42, 29, 22, 0.25); border: 2px solid var(--edge); overflow: hidden; }
+.rv-bar > div { position: absolute; inset: 0 auto 0 0; background: #4f9dff; }
+.rv-bar.ready > div { background: var(--green); }
+.rv-bar span { position: absolute; inset: 0; font-size: 8px; line-height: 8px; font-weight: 700; color: #fff; text-shadow: var(--outline-thin); }
+.gacha-row { display: flex; gap: 8px; margin-bottom: 6px; }
+.gacha-btn { flex: 1; display: flex; flex-direction: column; align-items: center; font-size: 16px; }
+.gacha-btn small { font-size: 11px; display: flex; align-items: center; gap: 2px; }
 .arena-sub { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .arena-sub .pass-btn { position: relative; font-size: 12px; }
 .arena-sub .pass-btn .dot { top: -4px; right: -4px; }

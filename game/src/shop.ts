@@ -8,6 +8,7 @@ import {
 } from './config';
 import { meta, saveMeta, todayStr, addItem, currentSeasonId } from './meta';
 import { unlockUnit } from './progress';
+import { openChestNow, pendingReveals } from './chests';
 import { getPlatform } from './platform';
 import type { ItemKey, PurchaseRecord } from './types';
 import { icon, type IconName } from './icons';
@@ -26,6 +27,7 @@ function applyGrant(g: ProductGrant, qty: number): void {
     meta.season.premium = true;
     meta.season.id = currentSeasonId();
   }
+  if (g.chest) for (let i = 0; i < qty; i++) pendingReveals.push(openChestNow(g.chest));
   if (g.units) for (const [j, lv] of Object.entries(g.units)) {
     const job = j as keyof typeof meta.units;
     if (!meta.units[job]) unlockUnit(job, false);
