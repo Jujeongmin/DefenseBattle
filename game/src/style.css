@@ -743,7 +743,6 @@ b, strong { font-weight: 700; }
 .mob-card .ctr span { margin-right: 2px; white-space: nowrap; }
 .frame-sprite.mini { width: 26px; height: 26px; }
 .tip-unit { display: inline-flex; cursor: help; border-radius: 3px; }
-.tip-unit:hover { background: rgba(255, 255, 255, 0.45); }
 .unit-tip { position: fixed; z-index: 200; left: 0; top: 0; pointer-events: none; padding: 5px 8px; min-width: 96px; max-width: 180px;
   background: #2a1d16; color: #fff3dc; border: 2px solid #ffcf3f; font-size: 11px; line-height: 1.35; text-align: center;
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); opacity: 0; transform: translateY(4px) scale(0.92); transition: opacity 0.12s, transform 0.12s; }
