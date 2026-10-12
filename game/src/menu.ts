@@ -110,7 +110,6 @@ export class Menu {
     const pct = next ? Math.max(0, Math.min(100, ((p.trophies - prevAt) / (next.at - prevAt)) * 100)) : 100;
     const nextIc = next ? roadRewardIcon(next) : icon('crown');
     const parade = meta.deck.map((j) => spriteIcon(unitIconUrl(j))).join('');
-    const vx = getPlatform().getVX();
     const nextStage = STAGE_BY_ID[nextStageId()];
     const allCleared = CAMPAIGN.every((s) => stageStars(s.id) > 0);
     const endlessOn = featureUnlocked('endless');
@@ -124,7 +123,6 @@ export class Menu {
           <div><div class="nm" style="color:var(--text)">${esc(meta.nick)}</div><div class="tr">${tier.kr} · ${p.trophies}</div></div>
         </div>
         <div class="res-chip" data-act="shop"><span class="crystal">${icon('gem')} ${meta.crystals.toLocaleString()}</span><span class="plus">${icon('plus')}</span></div>
-        ${vx !== null ? `<div class="res-chip" data-act="shop"><span class="trophy">VX ${vx.toLocaleString()}</span></div>` : ''}
         <button class="gear-btn" data-act="settings" aria-label="설정">${icon('settings')}</button>
       </div>
       <div class="lobby-body v1">
