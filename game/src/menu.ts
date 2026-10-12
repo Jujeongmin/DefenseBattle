@@ -249,10 +249,14 @@ export class Menu {
         <h2>설정</h2>
         ${row('music', '배경음악', 'bgm', audio.getBgmVolume())}
         ${row('sound', '효과음', 'sfx', audio.getSfxVolume())}
+        <div class="row"><div class="ic">${icon('play')}</div><div class="info"><div class="t">튜토리얼</div></div>
+          <button class="btn small blue" data-act="replayTutorial">다시 하기</button></div>
         <div class="row"><div class="ic">${icon('trophy')}</div><div class="info"><div class="t">${esc(meta.nick)}</div></div>
           <button class="btn small blue" data-act="profile">프로필</button></div></div>`, () => this.render());
       bindActions(el, {
         profile: () => { closeOverlay('panel'); this.openProfile(); },
+        // 튜토리얼만 처음부터 (스테이지·보상 진행은 그대로) - 1-1 을 시작하면 안내가 다시 나온다
+        replayTutorial: () => { meta.tutorial = 0; saveMeta(); closeOverlay('panel'); this.openStageInfo('1-1'); },
       });
       for (const input of el.querySelectorAll<HTMLInputElement>('input.vol')) {
         const key = input.dataset.vol as 'bgm' | 'sfx';

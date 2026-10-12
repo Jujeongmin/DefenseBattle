@@ -1178,7 +1178,7 @@ b, strong { font-weight: 700; }
 .attack-card.c3 { border-image-source: url('/ui/frame/btn_purple.png'); }
 .attack-card > .frame-sprite { width: 36px; height: 36px; margin: -2px 0 -3px; }
 .attack-card b { font-size: 11px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.attack-card span { font-size: 11px; display: flex; align-items: center; gap: 1px; }
+.attack-card span { font-size: 11px; display: flex; align-items: center; gap: 2px; line-height: 1; }
 .attack-card span .pi { width: 12px; height: 12px; }
 .attack-card:disabled { filter: grayscale(0.85); opacity: 0.6; }
 .attack-card .cd {
@@ -1211,8 +1211,8 @@ b, strong { font-weight: 700; }
   width: 64px;
   flex: 0 0 64px;
   height: 62px;
-  padding: 2px 0 6px;
-  font-size: 13px; font-weight: 700;
+  padding: 2px 0 8px;
+  font-size: 13px; font-weight: 700; line-height: 1.1;
   color: var(--cream); text-shadow: var(--outline-thin);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
 }
@@ -1237,7 +1237,7 @@ b, strong { font-weight: 700; }
   color: var(--cream);
   text-shadow: var(--outline-thin);
   height: 68px;
-  padding-bottom: 5px;
+  padding-bottom: 11px; /* 버튼 그림의 아래 입체 테두리(약 10px) 위에서 가운데 */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1245,8 +1245,9 @@ b, strong { font-weight: 700; }
 }
 .summon-btn:active:not(:disabled) { border-image-source: url('/ui/frame/btn_red_down.png'); padding: 5px 0 0; }
 .summon-btn:disabled { filter: grayscale(0.8); opacity: 0.65; }
-.summon-title { font-size: 20px; font-weight: 700; }
-.summon-cost { font-size: 13px; font-weight: 700; display: flex; gap: 3px; align-items: center; }
+.summon-title { font-size: 20px; font-weight: 700; line-height: 1.05; }
+.summon-cost { font-size: 13px; font-weight: 700; display: flex; gap: 3px; align-items: center; line-height: 1; margin-top: 2px; } /* 버튼 아래 테두리에 걸치지 않게 */
+.summon-cost .pi { width: 14px; height: 14px; }
 
 #unit-stacks {
   display: flex;
@@ -1377,8 +1378,10 @@ b, strong { font-weight: 700; }
 @media (max-height: 700px) {
   .stack .skill { display: none; }
   .stack .frame-sprite { width: 32px; height: 32px; }
-  .summon-btn { height: 58px; }
-  .side-btn { height: 56px; }
+  .summon-btn { height: 58px; padding-bottom: 9px; }
+  .summon-title { font-size: 18px; }
+  .side-btn { height: 56px; padding: 0 0 7px; gap: 1px; line-height: 1; }
+  .side-btn .pi { width: 20px; height: 20px; }
 }
 
 /* ---------- 설정: 음량 슬라이더 (픽셀 느낌 - 각진 막대 + 금색 손잡이) ---------- */
