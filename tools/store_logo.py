@@ -114,18 +114,12 @@ if __name__ == '__main__':
         p = STORE / 'thumbnail.jpg'
         out.save(p, quality=92, optimize=True)
         print(p, p.stat().st_size)
-        # 그래픽(1024x578)도 같은 픽셀 글자로: 위 가운데 영문, 아래 가운데 한글 판
+        # 그래픽(1024x578)도 같은 픽셀 글자로: 위 가운데 영문만 (썸네일과 같게 한글 판은 없음)
         g = Image.open(STORE / 'graphic_raw.png').convert('RGB')
         h = round(g.width * 578 / 1024)
         g = g.crop((0, 20, g.width, 20 + h)).resize((1024, 578), Image.LANCZOS).convert('RGBA')
         word = fit_word(NAME_EN, 1024 - 120, 4)
         g.alpha_composite(word, ((1024 - word.width) // 2, 18))
-        kr = pixel_word(NAME_KR, 22, 2, top=(255, 255, 255), mid=(255, 248, 230), low=(225, 208, 182))
-        by = 578 - kr.height - 22
-        plate = Image.new('RGBA', (kr.width + 40, kr.height + 18), (0, 0, 0, 0))
-        ImageDraw.Draw(plate).rectangle((0, 0, plate.width - 1, plate.height - 1), fill=(42, 26, 16, 235), outline=(255, 196, 40, 255), width=4)
-        g.alpha_composite(plate, ((1024 - plate.width) // 2, by - 9))
-        g.alpha_composite(kr, ((1024 - kr.width) // 2, by))
         gp = STORE / 'graphic_1024x578.png'
         g.convert('RGB').save(gp, optimize=True)
         print(gp, gp.stat().st_size)
