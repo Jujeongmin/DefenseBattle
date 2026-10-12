@@ -81,14 +81,22 @@ class AudioManager {
     this.setSfxVolume(on ? (this.sfxVol || 1) : 0);
   }
 
-  // 첫 사용자 입력에서 오디오 해제 (브라우저 자동재생 정책). 그 전에 요청된 BGM 도 이때 재생.
+  // 사용자 입력에서 오디오 해제 (브라우저 자동재생 정책). 그 전에 요청된 BGM 도 이때 재생.
+  // 휴대폰 터치는 손을 뗄 때(pointerup/touchend)만 허용되므로 여러 이벤트에서 시도하고,
+  // 한 번으로 끝내지 않는다 - 앱을 내렸다 올리면(iOS) 오디오가 다시 멈추기 때문
   installUnlock(): void {
     const unlock = () => {
       this.ensure();
       if (this.bgm && this.bgm.paused && !this.muted && !this.bgmOff) void this.bgm.play().catch(() => {});
     };
-    window.addEventListener('pointerdown', unlock, { once: true });
-    window.addEventListener('keydown', unlock, { once: true });
+    for (const ev of ['pointerdown', 'pointerup', 'touchend', 'keydown']) window.addEventListener(ev, unlock, { capture: true, passive: true });
+    // 다른 앱·탭으로 가면 소리를 멈추고, 돌아오면 다시 (휴대폰에서 배경음악이 계속 나오지 않게)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        this.bgm?.pause();
+        if (this.ctx && this.ctx.state === 'running') void this.ctx.suspend().catch(() => {});
+      } else unlock();
+    });
   }
 
   private ensure(): void {
@@ -101,7 +109,7 @@ class AudioManager {
       this.master.connect(this.ctx.destination);
       this.load();
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume();
+    if (this.ctx.state !== 'running') void this.ctx.resume().catch(() => {}); // suspended / iOS interrupted
   }
 
   private load(): void {

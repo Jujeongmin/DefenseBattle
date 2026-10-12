@@ -134,12 +134,13 @@ async function getStats(account: string): Promise<PvpStats> {
 
 export class Server {
   // ================= 클라우드 저장 =================
-  async loadProfile(): Promise<{ account: string; meta: Record<string, any> | null; pvp: PvpStats }> {
+  async loadProfile(): Promise<{ account: string; meta: Record<string, any>; pvp: PvpStats }> {
     const st = await $global.getMyState(['meta', 'pvp']);
     const pvp = { ...freshStats(), ...(st.pvp || {}) };
     const { econ } = await withEcon($sender.account, () => null); // 처음이면 여기서 옮겨 둔다
-    // PvP 기록·경제는 서버 값이 권위 (기기 저장본 덮어쓰기)
-    const meta = st.meta ? { ...st.meta, ...econ, pvp } : null;
+    // PvP 기록·경제는 서버 값이 권위 (기기 저장본 덮어쓰기).
+    // 처음 온 계정도 빈 저장본 대신 이 계정의 경제·PvP 를 준다 - 기기에 남은 다른 계정 캐시를 쓰지 않게
+    const meta = { ...(st.meta || {}), ...econ, pvp };
     return { account: $sender.account, meta, pvp };
   }
 

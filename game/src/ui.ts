@@ -105,17 +105,7 @@ export class UI {
       $('btn-mute').innerHTML = icon(muted ? 'mute' : 'sound');
     };
     $('btn-mute').innerHTML = icon(audio.isMuted() ? 'mute' : 'sound');
-    this.bindDebug();
     this.setupDrag();
-  }
-
-  // 개발 서버에서만 노출되는 테스트용 버튼 (배포 빌드엔 표시 안 됨)
-  private bindDebug(): void {
-    if (!import.meta.env.DEV) return;
-    $('debug-panel').classList.remove('hidden');
-    $('debug-mythic').onclick = () => { if (this.game.summonFree('mythic')) audio.summon(true); };
-    $('debug-eternal').onclick = () => { if (this.game.summonFree('eternal')) audio.summon(true); };
-    $('debug-gold').onclick = () => { this.game.gold += 500; };
   }
 
   // ---------- 매 프레임 갱신 ----------

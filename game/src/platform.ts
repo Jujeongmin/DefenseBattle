@@ -108,14 +108,18 @@ export class LocalPlatform implements PlatformAdapter {
 }
 
 /**
- * Verse8 플랫폼: 메타는 서버(계정)에 저장하고 localStorage 는 캐시로 사용.
- * 결제는 VX Shop 다이얼로그(부모 창) → 서버 훅에서 지급 대기 목록에 기록.
+ * Verse8 플랫폼: 메타는 서버(계정)에 저장하고 localStorage 는 계정별 캐시로 사용.
+ *  - 캐시 키에 계정 id 를 붙인다: 한 기기에서 여러 계정을 써도 다른 계정 진행이 섞이지 않게
+ *  - 계정을 확인하지 못하면(프로필 로드 실패) 서버에도 캐시에도 저장하지 않는다 (남의 저장본 덮어쓰기 방지)
+ *  - 저장은 0.8초 묶어서 보내고, 창을 닫거나 숨길 때 남은 것을 바로 보낸다
+ * 결제는 VX Shop 다이얼로그(부모 창) → 서버 훅에서 바로 지급 (server.ts $onItemPurchased).
  */
 export class Verse8Platform extends LocalPlatform {
   // @ts-expect-error - kind 를 verse8 로 좁힘
   readonly kind = 'verse8' as const;
   private remoteMeta: Partial<MetaData> | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingSave: MetaData | null = null;
   private account: string | null = null;
   private shop: VXShopApi | null = null;
   private net: NetModule | null = null;
@@ -125,29 +129,52 @@ export class Verse8Platform extends LocalPlatform {
     this.shop = VXShop;
     this.net = net;
     VXShop.init();
-    try {
-      const res = await net.callGlobal<{ account: string; meta: Partial<MetaData> | null }>('loadProfile');
-      this.account = res.account;
-      this.remoteMeta = res.meta;
-    } catch (e) {
-      console.warn('[Verse8Platform] 프로필 로드 실패 - 로컬 캐시 사용', e);
+    // 프로필(계정) 로드: 잠깐 끊겨도 되게 3번까지 다시 시도
+    for (let i = 0; i < 3 && !this.account; i++) {
+      try {
+        const res = await net.callGlobal<{ account: string; meta: Partial<MetaData> | null }>('loadProfile');
+        this.account = res.account || null;
+        this.remoteMeta = res.meta;
+      } catch (e) {
+        console.warn(`[Verse8Platform] 프로필 로드 실패 (${i + 1}/3)`, e);
+        if (i < 2) await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+      }
     }
+    // 창을 닫거나 다른 앱으로 넘어갈 때 묶여 있던 저장을 바로 보낸다
+    const flush = () => this.flushSave();
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
+  }
+
+  /** 이 계정의 로컬 캐시 키 (계정 확인 전엔 없음) */
+  private cacheKey(): string | null {
+    return this.account ? `${META_KEY}:${this.account}` : null;
   }
 
   loadMeta(): Partial<MetaData> | null {
-    // 서버 데이터가 있으면 우선 (다른 기기에서 플레이한 진행도)
-    return this.remoteMeta ?? super.loadMeta();
+    // 서버 데이터 우선 (다른 기기에서 플레이한 진행도). 없으면 이 계정의 캐시만 - 다른 계정 캐시는 쓰지 않는다
+    if (this.remoteMeta) return this.remoteMeta;
+    const key = this.cacheKey();
+    return key ? readJSON<Partial<MetaData> | null>(this.kv, key, null) : null;
   }
 
   saveMeta(m: MetaData): void {
-    super.saveMeta(m); // 로컬 캐시
+    const key = this.cacheKey();
+    if (!key) return; // 계정을 모르면 저장하지 않는다
+    try { this.kv.set(key, JSON.stringify(m)); } catch { /* 캐시 실패는 무시 */ }
     // 서버 저장은 디바운스 (연속 저장 묶기)
+    this.pendingSave = JSON.parse(JSON.stringify(m)) as MetaData;
     if (this.saveTimer) clearTimeout(this.saveTimer);
-    const snapshot = JSON.parse(JSON.stringify(m)) as MetaData;
-    this.saveTimer = setTimeout(() => {
-      this.saveTimer = null;
-      this.net?.callGlobal('saveProfile', snapshot).catch((e) => console.warn('[Verse8Platform] 저장 실패', e));
-    }, 800);
+    this.saveTimer = setTimeout(() => this.flushSave(), 800);
+  }
+
+  /** 묶여 있던 서버 저장을 지금 보낸다 */
+  flushSave(): void {
+    if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = null; }
+    const snapshot = this.pendingSave;
+    this.pendingSave = null;
+    if (!snapshot || !this.account) return;
+    this.net?.callGlobal('saveProfile', snapshot).catch((e) => console.warn('[Verse8Platform] 저장 실패', e));
   }
 
   getVX(): number | null { return null; } // 잔액은 VX Shop 결제창에서 확인

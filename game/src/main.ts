@@ -2,7 +2,7 @@
 //  진입점 - 부팅 / 화면 전환(로비↔게임) / 판 흐름(스테이지·무한·PvP) / 메인 루프
 // ============================================================
 import './style.css';
-import { Game, type BoardSnapshot } from './engine';
+import { Game } from './engine';
 import { Renderer } from './render';
 import { UI, type ResultView } from './ui';
 import { Spotlight, type SpotStep } from './tutorial';
@@ -101,7 +101,7 @@ function startPvp(g: Game, u: UI, s: PvpSession): void {
   });
   void s.ready({
     onStart: (startAt) => u.countdown(startAt, () => { g.paused = false; }),
-    onSnapshot: (snap) => { window.__oppSnap = snap; u.setOpponent(snap); },
+    onSnapshot: (snap) => u.setOpponent(snap),
     onAttack: (p) => g.receiveAttack(p),
     onResult: (r) => {
       if (resultShown) return;
@@ -364,22 +364,8 @@ async function boot(): Promise<void> {
   const granted = await syncPurchases().catch(() => [] as string[]);
   menu.show();
   if (granted.length) toast('결제한 상품이 지급되었어요');
+  // Verse8 인데 계정을 확인하지 못함 → 진행이 저장되지 않으니 알린다
+  if (getPlatform().kind === 'verse8' && !getPlatform().accountId()) toast('서버에 연결하지 못해 진행이 저장되지 않아요 · 새로고침해 주세요', 6000);
 }
 void boot();
 
-// 디버그용 전역 노출
-declare global {
-  interface Window {
-    __game: Game | null;
-    __oppSnap: BoardSnapshot | null; // 마지막으로 받은 상대 전장 (디버그)
-    __meta: typeof meta;
-    __launch: (l: Launch) => void;
-    __forceDraw: () => void;
-    __uiUpdate: () => void;
-  }
-}
-window.__launch = launch;
-window.__meta = meta;
-window.__forceDraw = () => renderer?.draw();
-window.__uiUpdate = () => ui?.update();
-Object.defineProperty(window, '__game', { get: () => game });

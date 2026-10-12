@@ -633,6 +633,35 @@ export class Menu {
     draw();
   }
 
+  /** 확률 정보 (뽑기·상자) - 규칙은 econ/rules.ts 의 gacha / rollChest 와 같다 */
+  private openOdds(): void {
+    const pct = (p: number) => `${+(p * 100).toFixed(p * 100 < 1 ? 3 : 2)}%`;
+    const rarities = ['common', 'rare', 'epic', 'legendary'] as const;
+    const poolSize = (r: (typeof rarities)[number]) => UNITS.filter((u) => u.rarity === r).length;
+    const gachaRows = rarities.map((r) => `<tr><td style="color:${RARITY_COLOR[r]}">${RARITY_KR[r]}</td><td>${pct(GACHA.rates[r])}</td><td>${GACHA.count[r]}장</td><td>${poolSize(r)}종</td><td>${pct(GACHA.rates[r] / poolSize(r))}</td></tr>`).join('');
+    const a = Math.max(0, PVP_TIERS.filter((t) => meta.pvp.trophies >= t.min).length - 1);
+    const chestRows = (Object.keys(CHESTS) as (keyof typeof CHESTS)[]).map((k) => {
+      const d = CHESTS[k];
+      const total = d.cards + d.perArena * a;
+      const epicBase = Math.floor(d.epic), epicChance = d.epic % 1;
+      const rare = Math.min(total - epicBase, Math.round(d.rare * (1 + a * 0.25)));
+      const epicTxt = !epicChance ? `${epicBase}장` : epicBase ? `${epicBase}장 +${pct(epicChance)}` : `${pct(epicChance)}로 1장`;
+      return `<tr><td>${d.kr}</td><td>${total}장</td><td>${rare}장</td><td>${epicTxt}</td><td>${d.legendary >= 1 ? '1장' : d.legendary ? `${pct(d.legendary)}로 1장` : '-'}</td><td>${d.gems[0]}~${d.gems[1]}</td></tr>`;
+    }).join('');
+    openOverlay('modal', `<div class="dialog odds-dialog"><button class="close-x">${icon('close')}</button>
+      <h2>확률 정보</h2>
+      <div class="section-title">유닛 뽑기</div>
+      <table class="odds"><tr><th>등급</th><th>확률</th><th>카드</th><th>유닛 수</th><th>유닛 1종</th></tr>${gachaRows}</table>
+      <div class="fine">· 1회마다 위 확률로 등급을 정하고, 그 등급 유닛 중 하나가 같은 확률로 나와요.<br>
+      · 10회 뽑기에서 영웅·전설이 하나도 없으면 마지막 1회가 영웅(영웅 ${poolSize('epic')}종 중 무작위)으로 바뀌어요.</div>
+      <div class="section-title">상자 <span class="fine">지금 아레나(${PVP_TIERS[a].kr}) 기준</span></div>
+      <table class="odds"><tr><th>상자</th><th>카드</th><th>희귀</th><th>영웅</th><th>전설</th><th>${icon('gem')}</th></tr>${chestRows}</table>
+      <div class="fine">· 나머지 카드는 일반이에요. 아레나가 오를수록 카드 장수와 희귀 카드가 늘어요.<br>
+      · 유닛은 같은 등급 안에서 무작위로 정해지고, 일반은 3종·희귀는 2종에 나눠 담겨요. 보석은 범위 안에서 같은 확률이에요.<br>
+      · 금·마법·전설 상자는 상점에서 사면 바로 열려요. 나무·은 상자는 대전 승리로만 얻어요.</div>
+      <button class="btn red" data-close style="width:100%;margin-top:8px">확인</button></div>`);
+  }
+
   // ======================= 상점 =======================
   openShop(): void {
     const plat = getPlatform();
@@ -647,7 +676,7 @@ export class Menu {
         if (p.category === 'offer') extra = ` <span class="badge">${icon('timer')}${timeLeft(id).split(':').slice(0, 2).join('시간 ')}분</span>`;
         const eff = owned ? 0 : productEfficiency(p, price(id));
         return `<div class="shop-card ${hot ? 'hot' : ''}">${eff > 100 ? `<span class="eff">효율<b>${eff}%</b></span>` : ''}<img class="shop-img" src="/ui/shop/${p.id}.png" alt="">
-          <div class="info"><div class="t">${p.kr}${p.badge ? ` <span class="badge">${p.badge}</span>` : ''}${extra}</div><div class="d">${p.desc}</div></div>
+          <div class="info"><div class="t"><span class="nm">${p.kr}</span>${p.badge ? `<span class="badge">${p.badge}</span>` : ''}${extra}</div><div class="d">${p.desc}</div></div>
           <button class="btn small ${owned ? '' : 'gold'}" data-act="buy" data-id="${id}" ${owned ? 'disabled' : ''}>${owned ? `보유 ${icon('check')}` : `VX ${price(id)}`}</button></div>`;
       };
       const gems = PRODUCTS.filter((p) => p.category === 'crystal').map((p) => {
@@ -662,13 +691,13 @@ export class Menu {
         <div class="balance"><span class="crystal">${icon('gem')} ${meta.crystals.toLocaleString()}</span>${vx !== null ? `<span class="vx-badge">VX ${vx.toLocaleString()}</span>` : ''}</div>
         <div class="fine" style="margin:-4px 0 6px">보유: ${items}</div>
         ${activeOffers().length ? `<div class="section-title hot-title">${icon('timer')} 한정 특가</div>${activeOffers().map((o) => card(o.id, true)).join('')}` : ''}
-        <div class="section-title">유닛 뽑기 <span class="fine">카드로 해금·레벨업</span></div>
+        <div class="section-title">유닛 뽑기 <span class="fine">카드로 해금·레벨업</span><button class="btn small odds-btn" data-act="odds">확률 정보</button></div>
         <div class="gacha-row">
           <button class="btn blue gacha-btn" data-act="gacha" data-n="1">1회<small>${icon('gem')}${GACHA.one}</small></button>
           <button class="btn gold gacha-btn" data-act="gacha" data-n="10">10회<small>${icon('gem')}${GACHA.ten} · 영웅+ 보장</small></button>
         </div>
         <div class="fine" style="margin:-4px 0 8px">${(['common', 'rare', 'epic', 'legendary'] as const).map((r) => `<span style="color:${RARITY_COLOR[r]}">${RARITY_KR[r]} ${Math.round(GACHA.rates[r] * 100)}%</span>`).join(' · ')}</div>
-        <div class="section-title">상자 <span class="fine">사면 바로 열림</span></div>
+        <div class="section-title">상자 <span class="fine">사면 바로 열림</span><button class="btn small odds-btn" data-act="odds">확률 정보</button></div>
         ${card('chest_gold')}${card('chest_magic')}${card('chest_legend', true)}
         <div class="section-title">추천 패키지</div>
         ${!productOwned('starter_pack') ? card('starter_pack', true) : ''}
@@ -681,6 +710,7 @@ export class Menu {
         <div class="section-title">보석</div><div class="gem-grid">${gems}</div>
         <div class="fine">${vx !== null ? '* 로컬 개발 환경: 데모 VX 로 결제를 흉내냅니다.' : '* 결제는 Verse8 VX 로 진행되며, 결제 완료 후 자동 지급됩니다.'}</div></div>`, () => this.render());
       bindActions(el, {
+        odds: () => { audio.button(); this.openOdds(); },
         buy: async (b) => {
           const id = b.dataset.id!;
           (b as HTMLButtonElement).disabled = true;

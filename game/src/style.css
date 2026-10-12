@@ -47,6 +47,9 @@ html, body {
   font-family: var(--font);
   overflow: hidden;
   user-select: none;
+  word-break: keep-all;      /* 한글을 단어 중간에서 끊지 않는다 ('패키
+지' 방지) */
+  overflow-wrap: break-word; /* 단어가 칸보다 길 때만 끊는다 */
 }
 button { font-family: inherit; }
 b, strong { font-weight: 700; }
@@ -250,6 +253,7 @@ b, strong { font-weight: 700; }
   text-shadow: var(--outline-thin);
   margin-top: -4px;
 }
+.lobby-body > * { flex-shrink: 0; } /* 낮은 화면: 줄어들어 잘리지 말고 스크롤 */
 .parade {
   display: flex;
   gap: 6px;
@@ -486,7 +490,10 @@ b, strong { font-weight: 700; }
 .road-unit { display: inline-block; width: 24px; height: 24px; vertical-align: middle; }
 .arena-sub { text-align: center; font-size: 12px; color: var(--cream-2); }
 .camp-btn { align-self: center; }
-.lobby-body.v1 { justify-content: center; padding-bottom: 40px; }
+/* 세로 가운데: justify-content:center 는 화면이 낮으면 위쪽이 스크롤로도 못 보는 곳으로 넘친다 → 위아래 auto 여백 */
+.lobby-body.v1 { padding-bottom: 40px; }
+.lobby-body.v1 > :first-child { margin-top: auto; }
+.lobby-body.v1 > :last-child { margin-bottom: auto; }
 .road-row {
   display: grid; grid-template-columns: 70px 1fr 26px; align-items: center; gap: 6px;
   padding: 6px 8px; margin-bottom: 4px;
@@ -811,7 +818,11 @@ b, strong { font-weight: 700; }
 .shop-card.hot { border: 3px solid var(--gold-ink); background: rgba(255, 201, 40, 0.2); }
 .shop-card .ic { font-size: 32px; }
 .shop-card .info { flex: 1; min-width: 0; }
-.shop-card .t { font-size: 15px; font-weight: 700; }
+.shop-card .t { font-size: 14px; font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; }
+.shop-card .t .nm { white-space: nowrap; letter-spacing: -0.3px; } /* 상품 이름은 한 줄 (배지는 넘치면 아래 줄) */
+.shop-card .t .badge { margin: 0; }
+@media (max-width: 380px) { .shop-card .t { font-size: 13px; } .shop-card .d { font-size: 11px; } }
+.shop-card .d { word-break: keep-all; }
 .shop-card .d { font-size: 12px; color: var(--ink-2); }
 .gem-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 /* 효율 띠: 기본 보석 상품 대비 가치 - 카드 왼쪽 위 모서리를 가로지르는 대각선 띠 (카드 밖은 잘림) */
@@ -968,7 +979,7 @@ b, strong { font-weight: 700; }
   font-weight: 700;
 }
 /* 나 vs 상대 몹 수 막대 (PvP) - 내 막대는 왼쪽에서, 상대 막대는 오른쪽에서 찬다 */
-.vs-hud { position: relative; flex-direction: column; align-items: stretch; gap: 3px; padding: 5px 100px 6px 10px; min-height: 92px; }
+.vs-hud { position: relative; flex-direction: column; align-items: stretch; justify-content: space-between; gap: 3px; padding: 5px 94px 6px 10px; min-height: 86px; } /* 미니맵(76) 높이에 세 줄을 고르게 - 아래 빈 공간 없이 */
 .vs-deck { display: flex; align-items: center; gap: 6px; margin-top: 1px; }
 .vs-deck-label { font-size: 10px; color: var(--cream-2); white-space: nowrap; }
 @media (max-width: 350px) { .vs-deck-label { display: none; } } /* 좁은 폰: 상대 카드 8장이 미니맵 앞에서 끝나게 */
@@ -980,19 +991,19 @@ b, strong { font-weight: 700; }
 .vs-tag.me { background: #3c8d3a; box-shadow: inset 0 -2px 0 #24581f; }
 .vs-tag.opp { background: #b8322c; box-shadow: inset 0 -2px 0 #7a1c18; }
 .vs-bars { display: flex; gap: 10px; }
-.vs-bar { flex: 1; position: relative; height: 18px; background: #4a3020; border: 2px solid var(--edge); overflow: hidden; }
+.vs-bar { flex: 1; position: relative; height: 20px; background: #4a3020; border: 2px solid var(--edge); overflow: hidden; }
 .vs-bar > div { position: absolute; top: 0; bottom: 0; width: 0; background: var(--red); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.3); transition: width 0.3s; }
 .vs-bar.me > div { left: 0; }
 .vs-bar.opp > div { right: 0; }
 .vs-bar > div.warn { animation: warnBlink 0.6s steps(2) infinite; }
-.vs-bar span { position: absolute; inset: 0; text-align: center; font-size: 11px; line-height: 14px; }
+.vs-bar span { position: absolute; inset: 0; text-align: center; font-size: 11px; line-height: 16px; }
 #game-frame.pvp #progress-row { display: none; } /* PvP 에선 위 VS 막대가 내 몹 수를 보여 준다 */
 /* 상대 전장: 평소엔 VS 줄 오른쪽 끝 작은 창, 몹 카드를 끄는 동안(.aiming) 크게 펼쳐 조준 */
 #opp-canvas {
   position: absolute;
   z-index: 20;
   top: 5px; right: 8px;
-  width: 82px; height: 82px;
+  width: 76px; height: 76px;
   background: #6c9a3a;
   image-rendering: pixelated;
   border: 3px solid var(--edge);
@@ -1128,11 +1139,6 @@ b, strong { font-weight: 700; }
 .coach-target { animation: pulseRing 0.8s steps(2) infinite !important; position: relative; z-index: 5; }
 @keyframes pulseRing { 0%, 100% { outline: 3px solid var(--gold); outline-offset: 0; } 50% { outline: 3px solid var(--gold); outline-offset: 4px; } }
 
-#debug-panel { position: absolute; top: 6px; left: 6px; z-index: 40; display: flex; gap: 4px; }
-#debug-panel button {
-  background: rgba(0, 0, 0, 0.6); color: #ffd54f; border: 1px dashed #ffd54f;
-  padding: 3px 6px; font-size: 11px; cursor: pointer;
-}
 
 #progress-row {
   position: relative;
@@ -1392,3 +1398,13 @@ input.vol::-moz-range-thumb {
   background: var(--gold); border: 2px solid var(--edge); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.25);
 }
 input.vol::-moz-range-track { background: transparent; }
+
+/* ---------- 확률 정보 (상점) ---------- */
+.section-title .odds-btn { margin-left: auto; padding: 2px 8px; font-size: 11px; }
+.odds-dialog { width: min(440px, 100%); }
+table.odds { width: 100%; border-collapse: collapse; font-size: 10px; letter-spacing: -0.3px; margin: 4px 0 6px; text-align: center; }
+table.odds th { background: rgba(42, 29, 22, 0.18); font-weight: 700; padding: 4px 2px; }
+table.odds td, table.odds th { white-space: nowrap; }
+table.odds td { padding: 4px 1px; border-bottom: 1px solid rgba(42, 29, 22, 0.15); font-weight: 700; }
+table.odds th .pi { width: 12px; height: 12px; }
+.odds-dialog .fine { text-align: left; line-height: 1.5; }

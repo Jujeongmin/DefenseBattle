@@ -12,6 +12,30 @@ describe('클라우드 저장', () => {
     expect(res.meta.crystals).toBe(123);
     expect(res.meta.pvp.trophies).toBe(0);
   });
+
+  test('처음 온 계정도 빈 값 대신 자기 계정 데이터를 받는다', async (server) => {
+    server.connect({ account: 'newbie' });
+    const res = await server.loadProfile();
+    expect(res.account).toBe('newbie');
+    expect(res.meta === null).toBe(false);
+    expect(typeof res.meta.crystals).toBe('number');
+    expect(res.meta.pvp.trophies).toBe(0);
+  });
+
+  test('계정끼리 저장본·결제가 섞이지 않는다', async (server) => {
+    await server.$onItemPurchased({ account: 'acc1', purchaseId: 'x1', productId: 'crystal_550', quantity: 1 });
+    server.connect({ account: 'acc1' });
+    await server.saveProfile({ nick: '첫계정', tutorial: 9 });
+    const one = await server.loadProfile();
+    server.connect({ account: 'acc2' });
+    const two = await server.loadProfile();
+    expect(one.meta.nick).toBe('첫계정');
+    expect(two.meta.nick === '첫계정').toBe(false);
+    expect(two.meta.tutorial === 9).toBe(false);
+    expect(one.meta.crystals - two.meta.crystals).toBe(550);
+    const claim2 = await server.claimPurchases();
+    expect(claim2.list.length).toBe(0);
+  });
 });
 
 describe('VX Shop 지급 (서버가 바로 지급)', () => {
