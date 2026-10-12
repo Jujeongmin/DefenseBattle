@@ -535,7 +535,7 @@ export const PRODUCTS: ProductDef[] = [
     desc: `즉시 보석 300 + 30일간 매일 보석 ${MONTHLY_DAILY_CRYSTALS}`,
     grant: { crystals: 300, monthlyDays: 30 } },
   { id: 'ad_remove', kr: '광고 제거 패키지', icon: 'bolt', category: 'package', vx: AD_REMOVE_VX, oneTime: true, badge: '1회 한정',
-    desc: '광고 제거 + 3배속 해금 + 보석 500',
+    desc: '광고 시청 없이 바로 보상 + 3배속 해금 + 보석 500',
     grant: { adRemove: true, crystals: 500 } },
   // 시즌 패스
   { id: 'season_premium', kr: 'PvP 시즌 패스', icon: 'trophy', category: 'pass', vx: 1000,

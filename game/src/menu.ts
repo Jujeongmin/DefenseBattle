@@ -5,7 +5,7 @@ import {
   RESEARCH, researchCost, DAILY_QUESTS, ACHIEVEMENTS, PRODUCTS, ITEM_KR,
   UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, unitUpgradeCost, SKILL_KR,
   DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, UNIT_PACK, CHESTS, RARITY_KR, RARITY_COLOR, GACHA, chestOpenCost, type RoadStep, type AttackKey,
-  SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, FEATURE_KR, productEfficiency,
+  SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, productEfficiency,
   CAMPAIGN, TROPHY_ROAD, PVP_TIERS, UNIT_PRESETS, ATTACK_PRESETS, type DeckPreset,
 } from './config';
 import { meta, saveMeta, researchLevel, currentSeasonId } from './meta';
@@ -28,6 +28,7 @@ import { freeTicketAdsLeft, watchForTickets, rewardedAvailable, FREE_TICKET_AMOU
 import { onlineAvailable, findMatch, type PvpSession } from './pvp';
 import { $, toast, openOverlay, closeOverlay, bindActions, spriteIcon, confirmModal } from './dom';
 import { enableDeckDrag } from './dragdeck';
+import { Spotlight } from './tutorial';
 import { act, type Reveal } from './econ';
 import { showShortage, activeOffers, unitPackAvailable, timeLeft } from './offers';
 import { chestState, chestLeftMs, leftText, opening, showReveal, flushReveals, pendingReveals } from './chests';
@@ -63,7 +64,7 @@ export function roadRewardText(s: RoadStep): string {
 export class Menu {
   private onLaunch: (l: Launch) => void;
   private selectedChapter = 1;
-  private announced = new Set<string>(); // 이번 접속에서 '새 메뉴' 토스트를 이미 띄운 기능
+  private guiding = false; // 로비 안내(스포트라이트)가 떠 있는 중
 
   constructor(onLaunch: (l: Launch) => void) {
     this.onLaunch = onLaunch;
@@ -115,7 +116,6 @@ export class Menu {
     const endlessOn = featureUnlocked('endless');
     const dot = '<span class="dot"></span>';
     const tag = (f: LobbyFeature) => (featureNew(f) ? NEW_TAG : '');
-    const fresh = (['units', 'research', 'quests', 'pvp', 'endless'] as const).filter((f) => featureNew(f) && !this.announced.has(f));
     root.innerHTML = `
       <div class="lobby-top">
         <div class="profile-chip" data-act="profile" style="color:${tier.color}">
@@ -175,8 +175,7 @@ export class Menu {
       monthly: async () => { const n = await claimMonthly(); if (n) { audio.coin(); toast(`월정액 보석 +${n} ${icon('gem')}`); this.render(); } },
     });
     root.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => audio.button(), { capture: true }));
-    for (const f of fresh) this.announced.add(f);
-    if (fresh.length) toast(`새로 열림: <b>${fresh.map((f) => FEATURE_KR[f]).join(', ')}</b>`, 2800);
+    this.maybeGuide();
     // 트로피 로드·결제로 받은 상자 공개 (쌓여 있으면 차례로)
     if (pendingReveals.length && $('modal').classList.contains('hidden')) flushReveals(() => this.render());
     // 여는 중인 상자 남은 시간
@@ -188,6 +187,40 @@ export class Menu {
         el.textContent = leftText(chestLeftMs(i));
       });
     }, 1000);
+  }
+
+  /**
+   * 로비 안내: 새로 열린 메뉴를 하나씩 밝혀 설명하고, 밝힌 버튼을 누르면 그 메뉴가 열린다.
+   * 한 번 안내한 것은 seenFeatures 에 남겨 다시 띄우지 않는다 (설정 > 튜토리얼 다시 하기 로 초기화).
+   * 순서: 대전 → 캠페인 → 덱 → 연구 → 퀘스트 → 무한 모드 (스테이지 1-1 튜토리얼을 마친 뒤부터)
+   */
+  private maybeGuide(): void {
+    if (this.guiding || !featureUnlocked('pvp') || meta.tutorial < 2) return;
+    if (['modal', 'panel'].some((id) => { const c = $(id).classList; return !c.contains('hidden') && !c.contains('closing'); })) return; // 닫히는 중이면 닫힌 것
+    const steps: { key: string; sel: string; text: string; on: boolean }[] = [
+      { key: 'pvp', sel: '[data-act="battle"]', on: true,
+        text: '<b>대전 시작</b>을 눌러 보세요!<br>상대 전장에 몹을 던지고, 이기면 상자를 받아요' },
+      { key: 'campaign', sel: '[data-act="stages"]', on: stageStars('1-2') === 0,
+        text: '<b>캠페인</b>에서 스테이지를 깨면<br>새 유닛과 보석을 얻어요' },
+      { key: 'units', sel: '.lobby-nav [data-act="units"]', on: featureUnlocked('units'),
+        text: '<b>덱</b>에서 유닛과 몹 카드를 고르고<br>모은 카드로 강화해요' },
+      { key: 'research', sel: '.lobby-nav [data-act="research"]', on: featureUnlocked('research'),
+        text: '<b>연구소</b>가 열렸어요!<br>보석으로 캠페인·무한 모드 능력을 올려요' },
+      { key: 'quests', sel: '.lobby-nav [data-act="quests"]', on: featureUnlocked('quests'),
+        text: '<b>퀘스트</b>가 열렸어요!<br>매일 목표를 채우면 보석을 받아요' },
+      { key: 'endless', sel: '[data-act="endless"]', on: featureUnlocked('endless'),
+        text: '<b>무한 모드</b>가 열렸어요!<br>얼마나 오래 버티는지 도전해 보세요' },
+    ];
+    const g = steps.find((s) => s.on && !meta.seenFeatures.includes(s.key) && document.querySelector(s.sel));
+    if (!g) return;
+    this.guiding = true;
+    setTimeout(async () => {
+      const spot = new Spotlight();
+      await spot.step({ target: () => document.querySelector<HTMLElement>(g.sel), text: g.text });
+      spot.close();
+      if (!meta.seenFeatures.includes(g.key)) { meta.seenFeatures.push(g.key); saveMeta(); }
+      this.guiding = false;
+    }, 600);
   }
 
   private chestTimer: ReturnType<typeof setInterval> | null = null;
@@ -256,7 +289,7 @@ export class Menu {
       bindActions(el, {
         profile: () => { closeOverlay('panel'); this.openProfile(); },
         // 튜토리얼만 처음부터 (스테이지·보상 진행은 그대로) - 1-1 을 시작하면 안내가 다시 나온다
-        replayTutorial: () => { meta.tutorial = 0; saveMeta(); closeOverlay('panel'); this.openStageInfo('1-1'); },
+        replayTutorial: () => { meta.tutorial = 0; meta.seenFeatures = []; saveMeta(); closeOverlay('panel'); this.openStageInfo('1-1'); },
       });
       for (const input of el.querySelectorAll<HTMLInputElement>('input.vol')) {
         const key = input.dataset.vol as 'bgm' | 'sfx';
@@ -578,6 +611,7 @@ export class Menu {
       }).join('');
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>연구소 <span class="crystal" style="font-size:16px">${icon('gem')} ${meta.crystals}</span></h2>
+        <div class="fine" style="margin:-4px 0 8px">보석으로 올리면 계속 적용돼요 · 캠페인·무한 모드 전용 (대전 제외)</div>
         ${rows}</div>`, () => this.render());
       bindActions(el, {
         res: async (b) => {

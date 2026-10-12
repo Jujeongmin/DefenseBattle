@@ -17,7 +17,7 @@ import { pendingReveals } from './chests';
 import { stageOptions, endlessOptions, stageUnlocked, unitLevels } from './progress';
 import { syncPurchases } from './shop';
 import { act, runStart, stageResult, endlessResult, applyEcon, online, pvpRewardLocal, syncEcon } from './econ';
-import { showRewarded, rewardedAvailable, maybeInterstitial } from './ads';
+import { showRewarded, rewardedAvailable } from './ads';
 import type { PvpSession, PvpResult } from './pvp';
 import { $, toast } from './dom';
 import type { GameOverData } from './types';
@@ -223,9 +223,9 @@ async function finishSolo(u: UI, d: GameOverData): Promise<void> {
       buttons: [],
     };
     if (crystals > 0 && rewardedAvailable()) view.buttons.push({ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward() });
-    if (canNext) view.buttons.push({ label: `${icon('play')} 다음 스테이지 ${next.id}`, cls: 'red', action: () => void exitGame(true, st.index).then(() => menu.openStage(next.id)) });
-    view.buttons.push({ label: '다시 하기', cls: canNext ? '' : 'red', action: () => void exitGame(true, st.index).then(() => menu.openStage(l.stageId)) });
-    view.buttons.push({ label: '로비로', cls: '', action: () => void exitGame(true, st.index) });
+    if (canNext) view.buttons.push({ label: `${icon('play')} 다음 스테이지 ${next.id}`, cls: 'red', action: () => void exitGame(true).then(() => menu.openStage(next.id)) });
+    view.buttons.push({ label: '다시 하기', cls: canNext ? '' : 'red', action: () => void exitGame(true).then(() => menu.openStage(l.stageId)) });
+    view.buttons.push({ label: '로비로', cls: '', action: () => void exitGame(true) });
     u.showResult(view);
     // 결제 팝업 조건: 새 챕터 도달 / 2연속 실패 (튜토리얼 직후는 제외)
     if (l.stageId !== '1-1') afterMatch({ chapterUp: res.firstClear && !!next && next.chapter > st.chapter, losing: meta.stageFailStreak >= 2 });
@@ -296,7 +296,7 @@ async function startTutorial(g: Game, u: UI): Promise<void> {
 // ---------------------------------------------------------------
 //  나가기
 // ---------------------------------------------------------------
-async function exitGame(skipConfirm = false, stageIndex: number | null = null): Promise<void> {
+async function exitGame(skipConfirm = false): Promise<void> {
   if (!skipConfirm && game && !game.over) {
     const { confirmModal } = await import('./dom');
     const pvp = current?.kind === 'pvp';
@@ -309,14 +309,12 @@ async function exitGame(skipConfirm = false, stageIndex: number | null = null): 
   gameFrame.classList.add('hidden');
   $('gameover-panel').classList.add('hidden');
   $('sell-panel').classList.add('hidden');
-  const wasSolo = current && current.kind !== 'pvp';
   game = null;
   renderer = null;
   ui = null;
   current = null;
   saveMeta();
   menu.show();
-  if (wasSolo) await maybeInterstitial(stageIndex);
 }
 
 // ---------------------------------------------------------------

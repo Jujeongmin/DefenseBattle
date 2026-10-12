@@ -1,7 +1,6 @@
 // ============================================================
 //  광고 - Verse8 Ads SDK (@verse8/ads)
 //  보상형: 결과 보상 2배 / 부활 / 소환권 받기
-//  전면형: 스테이지 결과 후 (광고 제거 구매 시 제외, 초반 스테이지 제외)
 //  Verse8 호스트 밖(로컬 개발)에서는 개발 서버에서만 가짜 광고로 흐름 테스트
 // ============================================================
 import { meta, todayStr } from './meta';
@@ -12,12 +11,9 @@ export const AD_PLACEMENTS = {
   doubleReward: 'reward_double',
   revive: 'reward_revive',
   freeTicket: 'reward_ticket',
-  interstitial: 'interstitial_result',
 } as const;
 export const FREE_TICKET_ADS_PER_DAY = 3;
 export const FREE_TICKET_AMOUNT = 5;
-const INTERSTITIAL_EVERY = 2;      // N판마다 1회
-const INTERSTITIAL_FROM_STAGE = 3; // 1-1~1-3 은 광고 없음 (첫인상/리텐션)
 
 type AdsModule = typeof import('@verse8/ads');
 let mod: Promise<AdsModule> | null = null;
@@ -32,7 +28,6 @@ function ads(): Promise<AdsModule> {
 }
 
 let unsupported = false;
-let gamesSinceInterstitial = 0;
 
 function isDev(): boolean {
   try { return !!import.meta.env?.DEV; } catch { return false; }
@@ -75,22 +70,6 @@ export async function showRewarded(placement: keyof typeof AD_PLACEMENTS): Promi
     }
   }
   return isDev() ? fakeAd(placement) : false;
-}
-
-/** 판 종료 후 전면 광고 (조건 충족 시) */
-export async function maybeInterstitial(stageIndex: number | null): Promise<void> {
-  if (meta.adRemoved || unsupported) return;
-  if (stageIndex !== null && stageIndex < INTERSTITIAL_FROM_STAGE) return;
-  gamesSinceInterstitial += 1;
-  if (gamesSinceInterstitial < INTERSTITIAL_EVERY) return;
-  gamesSinceInterstitial = 0;
-  try {
-    const { Verse8Ads } = await ads();
-    const r = await Verse8Ads.showInterstitial({ placementId: AD_PLACEMENTS.interstitial });
-    if (r.status === 'failed' && r.error.code === 'unsupported_env') unsupported = true;
-  } catch {
-    unsupported = true;
-  }
 }
 
 // ---------- 일일 광고 소환권 ----------

@@ -13,7 +13,7 @@ Verse8(Agent8) 플랫폼용 하이브리드 캐주얼 디펜스 게임. **TypeSc
 - **몹 카드** 16종, 4장을 골라 대전에서 상대 전장에 던진다 (카드마다 막는 유닛이 다름)
 - **PvP 실시간 1:1** (같은 웨이브를 동시에 막으며 몹을 보내 상대를 무너뜨림), 트로피·티어·시즌 패스·랭킹
 - **무한 모드** 50웨이브 생존
-- **수익화**: Verse8 VX Shop 결제 + Verse8 Ads(보상형/전면)
+- **수익화**: Verse8 VX Shop 결제 + Verse8 Ads(보상형)
 
 ## 실행
 
@@ -48,7 +48,7 @@ PvP 는 AI 연습전만 가능. Verse8 프로젝트(.env 에 `VITE_AGENT8_VERSE`
 │       ├── config.ts        # 모든 데이터/밸런스 (유닛·스킬·스테이지·상품·시즌패스·PvP)
 │       ├── progress.ts      # 캠페인 진행·유닛 해금/레벨·덱·기능 해금
 │       ├── shop.ts          # 결제 지급(중복 방지)·월정액·시즌패스 보상
-│       ├── ads.ts           # @verse8/ads 보상형/전면 광고
+│       ├── ads.ts           # @verse8/ads 보상형 광고
 │       ├── pvp.ts           # PvP 세션 (온라인 룸 / AI 봇) 공통 인터페이스
 │       ├── ai.ts            # 봇 플레이 정책
 │       ├── net/server.ts    # @agent8/gameserver 연결 (GS/RS 호출)
@@ -89,7 +89,7 @@ Verse8 VX Shop 에 아래 **productId** 로 상품을 등록해야 한다 (가�
 | --- | --- | --- | --- | --- |
 | `starter_pack` | 보석 150 + 소환권 10 + 골드 부스터 1 | 100 | 1 | 300% |
 | `monthly_pass` | 즉시 보석 300 + 30일간 매일 보석 40 | 500 | - | 300% |
-| `ad_remove` | 전면광고 제거, 보상형 광고 즉시 보상, 3배속, 보석 500 | 500 | 1 | - |
+| `ad_remove` | 보상형 광고 시청 없이 즉시 보상, 3배속, 보석 500 | 500 | 1 | - |
 | `season_premium` | 이번 시즌 PvP 패스 프리미엄 트랙 | 1000 | - (시즌당 게임이 막음) | - |
 | `summon_ticket_pack` | 소환권 24장 | 200 | - | 120% |
 | `mythic_ticket` | 신화 확정 소환권 1장 | 500 | - | 120% |
@@ -114,8 +114,7 @@ Verse8 VX Shop 에 아래 **productId** 로 상품을 등록해야 한다 (가�
 - 뜬 한정 상품은 24시간 동안 상점 '한정 특가' 칸에 남은 시간과 함께 보인다
 
 ### 3) 광고 플레이스먼트 (`ads.ts` `AD_PLACEMENTS`)
-`reward_double`(결과 보상 2배), `reward_revive`(실패 시 1회 부활), `reward_ticket`(하루 3회 소환권 5장),
-`interstitial_result`(1-4 이후, 2판마다 1회. 광고 제거 구매자 제외). Verse8 대시보드의 placementId 와 맞춘다.
+`reward_double`(결과 보상 2배), `reward_revive`(실패 시 1회 부활), `reward_ticket`(하루 3회 소환권 5장). 전면 광고는 쓰지 않는다. Verse8 대시보드의 placementId 와 맞춘다.
 
 ## 로비와 진행 (대전 중심)
 
