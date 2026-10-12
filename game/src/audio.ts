@@ -6,8 +6,10 @@
 //  그래서 여기서는 효과음마다 볼륨을 따로 주지 않는다 - 튀는 소리가 생기지 않게.
 // ============================================================
 const MUTE_KEY = 'randomdefense.muted.v1';     // 전투 화면 스피커 버튼 (전체)
-const BGM_KEY = 'randomdefense.bgm.v1';        // 설정: 배경음악
-const SFX_KEY = 'randomdefense.sfx.v1';        // 설정: 효과음
+const BGM_KEY = 'randomdefense.bgm.v1';        // (예전) 설정: 배경음악 켜기/끄기 - 음량 저장이 없을 때만 읽는다
+const SFX_KEY = 'randomdefense.sfx.v1';        // (예전) 설정: 효과음 켜기/끄기
+const BGM_VOL_KEY = 'randomdefense.bgmVol.v1'; // 설정: 배경음악 음량 0~1
+const SFX_VOL_KEY = 'randomdefense.sfxVol.v1'; // 설정: 효과음 음량 0~1
 
 type Sfx =
   | 'button' | 'coin' | 'summon' | 'mythic' | 'unlock' | 'merge' | 'arrow' | 'magic' | 'sword'
@@ -39,25 +41,44 @@ class AudioManager {
 
   private bgmOff: boolean;
   private sfxOff: boolean;
+  private bgmVol: number;
+  private sfxVol: number;
 
   constructor() {
     this.muted = store.get(MUTE_KEY) === '1';
-    this.bgmOff = store.get(BGM_KEY) === '0';
-    this.sfxOff = store.get(SFX_KEY) === '0';
+    const vol = (key: string, oldKey: string) => {
+      const v = Number(store.get(key));
+      if (store.get(key) !== null && Number.isFinite(v)) return Math.min(1, Math.max(0, v));
+      return store.get(oldKey) === '0' ? 0 : 1; // 예전 켜기/끄기 설정을 이어받는다
+    };
+    this.bgmVol = vol(BGM_VOL_KEY, BGM_KEY);
+    this.sfxVol = vol(SFX_VOL_KEY, SFX_KEY);
+    this.bgmOff = this.bgmVol <= 0;
+    this.sfxOff = this.sfxVol <= 0;
   }
 
-  isBgmOn(): boolean { return !this.bgmOff; }
-  isSfxOn(): boolean { return !this.sfxOff; }
-  setBgm(on: boolean): void {
-    this.bgmOff = !on;
-    store.set(BGM_KEY, on ? '1' : '0');
+  /** 음량 0~1 (0 이면 꺼짐) */
+  getBgmVolume(): number { return this.bgmVol; }
+  getSfxVolume(): number { return this.sfxVol; }
+  setBgmVolume(v: number): void {
+    this.bgmVol = Math.min(1, Math.max(0, v));
+    this.bgmOff = this.bgmVol <= 0;
+    store.set(BGM_VOL_KEY, String(this.bgmVol));
     if (!this.bgm) return;
-    if (on && !this.muted) void this.bgm.play().catch(() => {});
+    this.bgm.volume = BGM_VOL * this.bgmVol;
+    if (!this.bgmOff && !this.muted) { if (this.bgm.paused) void this.bgm.play().catch(() => {}); }
     else this.bgm.pause();
   }
+  setSfxVolume(v: number): void {
+    this.sfxVol = Math.min(1, Math.max(0, v));
+    this.sfxOff = this.sfxVol <= 0;
+    store.set(SFX_VOL_KEY, String(this.sfxVol));
+  }
+  isBgmOn(): boolean { return !this.bgmOff; }
+  isSfxOn(): boolean { return !this.sfxOff; }
+  setBgm(on: boolean): void { this.setBgmVolume(on ? (this.bgmVol || 1) : 0); }
   setSfx(on: boolean): void {
-    this.sfxOff = !on;
-    store.set(SFX_KEY, on ? '1' : '0');
+    this.setSfxVolume(on ? (this.sfxVol || 1) : 0);
   }
 
   // 첫 사용자 입력에서 오디오 해제 (브라우저 자동재생 정책). 그 전에 요청된 BGM 도 이때 재생.
@@ -108,7 +129,7 @@ class AudioManager {
     src.buffer = buf;
     src.playbackRate.value = opts.rate ?? 1;
     const g = this.ctx.createGain();
-    g.gain.value = SFX_VOL;
+    g.gain.value = SFX_VOL * this.sfxVol;
     src.connect(g);
     g.connect(this.master);
     src.start();
@@ -163,7 +184,7 @@ class AudioManager {
     this.track = track;
     const a = new Audio(`bgm/${track}.mp3`);
     a.loop = true;
-    a.volume = BGM_VOL;
+    a.volume = BGM_VOL * this.bgmVol;
     this.bgm = a;
     if (!this.muted && !this.bgmOff) void a.play().catch(() => { /* 첫 입력 전이면 installUnlock 에서 재생 */ });
   }

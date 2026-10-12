@@ -240,20 +240,36 @@ export class Menu {
   // ======================= 설정 =======================
   private openSettings(): void {
     const draw = () => {
-      const row = (ic: Parameters<typeof icon>[0], label: string, act: string, onNow: boolean) =>
-        `<div class="row"><div class="ic">${icon(ic)}</div><div class="info"><div class="t">${label}</div></div>
-          <button class="btn small ${onNow ? 'green' : ''}" data-act="${act}">${onNow ? 'ON' : 'OFF'}</button></div>`;
+      // 음량 슬라이더 (0 이면 끔) - 끄는 동안 다시 그리지 않고 값만 바꾼다 (끌기가 끊기지 않게)
+      const row = (ic: Parameters<typeof icon>[0], label: string, key: 'bgm' | 'sfx', vol: number) =>
+        `<div class="row vol-row"><div class="ic">${icon(vol > 0 ? ic : 'mute')}</div><div class="info"><div class="t">${label}</div>
+          <input class="vol" type="range" min="0" max="100" step="5" value="${Math.round(vol * 100)}" data-vol="${key}" style="--p:${Math.round(vol * 100)}%"></div>
+          <span class="vol-n">${Math.round(vol * 100)}</span></div>`;
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>설정</h2>
-        ${row('music', '배경음악', 'bgm', audio.isBgmOn())}
-        ${row('sound', '효과음', 'sfx', audio.isSfxOn())}
+        ${row('music', '배경음악', 'bgm', audio.getBgmVolume())}
+        ${row('sound', '효과음', 'sfx', audio.getSfxVolume())}
         <div class="row"><div class="ic">${icon('trophy')}</div><div class="info"><div class="t">${esc(meta.nick)}</div></div>
           <button class="btn small blue" data-act="profile">프로필</button></div></div>`, () => this.render());
       bindActions(el, {
-        bgm: () => { audio.setBgm(!audio.isBgmOn()); draw(); },
-        sfx: () => { audio.setSfx(!audio.isSfxOn()); audio.button(); draw(); },
         profile: () => { closeOverlay('panel'); this.openProfile(); },
       });
+      for (const input of el.querySelectorAll<HTMLInputElement>('input.vol')) {
+        const key = input.dataset.vol as 'bgm' | 'sfx';
+        const rowEl = input.closest('.vol-row')!;
+        const show = () => {
+          const v = Number(input.value);
+          input.style.setProperty('--p', `${v}%`);
+          rowEl.querySelector('.vol-n')!.textContent = String(v);
+          rowEl.querySelector('.ic')!.innerHTML = icon(v > 0 ? (key === 'bgm' ? 'music' : 'sound') : 'mute');
+          return v / 100;
+        };
+        input.addEventListener('input', () => {
+          const v = show();
+          if (key === 'bgm') audio.setBgmVolume(v); else audio.setSfxVolume(v);
+        });
+        if (key === 'sfx') input.addEventListener('change', () => audio.button()); // 놓으면 그 크기로 한 번 들려준다
+      }
     };
     draw();
   }
@@ -640,7 +656,7 @@ export class Menu {
         ${eff > 100 ? `<span class="eff">효율<b>${eff}%</b></span>` : ''}<img class="shop-img" src="/ui/shop/${p.id}.png" alt=""><div>${p.kr}</div>
         <button class="btn small gold" data-act="buy" data-id="${p.id}">VX ${price(p.id)}</button></div>`;
       }).join('');
-      const items = Object.entries(meta.items).map(([k, n]) => `${icon(ITEM_KR[k as keyof typeof ITEM_KR].icon)}${n}`).join(' · ');
+      const items = Object.entries(meta.items).map(([k, n]) => `<span class="tip-item" data-tip-item="${k}">${icon(ITEM_KR[k as keyof typeof ITEM_KR].icon)}${n}</span>`).join(' · ');
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>상점</h2>
         <div class="balance"><span class="crystal">${icon('gem')} ${meta.crystals.toLocaleString()}</span>${vx !== null ? `<span class="vx-badge">VX ${vx.toLocaleString()}</span>` : ''}</div>

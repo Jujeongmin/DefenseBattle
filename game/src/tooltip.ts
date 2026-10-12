@@ -2,8 +2,9 @@
 //  유닛 말풍선 - 마우스를 올리거나(PC) 탭하면(모바일) 요소 위에 띄운다. 다른 곳을 누르거나 스크롤하면 닫힌다.
 //   data-tip-unit="<job>"  : 유닛 이름·등급·역할·보유 레벨 (몹 카드의 '막는 유닛')
 //   data-tip-skill="<job>" : 유닛 스킬 이름·설명 (유닛 카드의 ?)
+//   data-tip-item="<item>" : 아이템 이름·설명 (상점 '보유')
 // ============================================================
-import { UNIT_BY_ID, RARITY_KR, RARITY_COLOR, SKILL_KR, SKILL_DESC } from './config';
+import { UNIT_BY_ID, RARITY_KR, RARITY_COLOR, SKILL_KR, SKILL_DESC, ITEM_KR } from './config';
 import { meta } from './meta';
 import type { Job } from './types';
 
@@ -17,6 +18,8 @@ function hide(): void {
 }
 
 function content(el: HTMLElement): string | null {
+  const item = ITEM_KR[el.dataset.tipItem as keyof typeof ITEM_KR];
+  if (item) return `<div class="ut-name">${item.kr}</div><div class="ut-desc">${item.desc}</div>`;
   const skill = el.dataset.tipSkill as Job | undefined;
   if (skill && SKILL_KR[skill]) return `<div class="ut-name">${SKILL_KR[skill]}</div><div class="ut-desc">${SKILL_DESC[skill]}</div>`;
   const job = el.dataset.tipUnit as Job;
@@ -37,7 +40,7 @@ function show(el: HTMLElement): void {
     document.body.appendChild(tip);
   }
   tip.innerHTML = html;
-  tip.classList.toggle('wide', !!el.dataset.tipSkill);
+  tip.classList.toggle('wide', !!el.dataset.tipSkill || !!el.dataset.tipItem);
   anchor = el;
   // 아이콘 바로 위 가운데 (화면 밖으로 나가지 않게)
   const r = el.getBoundingClientRect();
@@ -51,7 +54,7 @@ function show(el: HTMLElement): void {
   tip.classList.toggle('below', above < 6);
 }
 
-const target = (e: Event) => (e.target as HTMLElement | null)?.closest?.<HTMLElement>('[data-tip-unit],[data-tip-skill]') ?? null;
+const target = (e: Event) => (e.target as HTMLElement | null)?.closest?.<HTMLElement>('[data-tip-unit],[data-tip-skill],[data-tip-item]') ?? null;
 
 export function initUnitTips(): void {
   document.addEventListener('pointerover', (e) => {

@@ -592,10 +592,10 @@ export const UNIT_PACK: Partial<Record<Job, string>> = {
 };
 export const PRODUCT_BY_ID: Record<string, ProductDef> = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
 
-export const ITEM_KR: Record<ItemKey, { kr: string; icon: IconName }> = {
-  summonTicket: { kr: '소환권', icon: 'ticket' },
-  mythicTicket: { kr: '신화 확정권', icon: 'star' },
-  goldBooster: { kr: '골드 부스터', icon: 'bag' },
+export const ITEM_KR: Record<ItemKey, { kr: string; icon: IconName; desc: string }> = {
+  summonTicket: { kr: '소환권', icon: 'ticket', desc: '판 안에서 골드 없이 유닛 1회 소환' },
+  mythicTicket: { kr: '신화 확정권', icon: 'star', desc: '판 안에서 신화 등급 유닛을 바로 소환' },
+  goldBooster: { kr: '골드 부스터', icon: 'bag', desc: '켜고 시작하면 그 판 시작 골드 2배 (일반 모드)' },
 };
 
 // ---------- PvP 시즌 패스 ----------
