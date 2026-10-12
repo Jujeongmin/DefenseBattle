@@ -1426,3 +1426,20 @@ table.odds th .pi { width: 12px; height: 12px; }
 .ld-pct { margin-top: -4px; font-size: 16px; font-weight: 700; color: var(--cream); text-shadow: var(--outline-thin); }
 .ld-tip { min-height: 34px; width: 100%; font-size: 13px; color: var(--cream); text-shadow: var(--outline-thin); padding: 7px 12px; background: rgba(15, 10, 6, 0.62); border: 2px solid var(--edge); text-align: center; word-break: keep-all; }
 @keyframes ldIn { from { transform: scale(0.6); opacity: 0; } }
+
+/* ---------- 로비: 아레나·상자를 큰 패널 하나에 (같은 틀을 여러 개 반복하지 않는다) ---------- */
+.arena-card {
+  border-image: url('/ui/frame/paper_dark.png') 44 fill / 20px;  /* 판자 이음선이 없는 한 장짜리 패널 */
+  padding: 18px 14px 14px; gap: 8px;
+}
+.arena-card .road-bar { height: 20px; background: rgba(0, 0, 0, 0.45); border: 2px solid #1a120c; }
+.arena-card .play-btn { margin-top: 0; padding: 10px 14px 14px; }
+.arena-chests { display: flex; flex-direction: column; gap: 5px; padding-top: 8px; border-top: 2px dashed rgba(255, 207, 63, 0.35); }
+.ac-title { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--cream-2); }
+.ac-title .pi { width: 16px; height: 16px; }
+/* 큰 패널 안의 상자 칸: 테두리 그림 대신 은은한 칸 (패널 안에 패널을 또 넣지 않는다) */
+.arena-card .chest-slot { border-image: none; background: rgba(255, 255, 255, 0.07); border: 2px solid rgba(255, 207, 63, 0.28); height: 74px; padding: 4px 3px; }
+.arena-card .chest-slot.empty { background: rgba(0, 0, 0, 0.18); border-style: dashed; }
+.arena-card .chest-slot.opening { border-color: var(--gold); background: rgba(255, 207, 63, 0.14); box-shadow: none; }
+.chest-slot.empty .pi { width: 26px; height: 26px; opacity: 0.4; filter: grayscale(1); }
+.chest-slot.empty .es { font-size: 9px; line-height: 1.25; color: var(--cream-2); opacity: 0.8; }

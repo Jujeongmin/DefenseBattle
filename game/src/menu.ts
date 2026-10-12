@@ -136,8 +136,8 @@ export class Menu {
           <button class="btn red play-btn" data-act="battle">${icon('sword')} 대전 시작</button>
           <div class="arena-sub">${p.wins}승 ${p.losses}패${p.streak > 1 ? ` · ${p.streak}연승` : ''}
             <button class="btn small gold pass-btn" data-act="pass">${icon('trophy')} 시즌 패스${this.seasonClaimable() ? dot : ''}</button></div>
+          <div class="arena-chests"><div class="ac-title">${icon('chest')} 내 상자</div><div class="chest-row">${this.chestSlotsHtml()}</div></div>
         </div>
-        <div class="chest-row">${this.chestSlotsHtml()}</div>
         <div class="mode-row">
           <button class="mode-card camp" data-act="stages">
             <div class="ic">${icon('map')}</div><div class="t">캠페인</div><div class="d">${allCleared ? `${icon('check')} 모두 클리어` : `스테이지 ${nextStage.id}`}</div>
@@ -196,7 +196,7 @@ export class Menu {
   private chestSlotsHtml(): string {
     return meta.chests.map((c, i) => {
       const st = chestState(i);
-      if (!c) return `<div class="chest-slot empty">빈 칸</div>`;
+      if (!c) return `<div class="chest-slot empty">${icon('chest')}<span class="es">대전 승리 시<br>획득</span></div>`;
       const d = CHESTS[c.kind];
       const ic = `<span class="chest-ic" style="--cc:${d.color}">${icon('chest')}</span>`;
       const label = st === 'ready' ? '<b class="open">열기!</b>'
