@@ -325,7 +325,7 @@ export class Menu {
         ${row('music', tl('배경음악'), 'bgm', audio.getBgmVolume())}
         ${row('sound', tl('효과음'), 'sfx', audio.getSfxVolume())}
         <div class="row lang-row"><div class="ic">${icon('flag')}</div><div class="info"><div class="t">Language · ${tl('언어')}</div>
-          <div class="lang-list">${LANGS.map((l) => `<button class="btn small ${l.id === lang ? 'gold' : ''}" data-act="lang" data-l="${l.id}">${l.name}</button>`).join('')}</div></div></div>
+          <div class="lang-list">${LANGS.map((l) => `<button class="btn small fit ${l.id === lang ? 'gold' : ''}" data-act="lang" data-l="${l.id}">${l.name}</button>`).join('')}</div></div></div>
         <div class="row"><div class="ic">${icon('play')}</div><div class="info"><div class="t">${tl('튜토리얼')}</div></div>
           <button class="btn small blue" data-act="replayTutorial">${tl('다시 하기')}</button></div>
         <div class="row"><div class="ic">${icon('trophy')}</div><div class="info"><div class="t">${esc(meta.nick)}</div></div>
