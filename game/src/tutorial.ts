@@ -19,6 +19,7 @@ export class Spotlight {
   private raf = 0;
   private current: SpotStep | null = null;
   private onTap: (() => void) | null = null;
+  private scrolledFor: SpotStep | null = null;
 
   constructor() {
     this.root = document.createElement('div');
@@ -71,6 +72,15 @@ export class Spotlight {
     const app = document.getElementById('app')!.getBoundingClientRect();
     const el = this.current?.target() ?? null;
     if (el) {
+      // 작은 화면에서 대상이 스크롤 영역 밖(로비 아래쪽 등)이면 한 번 보이게 끌어온다
+      if (this.scrolledFor !== this.current) {
+        this.scrolledFor = this.current;
+        const box = scrollParent(el);
+        if (box) {
+          const er = el.getBoundingClientRect(), br = box.getBoundingClientRect();
+          if (er.top < br.top || er.bottom > br.bottom) box.scrollTop += er.top + er.height / 2 - (br.top + br.height / 2);
+        }
+      }
       const r = el.getBoundingClientRect();
       const pad = 6;
       Object.assign(this.hole.style, {
@@ -92,4 +102,12 @@ export class Spotlight {
     }
     this.raf = requestAnimationFrame(this.tick);
   };
+}
+
+/** 세로로 스크롤되는 가장 가까운 조상 */
+function scrollParent(el: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    if (/auto|scroll/.test(getComputedStyle(p).overflowY) && p.scrollHeight > p.clientHeight) return p;
+  }
+  return null;
 }

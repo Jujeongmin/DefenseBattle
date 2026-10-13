@@ -479,6 +479,7 @@ b, strong { font-weight: 700; }
   border-image: url('/ui/frame/paper.png') 44 fill / 16px;
   color: var(--ink); padding: 12px 16px;
   font-size: 15px; font-weight: 700; text-align: center; pointer-events: none;
+  text-wrap: pretty; /* 언어마다 길이가 달라 마지막 줄에 한 단어만 남지 않게 */
 }
 
 /* ---------- v1 로비: 아레나 카드 + 트로피 로드 ---------- */
@@ -1144,6 +1145,7 @@ b, strong { font-weight: 700; }
   padding: 12px 14px;
   font-size: 14px;
   text-align: center;
+  text-wrap: pretty;
   z-index: 32;
   pointer-events: none;
   animation: coachIn 0.3s ease;

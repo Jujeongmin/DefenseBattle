@@ -193,9 +193,17 @@ export class Menu {
    * 한 번 안내한 것은 seenFeatures 에 남겨 다시 띄우지 않는다 (설정 > 튜토리얼 다시 하기 로 초기화).
    * 순서: 대전 → 캠페인 → 덱 → 연구 → 퀘스트 → 무한 모드 (스테이지 1-1 튜토리얼을 마친 뒤부터)
    */
+  private guideRetry: ReturnType<typeof setTimeout> | null = null;
   private maybeGuide(): void {
     if (this.guiding || !featureUnlocked('pvp') || meta.tutorial < 2) return;
-    if (['modal', 'panel'].some((id) => { const c = $(id).classList; return !c.contains('hidden') && !c.contains('closing'); })) return; // 닫히는 중이면 닫힌 것
+    // 팝업(연패 상품 등)이 떠 있으면 닫힐 때까지 기다렸다가 안내한다. 닫히는 중이면 닫힌 것
+    if (['modal', 'panel'].some((id) => { const c = $(id).classList; return !c.contains('hidden') && !c.contains('closing'); })) {
+      if (!this.guideRetry) this.guideRetry = setTimeout(() => {
+        this.guideRetry = null;
+        if (!$('main-menu').classList.contains('hidden')) this.maybeGuide();
+      }, 800);
+      return;
+    }
     const steps: { key: string; sel: string; text: string; on: boolean }[] = [
       { key: 'pvp', sel: '[data-act="battle"]', on: true,
         text: tl('<b>대전 시작</b>을 눌러 보세요!<br>상대 전장에 몹을 던지고, 이기면 상자를 받아요') },
