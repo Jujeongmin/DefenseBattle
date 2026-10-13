@@ -328,7 +328,7 @@ b, strong { font-weight: 700; }
 .rv-card.r-legendary { box-shadow: 0 0 12px var(--rc); }
 .rv-card .frame-sprite { width: 48px; height: 48px; }
 .rv-n { position: absolute; top: 4px; right: 5px; font-size: 13px; font-weight: 700; color: var(--rc); text-shadow: var(--outline-thin); }
-.rv-new { position: absolute; top: -8px; left: -6px; background: var(--red); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 4px; transform: rotate(-8deg); }
+.rv-new { position: absolute; top: 3px; left: 3px; z-index: 2; background: var(--red); color: #fff; font-size: 9px; font-weight: 700; line-height: 1.2; padding: 1px 4px; border: 1px solid var(--edge); } /* 카드 안쪽 - 창 가장자리에 잘리지 않게 */
 .rv-name { font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .rv-bar { position: relative; width: 100%; height: 12px; background: rgba(42, 29, 22, 0.25); border: 2px solid var(--edge); overflow: hidden; }
 .rv-bar > div { position: absolute; inset: 0 auto 0 0; background: #4f9dff; }
@@ -1448,3 +1448,6 @@ table.odds th .pi { width: 12px; height: 12px; }
 .tut-start { width: 100%; max-width: 340px; font-size: 22px; padding: 16px 14px 20px; }
 .ac-hint { margin-left: auto; font-size: 10px; font-weight: 400; color: var(--cream-2); opacity: 0.8; }
 .chest-slot .clock { font-size: 12px; letter-spacing: 0.5px; font-variant-numeric: tabular-nums; }
+.reveal-dialog .rv-grid { padding-top: 4px; }
+/* 뽑기: 가장 높은 등급 색으로 소환 아이콘이 빛난다 */
+.rv-scene .rv-box .pi-summon { filter: drop-shadow(0 0 10px var(--cc)) drop-shadow(0 0 22px var(--cc)); }

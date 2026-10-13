@@ -62,7 +62,8 @@ export function showReveal(r: Reveal, onDone?: () => void): void {
   const drops = [...r.drops].reverse(); // 낮은 등급부터 → 가장 좋은 카드가 마지막
   const rar = (d: { job: Job }) => UNIT_BY_ID[d.job].rarity;
   const best = drops.reduce<Rarity>((b, d) => (RANK[rar(d)] > RANK[b] ? rar(d) : b), 'common');
-  const box = r.kind && r.kind !== 'gacha' ? CHESTS[r.kind].color : '#b06bff';
+  // 연출 색: 상자는 상자 색, 뽑기는 나온 카드 중 가장 높은 등급 색 (일반 회색 · 희귀 파랑 · 영웅 보라 · 전설 금색)
+  const box = r.kind && r.kind !== 'gacha' ? CHESTS[r.kind].color : RARITY_COLOR[best];
   // 카드마다 나오는 시각 (영웅 이상은 뜸을 들인다)
   let t = 0;
   const delays = drops.map((d) => (t += RANK[rar(d)] >= 2 ? 620 : 200));
