@@ -1155,7 +1155,10 @@ b, strong { font-weight: 700; }
 #mob-count-label { position: relative; font-size: 13px; font-weight: 700; text-shadow: var(--outline-thin); }
 
 #controls {
-  border-image: url('/ui/frame/wood.png') 96 fill / 14px 18px 0 18px;
+  /* 판자 이음선이 있는 나무판을 여러 장 붙인 것처럼 보이지 않게: 테두리만 그리고, 안쪽은 판자 한 장을 크게 늘린다 */
+  border-image: url('/ui/frame/wood_frame.png') 53 52 71 52 / 8px 10px 0 10px;
+  background: #7a4a32 url('/ui/frame/wood_plank.png') center / 100% 100% no-repeat;
+  image-rendering: pixelated;
   padding: 12px 12px calc(10px + env(safe-area-inset-bottom));
   flex: 1 1 auto;
   display: flex;
