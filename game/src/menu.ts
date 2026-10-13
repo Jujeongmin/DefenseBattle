@@ -6,7 +6,7 @@ import {
   UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, unitUpgradeCost, SKILL_KR,
   DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, UNIT_PACK, CHESTS, RARITY_KR, RARITY_COLOR, GACHA, chestOpenCost, type RoadStep, type AttackKey,
   SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, productEfficiency,
-  CAMPAIGN, TROPHY_ROAD, PVP_TIERS, ECONOMY, UNIT_PRESETS, ATTACK_PRESETS, type DeckPreset,
+  CAMPAIGN, TROPHY_ROAD, PVP_TIERS, ECONOMY, type SeasonReward, UNIT_PRESETS, ATTACK_PRESETS, type DeckPreset,
 } from './config';
 import { meta, saveMeta, researchLevel, currentSeasonId } from './meta';
 import { getPlatform } from './platform';
@@ -785,35 +785,71 @@ export class Menu {
 
   // ======================= PvP =======================
   /** 랭킹 / 시즌 패스 창 (대전은 로비의 '대전 시작') */
+  private spScroll: number | null = null; // 시즌 패스 띠 스크롤 위치 (창을 다시 그릴 때 유지)
   openPvp(tab: 'pass' | 'rank' = 'rank'): void {
+    this.spScroll = null;
     const draw = async () => {
       let body = '';
       if (tab === 'pass') {
         const t = seasonTier();
         const inTier = meta.season.xp % SEASON_XP_PER_TIER;
-        const rows = SEASON_TIERS.map((def, i) => {
+        // 단계마다 큰 카드 (위: 프리미엄, 아래: 무료). 옆으로 넘기는 띠 - 열면 지금 단계로 이동
+        const bigIc = (r: SeasonReward) => icon(r.items?.mythicTicket ? 'star' : r.items?.summonTicket ? 'ticket' : r.items?.goldBooster ? 'bag' : 'gem');
+        const cell = (r: SeasonReward, n: number, prem: boolean, cls: string) => `<button class="sp-cell ${prem ? 'prem' : 'free'} ${cls}" data-act="claim" data-n="${n}" data-p="${prem ? 1 : 0}">
+            <span class="sp-tag">${prem ? '프리미엄' : '무료'}</span>
+            <span class="sp-ic">${bigIc(r)}</span><span class="sp-amt">${rewardText(r)}</span>
+            <span class="sp-state">${cls === 'done' ? `${icon('check')} 받음` : cls === 'ready' ? '받기!' : icon('lock')}</span></button>`;
+        const tiers = SEASON_TIERS.map((def, i) => {
           const n = i + 1;
           const reached = n <= t;
-          const fDone = meta.season.claimedFree.includes(n);
-          const pDone = meta.season.claimedPremium.includes(n);
-          const fCls = fDone ? 'done' : reached ? 'ready' : 'lock';
-          const pCls = pDone ? 'done' : reached && meta.season.premium ? 'ready' : 'lock';
-          return `<div class="pass-row"><div class="n ${reached ? 'on' : ''}">${n}</div>
-            <button class="pass-cell ${fCls}" data-act="claim" data-n="${n}" data-p="0">${rewardText(def.free)}</button>
-            <button class="pass-cell prem ${pCls}" data-act="claim" data-n="${n}" data-p="1">${meta.season.premium ? '' : icon('lock')}${rewardText(def.premium)}</button></div>`;
+          const fCls = meta.season.claimedFree.includes(n) ? 'done' : reached ? 'ready' : 'lock';
+          const pCls = meta.season.claimedPremium.includes(n) ? 'done' : reached && meta.season.premium ? 'ready' : 'lock';
+          return `<div class="sp-tier ${reached ? 'reached' : ''} ${n === Math.max(1, t) ? 'current' : ''}" data-n="${n}">
+            <div class="sp-n">${n}</div>${cell(def.premium, n, true, pCls)}${cell(def.free, n, false, fCls)}</div>`;
         }).join('');
         body = `<div class="pass-head"><div class="lvl">${t}</div><div style="flex:1">
             <div class="fine" style="text-align:left">시즌 ${currentSeasonId().slice(1)} · 다음 단계까지 ${SEASON_XP_PER_TIER - inTier} XP</div>
             <div class="pass-bar"><div style="width:${t >= SEASON_TIERS.length ? 100 : (inTier / SEASON_XP_PER_TIER) * 100}%"></div></div></div></div>
           ${meta.season.premium ? '' : `<button class="btn gold close" data-act="buyPass" style="margin:0 0 10px">${icon('trophy')} 프리미엄 패스 구매</button>`}
-          <div class="pass-row"><div></div><div class="fine">무료</div><div class="fine trophy">프리미엄</div></div>${rows}`;
+          <div class="sp-wrap"><button class="sp-arrow l" data-act="spMove" data-d="-1" aria-label="이전">${icon('play')}</button>
+            <div class="sp-track" id="sp-track">${tiers}</div>
+            <button class="sp-arrow r" data-act="spMove" data-d="1" aria-label="다음">${icon('play')}</button></div>
+          <div class="fine" style="margin-top:6px">옆으로 넘겨 보세요 · 대전에서 이기면 XP</div>`;
       } else {
         body = '<div class="fine">불러오는 중...</div>';
       }
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>${tab === 'pass' ? '시즌 패스' : '랭킹'}</h2>
         <div id="pvp-body">${body}</div></div>`, () => this.render());
+      // 시즌 패스 띠: 처음 열 때는 지금 단계를 가운데로, 다시 그릴 때(보상 받기)는 보던 위치 그대로
+      const track = el.querySelector<HTMLElement>('#sp-track');
+      if (track) {
+        if (this.spScroll === null) {
+          const cur = track.querySelector<HTMLElement>('.sp-tier.current');
+          if (cur) track.scrollLeft = cur.offsetLeft - (track.clientWidth - cur.offsetWidth) / 2;
+        } else track.scrollLeft = this.spScroll;
+        track.addEventListener('scroll', () => { this.spScroll = track.scrollLeft; }, { passive: true });
+      }
       bindActions(el, {
+        spMove: (b) => {
+          // 지금 가운데 카드에서 2장 옆 카드를 가운데로 (스냅과 싸우지 않게 정확한 위치로 이동)
+          const tr = el.querySelector<HTMLElement>('#sp-track');
+          if (!tr) return;
+          const cards = Array.from(tr.querySelectorAll<HTMLElement>('.sp-tier'));
+          const mid = tr.scrollLeft + tr.clientWidth / 2;
+          let cur = 0;
+          cards.forEach((c, i) => { if (Math.abs(c.offsetLeft + c.offsetWidth / 2 - mid) < Math.abs(cards[cur].offsetLeft + cards[cur].offsetWidth / 2 - mid)) cur = i; });
+          const to = cards[Math.max(0, Math.min(cards.length - 1, cur + Number(b.dataset.d) * 2))];
+          // 부드러운 스크롤은 스냅과 부딪혀 중간에 멈추므로, 이동하는 동안 스냅을 끄고 직접 움직인다
+          const from = tr.scrollLeft, target = Math.max(0, to.offsetLeft - (tr.clientWidth - to.offsetWidth) / 2), t0 = performance.now();
+          tr.style.scrollSnapType = 'none';
+          const step = (now: number) => {
+            const k = Math.min(1, (now - t0) / 260);
+            tr.scrollLeft = from + (target - from) * (1 - (1 - k) ** 3);
+            if (k < 1) requestAnimationFrame(step); else tr.style.scrollSnapType = '';
+          };
+          requestAnimationFrame(step);
+        },
         claim: async (b) => {
           const ok = await claimSeasonReward(Number(b.dataset.n), b.dataset.p === '1');
           if (ok) { audio.coin(); toast('시즌 보상 획득!'); void draw(); }

@@ -1460,3 +1460,37 @@ table.odds th .pi { width: 12px; height: 12px; }
 .summon-btn { touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .deck-warn { display: flex; align-items: center; justify-content: center; gap: 3px; flex-wrap: wrap; margin: -4px 0 8px; padding: 5px 8px; font-size: 11px; font-weight: 700; color: #fff; background: var(--red); border: 2px solid var(--edge); text-shadow: var(--outline-thin); }
 .deck-warn .pi { width: 14px; height: 14px; }
+
+/* ---------- 시즌 패스: 옆으로 넘기는 큰 단계 카드 ---------- */
+.sp-wrap { position: relative; }
+.sp-track { position: relative; display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 6px 30px 10px; scrollbar-width: none; overscroll-behavior-x: contain; }
+.sp-track::-webkit-scrollbar { display: none; }
+.sp-tier { flex: 0 0 118px; scroll-snap-align: center; display: flex; flex-direction: column; gap: 6px; align-items: stretch; position: relative; }
+.sp-n { align-self: center; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700;
+  color: var(--ink-2); background: rgba(42, 29, 22, 0.15); border: 3px solid rgba(42, 29, 22, 0.3); position: relative; z-index: 1; }
+/* 단계 사이 연결선 (도달한 곳까지 금색) */
+.sp-tier::before { content: ''; position: absolute; top: 16px; left: -10px; right: 50%; height: 4px; background: rgba(42, 29, 22, 0.2); }
+.sp-tier + .sp-tier::after { content: ''; }
+.sp-tier.reached::before { background: var(--gold); }
+.sp-tier:first-child::before { display: none; }
+.sp-tier.reached .sp-n { color: #fff; background: var(--gold-ink, #c98a14); border-color: var(--edge); text-shadow: var(--outline-thin); }
+.sp-tier.current .sp-n { box-shadow: 0 0 0 3px var(--gold), 0 0 12px var(--gold); }
+.sp-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 6px 8px; min-height: 128px; border: 0; cursor: pointer;
+  font-family: inherit; color: var(--cream); text-shadow: var(--outline-thin); border-image: url('/ui/frame/btn_gray.png') 44 fill / 12px; }
+.sp-cell.prem { border-image-source: url('/ui/frame/btn_purple.png'); }
+.sp-cell.free { border-image-source: url('/ui/frame/btn_blue.png'); }
+.sp-cell.lock { filter: grayscale(0.6) brightness(0.85); cursor: default; }
+.sp-cell.ready { animation: spReady 1s ease-in-out infinite; }
+.sp-cell.done { filter: grayscale(0.4); opacity: 0.75; }
+@keyframes spReady { 50% { transform: translateY(-3px); filter: brightness(1.15); } }
+.sp-tag { position: absolute; top: 4px; left: 0; right: 0; text-align: center; font-size: 10px; font-weight: 700; opacity: 0.9; }
+.sp-ic .pi { width: 44px; height: 44px; }
+.sp-amt { font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 2px; line-height: 1.2; }
+.sp-amt .pi { width: 13px; height: 13px; }
+.sp-state { margin-top: auto; font-size: 12px; font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 2px; }
+.sp-state .pi { width: 14px; height: 14px; }
+.sp-arrow { position: absolute; top: 50%; z-index: 2; width: 28px; height: 44px; transform: translateY(-50%); border: 0; cursor: pointer;
+  border-image: url('/ui/frame/btn_gold.png') 44 fill / 10px; display: flex; align-items: center; justify-content: center; }
+.sp-arrow .pi { width: 14px; height: 14px; }
+.sp-arrow.l { left: -6px; } .sp-arrow.l .pi { transform: scaleX(-1); }
+.sp-arrow.r { right: -6px; }
