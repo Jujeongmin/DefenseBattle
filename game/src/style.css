@@ -634,7 +634,8 @@ b, strong { font-weight: 700; }
   color: var(--cream);
   text-shadow: var(--outline-thin);
   border-image: url('/ui/frame/ribbon_red.png') 20 128 8 128 fill / 8px 46px 3px 46px;
-  padding: 8px 46px 11px;
+  /* 리본 그림의 밝은 면은 아래쪽 그림자 때문에 상자 가운데보다 약간 아래 → 글자를 그 면 가운데에 */
+  padding: 10px 46px 9px;
 }
 .dialog .close-x, .close-x {
   position: absolute;
@@ -1355,7 +1356,7 @@ b, strong { font-weight: 700; }
 #sell-panel .sell-dialog:not(.anim) h2 { animation: none; } /* 버튼마다 다시 그려질 때 제목 리본이 다시 떨어지지 않게 */
 @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .sell-head { display: flex; align-items: center; justify-content: space-between; margin: 0 28px 10px 0; gap: 8px; }
-.sell-head h2 { margin: 0; font-size: 17px; padding: 7px 40px 10px; border-image-width: 7px 40px 3px 40px; }
+.sell-head h2 { margin: 0; font-size: 17px; padding: 9px 40px 8px; border-image-width: 7px 40px 3px 40px; } /* .dialog h2 와 같이 리본 면 가운데 */
 .qty-row { display: flex; gap: 5px; }
 .qty-row button, .mode-tabs button, .job-tabs button {
   border: 0; background: none; cursor: pointer;
