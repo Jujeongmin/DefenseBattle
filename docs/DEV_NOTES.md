@@ -165,6 +165,17 @@ Verse8 VX Shop 에 아래 **productId** 로 상품을 등록해야 한다 (가�
 한 판 약 3~4분(PvP 시작 체력 x3, 웨이브당 +25%, 봇은 21~38초마다 골드를 모아 던짐), 승률 약 51~56%,
 유닛 5종 해금(260 트로피)까지 약 1.2~2.6시간, 몹 카드 마지막(360)까지 약 2~3.5시간 + 튜토리얼/연습 ≈ 핵심 플레이 3시간.
 
+## 다국어 (한국어 · 영어 · 일본어 · 간체 · 번체)
+
+- 화면 문구는 모두 `tl('한국어 원문', ...인자)` (`game/src/i18n.ts`). 한국어 원문이 키이고, 번역 표는 `game/src/i18n/{en,ja,zh-hans,zh-hant}.ts`.
+  `{0}`·`{1}` 자리에 인자가 들어가고, 같은 한국어가 뜻이 다르면 키 뒤에 `@@문맥` (예: `영웅@@button`).
+- 언어: 저장값 > 기기 언어(ko/ja/zh-Hans/zh-Hant/en) > 영어. 설정에서 바꾸면 저장 후 새로고침. 서버 번들에선 한국어.
+- `index.html` 고정 문구는 `data-i18n="원문"` (`i18n-dom.ts` 가 부팅 때 번역).
+- 글꼴: 한국어·영어는 Galmuri11, 일본어·중국어는 Fusion Pixel 12px (OFL, `game/public/fonts/LICENSE-FusionPixel.txt`).
+  그 언어일 때만 내려받는다.
+- 새 문구를 넣으면: `node tools/i18n_wrap.cjs` (한국어 문구를 `tl()` 로 감싸고, 변수에 붙어 끊긴 문장을 알려 줌)
+  → `node tools/i18n_catalog.cjs` (언어별 빠진 키 수) → 번역 표에 추가.
+
 ## 로딩 화면 · 에셋
 
 - 시작하면 로딩 화면(키아트 + 진행 막대 + 팁)에서 `game/public` 의 모든 그림·소리·글꼴을 미리 받고 서버 접속까지 끝낸 뒤 로비가 열린다 (`preload.ts`, 파일 목록은 `vite.config.js` 의 `virtual:public-assets`).

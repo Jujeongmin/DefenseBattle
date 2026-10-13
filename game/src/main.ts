@@ -24,16 +24,18 @@ import type { GameOverData } from './types';
 import { icon } from './icons';
 import { initUnitTips } from './tooltip';
 import { preloadEverything } from './preload';
+import { translateStatic } from './i18n-dom';
 
+import { tl } from './i18n';
 /** 로딩 화면 한 줄 팁 */
 const LOADING_TIPS = [
-  '같은 유닛 3개를 합치면 한 등급 위로 올라가요',
-  '몹 카드를 끌어 상대 전장에 던지세요',
-  '필드 몹이 100마리가 되면 져요',
-  '상대 덱을 보고 막기 어려운 몹을 골라 보내세요',
-  '영웅·전설 유닛은 정예 등급부터 스킬을 써요',
-  '대전에서 이기면 상자를 받아요',
-  '중복 카드를 모으면 유닛 레벨을 올릴 수 있어요',
+  tl('같은 유닛 3개를 합치면 한 등급 위로 올라가요'),
+  tl('몹 카드를 끌어 상대 전장에 던지세요'),
+  tl('필드 몹이 100마리가 되면 져요'),
+  tl('상대 덱을 보고 막기 어려운 몹을 골라 보내세요'),
+  tl('영웅·전설 유닛은 정예 등급부터 스킬을 써요'),
+  tl('대전에서 이기면 상자를 받아요'),
+  tl('중복 카드를 모으면 유닛 레벨을 올릴 수 있어요'),
 ];
 
 preloadAll(meta.deck);
@@ -119,12 +121,12 @@ function startPvp(g: Game, u: UI, s: PvpSession): void {
       if (resultShown) return;
       resultShown = true;
       if (fallback) clearTimeout(fallback);
-      if (!g.over) g.pvpEnd(r.won, r.won ? (r.reason === 'leave' ? '상대가 대전을 떠났습니다' : '상대 필드가 무너졌습니다!') : '내 필드가 무너졌습니다');
+      if (!g.over) g.pvpEnd(r.won, r.won ? (r.reason === 'leave' ? tl('상대가 대전을 떠났습니다') : tl('상대 필드가 무너졌습니다!')) : tl('내 필드가 무너졌습니다'));
       showPvpResult(g, u, s, r);
     },
   }).catch((e) => {
     console.warn('[pvp] ready failed', e);
-    toast('대전 서버 연결에 실패했어요');
+    toast(tl('대전 서버 연결에 실패했어요'));
     void exitGame(true);
   });
 }
@@ -150,20 +152,20 @@ function showPvpResult(g: Game, u: UI, s: PvpSession, r: PvpResult): void {
   saveMeta();
   audio.gameEnd(r.won);
   const rewards = [`${icon('trophy')} ${r.trophyDelta >= 0 ? '+' : ''}${r.trophyDelta}`, ...(crystals ? [`${icon('gem')} +${crystals}`] : [])];
-  for (const st of road) if (st.crystals) rewards.push(`${icon('gem')} +${st.crystals} 로드`);
-  for (const st of road) if (st.attack) rewards.push(`${roadRewardIcon(st)} 새 몹 카드!`);
-  if (r.won && reward) rewards.push(reward.chest ? `${icon('chest')} ${CHESTS[reward.chest].kr}` : `${icon('chest')} 상자 칸 가득`);
+  for (const st of road) if (st.crystals) rewards.push(tl('{0} +{1} 로드', icon('gem'), st.crystals));
+  for (const st of road) if (st.attack) rewards.push(tl('{0} 새 몹 카드!', roadRewardIcon(st)));
+  if (r.won && reward) rewards.push(reward.chest ? `${icon('chest')} ${CHESTS[reward.chest].kr}` : tl('{0} 상자 칸 가득', icon('chest')));
   const roadUnit = road.find((st) => st.unit)?.unit;
   u.showResult({
     win: r.won,
-    title: r.won ? `${icon('trophy')} 승리!` : '패배',
-    sub: `${s.match.opponent.nick} · Wave ${g.wave}${r.reason === 'leave' && r.won ? ' · 상대 이탈' : ''}`,
+    title: r.won ? tl('{0} 승리!', icon('trophy')) : tl('패배'),
+    sub: `${s.match.opponent.nick} · Wave ${g.wave}${r.reason === 'leave' && r.won ? tl(' · 상대 이탈') : ''}`,
     rewards,
     unlocked: roadUnit,
     buttons: [
-      ...(crystals && rewardedAvailable() ? [{ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward() }] : []),
-      { label: `${icon('sword')} 다시 대전`, cls: 'red', action: () => { void exitGame(true).then(() => menu.quickMatch()); } },
-      { label: '로비로', cls: '', action: () => void exitGame(true) },
+      ...(crystals && rewardedAvailable() ? [{ label: tl('{0} 광고 보고 {1} +{2} 더 받기', icon('tv'), icon('gem'), crystals), cls: 'blue', id: 'btn-double', action: () => void doubleReward() }] : []),
+      { label: tl('{0} 다시 대전', icon('sword')), cls: 'red', action: () => { void exitGame(true).then(() => menu.quickMatch()); } },
+      { label: tl('로비로'), cls: '', action: () => void exitGame(true) },
     ],
   });
   afterMatch({ tierUp, losing: !r.won && (meta.pvp.lossStreak ?? 0) >= 2 });
@@ -180,16 +182,16 @@ function onGameOver(g: Game, d: GameOverData): void {
   if (!d.cleared && g.canRevive() && rewardedAvailable()) {
     u.showResult({
       win: false,
-      title: '위기!',
+      title: tl('위기!'),
       sub: d.reason,
       rewards: [],
-      extraHtml: '<div class="fine">광고 보고 몹을 모두 지우고 계속 (1회)</div>',
+      extraHtml: tl('<div class="fine">광고 보고 몹을 모두 지우고 계속 (1회)</div>'),
       buttons: [
-        { label: `${icon('tv')} 부활하고 계속하기`, cls: 'green', action: async () => {
+        { label: tl('{0} 부활하고 계속하기', icon('tv')), cls: 'green', action: async () => {
           if (await showRewarded('revive') && g.revive()) { u.hideResult(); audio.merge(); }
-          else toast('광고를 끝까지 보면 부활할 수 있어요');
+          else toast(tl('광고를 끝까지 보면 부활할 수 있어요'));
         } },
-        { label: '포기하기', cls: '', action: () => void finishSolo(u, d) },
+        { label: tl('포기하기'), cls: '', action: () => void finishSolo(u, d) },
       ],
     });
     return;
@@ -212,9 +214,9 @@ async function finishSolo(u: UI, d: GameOverData): Promise<void> {
     const canNext = d.cleared && next && stageUnlocked(next.id);
     const view: ResultView = {
       win: d.cleared,
-      title: d.cleared ? '스테이지 클리어!' : '실패...',
+      title: d.cleared ? tl('스테이지 클리어!') : tl('실패...'),
       sub: d.cleared
-        ? `${l.stageId} · 최대 필드 몹 ${d.peakMobs}마리${res.firstClear ? ' · 첫 클리어!' : res.newBest ? ' · 별 기록 갱신!' : ''}`
+        ? tl('{0} · 최대 필드 몹 {1}마리{2}', l.stageId, d.peakMobs, res.firstClear ? tl(' · 첫 클리어!') : res.newBest ? tl(' · 별 기록 갱신!') : '')
         : `${d.reason} · Wave ${d.wave}/${st.waves}`,
       stars: d.cleared ? stars : undefined,
       rewards: crystals ? [`${icon('gem')} +${crystals}`] : [],
@@ -222,11 +224,11 @@ async function finishSolo(u: UI, d: GameOverData): Promise<void> {
       extraHtml: '',
       buttons: [],
     };
-    if (crystals > 0 && rewardedAvailable()) view.buttons.push({ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward() });
-    if (canNext) view.buttons.push({ label: `${icon('play')} 다음 스테이지 ${next.id}`, cls: 'red', action: () => void exitGame(true).then(() => menu.openStage(next.id)) });
+    if (crystals > 0 && rewardedAvailable()) view.buttons.push({ label: tl('{0} 광고 보고 {1} +{2} 더 받기', icon('tv'), icon('gem'), crystals), cls: 'blue', id: 'btn-double', action: () => void doubleReward() });
+    if (canNext) view.buttons.push({ label: tl('{0} 다음 스테이지 {1}', icon('play'), next.id), cls: 'red', action: () => void exitGame(true).then(() => menu.openStage(next.id)) });
     // 다시 하기는 실패했을 때만 (클리어면 다음 스테이지 / 로비로 - 버튼을 줄인다)
-    if (!d.cleared) view.buttons.push({ label: '다시 하기', cls: 'red', action: () => void exitGame(true).then(() => menu.openStage(l.stageId)) });
-    view.buttons.push({ label: '로비로', cls: '', action: () => void exitGame(true) });
+    if (!d.cleared) view.buttons.push({ label: tl('다시 하기'), cls: 'red', action: () => void exitGame(true).then(() => menu.openStage(l.stageId)) });
+    view.buttons.push({ label: tl('로비로'), cls: '', action: () => void exitGame(true) });
     u.showResult(view);
     // 결제 팝업 조건: 새 챕터 도달 / 2연속 실패 (튜토리얼 직후는 제외)
     if (l.stageId !== '1-1') afterMatch({ chapterUp: res.firstClear && !!next && next.chapter > st.chapter, losing: meta.stageFailStreak >= 2 });
@@ -234,13 +236,13 @@ async function finishSolo(u: UI, d: GameOverData): Promise<void> {
     const reward = await endlessResult(d.wave);
     u.showResult({
       win: d.cleared,
-      title: d.cleared ? '50웨이브 클리어!' : '게임 오버',
-      sub: `${d.reason} · 최고 기록 ${meta.bestWave}웨이브`,
+      title: d.cleared ? tl('50웨이브 클리어!') : tl('게임 오버'),
+      sub: tl('{0} · 최고 기록 {1}웨이브', d.reason, meta.bestWave),
       rewards: [`Wave ${d.wave}`, `${icon('gem')} +${reward}`],
       buttons: [
-        ...(reward > 0 && rewardedAvailable() ? [{ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${reward} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward() }] : []),
-        { label: '다시 하기', cls: 'red', action: () => void exitGame(true).then(() => launch({ kind: 'endless', goldBooster: false })) },
-        { label: '로비로', cls: '', action: () => void exitGame(true) },
+        ...(reward > 0 && rewardedAvailable() ? [{ label: tl('{0} 광고 보고 {1} +{2} 더 받기', icon('tv'), icon('gem'), reward), cls: 'blue', id: 'btn-double', action: () => void doubleReward() }] : []),
+        { label: tl('다시 하기'), cls: 'red', action: () => void exitGame(true).then(() => launch({ kind: 'endless', goldBooster: false })) },
+        { label: tl('로비로'), cls: '', action: () => void exitGame(true) },
       ],
     });
   }
@@ -252,8 +254,8 @@ async function doubleReward(): Promise<void> {
   if (await showRewarded('doubleReward')) {
     const amount = await act<number>('adReward', { kind: 'double' }); // 직전 판 보상 한 번 더 (서버가 금액 결정)
     audio.coin();
-    toast(`보상 2배! ${icon('gem')} +${amount}`);
-    if (btn) btn.innerHTML = `${icon('check')} 2배 보상 받음`;
+    toast(tl('보상 2배! {0} +{1}', icon('gem'), amount));
+    if (btn) btn.innerHTML = tl('{0} 2배 보상 받음', icon('check'));
   } else if (btn) {
     btn.disabled = false;
   }
@@ -273,20 +275,20 @@ async function startTutorial(g: Game, u: UI): Promise<void> {
   const q = <T extends Element>(sel: string) => document.querySelector<T>(sel) as HTMLElement | null;
   const alive = () => g === game;
   const steps: SpotStep[] = [
-    { target: () => $('btn-summon'), text: `<b>소환</b>을 눌러 영웅을 불러요 (${icon('coin')}20)` },
-    { target: () => $('btn-summon'), text: '한 번 더!' },
-    { target: () => $('btn-summon'), text: '하나 더 부르면 <b>합성</b>할 수 있어요' },
-    { target: () => $('btn-sell-panel'), text: '같은 영웅 3명! <b>영웅</b>을 눌러요' },
-    { target: () => q('#sell-panel .grade-card.ready'), text: '눌러서 <b>합성</b> - 한 등급 위로!' },
-    { target: () => q('#sell-panel .close-x'), text: '창을 닫아요' },
-    { target: () => q('#unit-stacks .up-btn:not(:disabled)'), text: '<b>강화</b>하면 그 직업이 모두 세져요' },
+    { target: () => $('btn-summon'), text: tl('<b>소환</b>을 눌러 영웅을 불러요 ({0}20)', icon('coin')) },
+    { target: () => $('btn-summon'), text: tl('한 번 더!') },
+    { target: () => $('btn-summon'), text: tl('하나 더 부르면 <b>합성</b>할 수 있어요') },
+    { target: () => $('btn-sell-panel'), text: tl('같은 영웅 3명! <b>영웅</b>을 눌러요') },
+    { target: () => q('#sell-panel .grade-card.ready'), text: tl('눌러서 <b>합성</b> - 한 등급 위로!') },
+    { target: () => q('#sell-panel .close-x'), text: tl('창을 닫아요') },
+    { target: () => q('#unit-stacks .up-btn:not(:disabled)'), text: tl('<b>강화</b>하면 그 직업이 모두 세져요') },
   ];
   for (const s of steps) {
     if (!alive()) break;
     await spot.step(s);
     await new Promise((r) => setTimeout(r, 120)); // 클릭 결과가 화면에 반영될 시간
   }
-  if (alive()) await spot.message('준비 끝! 몹이 길 끝에 쌓이지 않게 막아요', 1800);
+  if (alive()) await spot.message(tl('준비 끝! 몹이 길 끝에 쌓이지 않게 막아요'), 1800);
   spot.close();
   if (!alive()) return;
   g.paused = false;
@@ -301,7 +303,7 @@ async function exitGame(skipConfirm = false): Promise<void> {
   if (!skipConfirm && game && !game.over) {
     const { confirmModal } = await import('./dom');
     const pvp = current?.kind === 'pvp';
-    if (!(await confirmModal('나가기', pvp ? '지금 나가면 <b>패배</b> 처리됩니다.' : '진행 중인 판을 포기하고 로비로 갈까요?', '나가기'))) return;
+    if (!(await confirmModal(tl('나가기'), pvp ? tl('지금 나가면 <b>패배</b> 처리됩니다.') : tl('진행 중인 판을 포기하고 로비로 갈까요?'), tl('나가기')))) return;
     if (pvp) session?.reportDefeat();
   }
   session?.leave();
@@ -363,12 +365,13 @@ setInterval(() => {
 //  부팅
 // ---------------------------------------------------------------
 async function boot(): Promise<void> {
+  translateStatic(); // index.html 고정 문구를 지금 언어로
   initUnitTips(); // 유닛 아이콘 말풍선 (몹 카드의 '막는 유닛' 등)
   $('main-menu').classList.remove('hidden');
   // 로딩 화면: 모든 에셋을 받는 동안 진행 막대 (서버 접속도 함께)
   const tips = LOADING_TIPS.slice().sort(() => Math.random() - 0.5);
   $('main-menu').innerHTML = `<div class="loading">
-    <img class="ld-logo" src="ui/logo.png" alt="디펜스 배틀">
+    <img class="ld-logo" src="ui/logo.png" alt="${tl('디펜스 배틀')}">
     <div class="ld-bottom">
       <div class="ld-tip" id="ld-tip">${tips[0]}</div>
       <div class="ld-bar"><div id="ld-fill"></div></div>
@@ -394,9 +397,9 @@ async function boot(): Promise<void> {
   setPct(100);
   const granted = await syncPurchases().catch(() => [] as string[]);
   menu.show();
-  if (granted.length) toast('결제한 상품이 지급되었어요');
+  if (granted.length) toast(tl('결제한 상품이 지급되었어요'));
   // Verse8 인데 계정을 확인하지 못함 → 진행이 저장되지 않으니 알린다
-  if (getPlatform().kind === 'verse8' && !getPlatform().accountId()) toast('서버에 연결하지 못해 진행이 저장되지 않아요 · 새로고침해 주세요', 6000);
+  if (getPlatform().kind === 'verse8' && !getPlatform().accountId()) toast(tl('서버에 연결하지 못해 진행이 저장되지 않아요 · 새로고침해 주세요'), 6000);
 }
 void boot();
 

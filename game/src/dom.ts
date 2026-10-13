@@ -1,4 +1,5 @@
-// ============================================================
+
+import { tl } from './i18n';// ============================================================
 //  DOM 헬퍼 - 패널/모달/토스트 공용
 // ============================================================
 export const $ = <T extends HTMLElement = HTMLElement>(id: string): T =>
@@ -86,7 +87,7 @@ export function bindActions(root: HTMLElement, handlers: Record<string, (el: HTM
 }
 
 /** 확인 모달 */
-export function confirmModal(title: string, body: string, ok = '확인', cancel = '취소'): Promise<boolean> {
+export function confirmModal(title: string, body: string, ok = tl('확인'), cancel = tl('취소')): Promise<boolean> {
   return new Promise((resolve) => {
     const el = openOverlay('modal', `<div class="dialog" style="text-align:center">
       <h2>${title}</h2><div style="margin-bottom:12px">${body}</div>

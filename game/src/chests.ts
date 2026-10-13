@@ -16,6 +16,7 @@ import type { Job, Rarity } from './types';
 export type { CardDrop, Reveal } from './econ/rules';
 import type { Reveal } from './econ/rules';
 
+import { tl } from './i18n';
 const HOUR = 60 * 60 * 1000;
 
 // ---------- 상자 칸 ----------
@@ -41,7 +42,7 @@ export function clockText(ms: number): string {
 }
 export function leftText(ms: number): string {
   const m = Math.ceil(ms / 60000);
-  return m >= 60 ? `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}` : `${m}분`;
+  return m >= 60 ? tl('{0}시간{1}', Math.floor(m / 60), m % 60 ? tl(' {0}분', m % 60) : '') : tl('{0}분', m);
 }
 
 // ---------- 카드 공개 창 ----------
@@ -58,6 +59,13 @@ const T_CARDS = 1760;
  * 카드 공개 연출: 상자가 떨어져 세 번 흔들리고(영웅 이상이 있으면 마지막 흔들림이 그 등급 색으로 빛남)
  * 빛과 함께 터진 뒤, 카드가 낮은 등급부터 한 장씩 뒤집힌다 (영웅·전설은 뜸을 들여 크게). 화면을 탭하면 건너뛴다.
  */
+/** 공개 창 제목 (서버가 보낸 제목은 한국어라 종류로 다시 만든다) */
+function revealTitle(r: Reveal): string {
+  if (r.kind === 'gacha') return tl('유닛 뽑기 {0}회', (r.title.match(/\d+/) ?? ['1'])[0]);
+  if (r.kind) return CHESTS[r.kind].kr;
+  return r.title;
+}
+
 export function showReveal(r: Reveal, onDone?: () => void): void {
   const drops = [...r.drops].reverse(); // 낮은 등급부터 → 가장 좋은 카드가 마지막
   const rar = (d: { job: Job }) => UNIT_BY_ID[d.job].rarity;
@@ -80,21 +88,21 @@ export function showReveal(r: Reveal, onDone?: () => void): void {
       ${spriteIcon(unitIconUrl(d.job))}
       <div class="rv-n">×${d.n}</div>
       <div class="rv-name">${u.kr}</div>
-      <div class="rv-bar ${ready ? 'ready' : ''}"><div style="--from:${pctOf(Math.max(0, have - d.n))}%;width:${pctOf(have)}%"></div><span>${ready ? '레벨업!' : `${have}/${need}`}</span></div>
+      <div class="rv-bar ${ready ? 'ready' : ''}"><div style="--from:${pctOf(Math.max(0, have - d.n))}%;width:${pctOf(have)}%"></div><span>${ready ? tl('레벨업!') : `${have}/${need}`}</span></div>
     </div>`;
   }).join('');
   const el = openOverlay('modal', `<div class="rv-scene" style="--cc:${box};--hc:${RARITY_COLOR[best]}">
       <div class="rv-rays"></div>
       <div class="rv-box ${RANK[best] >= 2 ? 'hint' : ''}">${r.kind === 'gacha' ? icon('summon') : icon('chest')}</div>
       <div class="rv-flash"></div>
-      <div class="rv-skip">탭해서 건너뛰기</div>
+      <div class="rv-skip">${tl('탭해서 건너뛰기')}</div>
     </div>
     <div class="dialog reveal-dialog rv-wait" style="--end:${end}ms"><button class="close-x">${icon('close')}</button>
-    <h2>${r.title}</h2>
+    <h2>${revealTitle(r)}</h2>
     ${r.gems ? `<div class="rv-gems">${icon('gem')} +${r.gems}</div>` : ''}
     <div class="rv-grid">${rows}</div>
     <div class="fine">${Object.entries(RARITY_KR).map(([k, v]) => `<span style="color:${RARITY_COLOR[k as Rarity]}">■</span>${v}`).join(' ')}</div>
-    <button class="btn red rv-ok" data-close>확인</button></div>`, onDone);
+    <button class="btn red rv-ok" data-close>${tl('확인')}</button></div>`, onDone);
 
   const scene = el.querySelector<HTMLElement>('.rv-scene')!;
   const dlg = el.querySelector<HTMLElement>('.reveal-dialog')!;

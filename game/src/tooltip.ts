@@ -8,6 +8,7 @@ import { UNIT_BY_ID, RARITY_KR, RARITY_COLOR, SKILL_KR, SKILL_DESC, ITEM_KR } fr
 import { meta } from './meta';
 import type { Job } from './types';
 
+import { tl } from './i18n';
 let tip: HTMLDivElement | null = null;
 let anchor: HTMLElement | null = null;
 let lastPointer = 'mouse';
@@ -28,7 +29,7 @@ function content(el: HTMLElement): string | null {
   const lv = meta.units[job];
   return `<div class="ut-name">${u.kr} <span style="color:${RARITY_COLOR[u.rarity]}">${RARITY_KR[u.rarity]}</span></div>
     <div class="ut-role">${u.role}</div>
-    <div class="ut-own ${lv ? '' : 'no'}">${lv ? `보유 Lv.${lv}` : '미보유'}</div>`;
+    <div class="ut-own ${lv ? '' : 'no'}">${lv ? tl('보유 Lv.{0}', lv) : tl('미보유')}</div>`;
 }
 
 function show(el: HTMLElement): void {

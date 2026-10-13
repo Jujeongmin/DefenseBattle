@@ -8,6 +8,7 @@ import type {
 } from './types';
 
 
+import { tl } from './i18n';
 // ---------- 유닛 (직업) ----------
 // base: 투사체 형태 (+ sheet 가 없으면 스프라이트 시트), sheet: 전용 시트 이름 (public/sprites/{sheet}_{등급}.png)
 // hue: 색조 회전(도) - 전용 아트가 없을 때의 임시 변형
@@ -32,43 +33,43 @@ export interface UnitDef {
 // 등급은 '얻기 어려움'이다 (같은 레벨이면 비슷한 전력). 상자·뽑기에서 나오는 확률과 레벨업 카드 수가 다르다.
 export const UNITS: UnitDef[] = [
   // ---- 일반 ----
-  { id: 'archer',   kr: '궁수',     base: 'archer',  hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: '다중 사격', rarity: 'common', tint: '#3fae4a', fav: 'orc' },
-  { id: 'wizard',   kr: '마법사',   base: 'wizard',  hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: '범위 폭발', rarity: 'common', tint: '#8e5bd8', fav: 'undead' },
-  { id: 'warrior',  kr: '전사',     base: 'warrior', hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: '둔화', rarity: 'common', tint: '#c9a13b', fav: 'troll' },
-  { id: 'spearman', kr: '창병',     base: 'warrior', sheet: 'Spearman', hue: 0, cooldown: 1.05, rangeMult: 1.05, atkMult: 0.95, role: '관통', rarity: 'common', tint: '#b8864b', fav: 'troll', unlockCrystals: 200 },
-  { id: 'slinger',  kr: '투석병',   base: 'archer', sheet: 'Slinger',  hue: 0, cooldown: 1.1,  rangeMult: 1.0,  atkMult: 0.95, role: '넉백', rarity: 'common', tint: '#9a8a6a', fav: 'orc', unlockCrystals: 200 },
-  { id: 'monk',     kr: '수도승',   base: 'warrior', sheet: 'Monk', hue: 0, cooldown: 0.6,  rangeMult: 0.9,  atkMult: 0.55, role: '연타', rarity: 'common', tint: '#e0a050', fav: 'troll', unlockCrystals: 200 },
-  { id: 'hunter',   kr: '사냥꾼',   base: 'archer', sheet: 'Hunter',  hue: 0, cooldown: 1.0,  rangeMult: 1.1,  atkMult: 0.9,  role: '표식', rarity: 'common', tint: '#6a9a3a', fav: 'orc', unlockCrystals: 200 },
-  { id: 'acolyte',  kr: '견습 사제', base: 'wizard', sheet: 'Acolyte', hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.9,  role: '언데드 특화', rarity: 'common', tint: '#f0e0a0', unlockCrystals: 200 },
+  { id: 'archer',   kr: tl('궁수'),     base: 'archer',  hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: tl('다중 사격'), rarity: 'common', tint: '#3fae4a', fav: 'orc' },
+  { id: 'wizard',   kr: tl('마법사'),   base: 'wizard',  hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: tl('범위 폭발'), rarity: 'common', tint: '#8e5bd8', fav: 'undead' },
+  { id: 'warrior',  kr: tl('전사'),     base: 'warrior', hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 1.0,  role: tl('둔화'), rarity: 'common', tint: '#c9a13b', fav: 'troll' },
+  { id: 'spearman', kr: tl('창병'),     base: 'warrior', sheet: 'Spearman', hue: 0, cooldown: 1.05, rangeMult: 1.05, atkMult: 0.95, role: tl('관통'), rarity: 'common', tint: '#b8864b', fav: 'troll', unlockCrystals: 200 },
+  { id: 'slinger',  kr: tl('투석병'),   base: 'archer', sheet: 'Slinger',  hue: 0, cooldown: 1.1,  rangeMult: 1.0,  atkMult: 0.95, role: tl('넉백'), rarity: 'common', tint: '#9a8a6a', fav: 'orc', unlockCrystals: 200 },
+  { id: 'monk',     kr: tl('수도승'),   base: 'warrior', sheet: 'Monk', hue: 0, cooldown: 0.6,  rangeMult: 0.9,  atkMult: 0.55, role: tl('연타'), rarity: 'common', tint: '#e0a050', fav: 'troll', unlockCrystals: 200 },
+  { id: 'hunter',   kr: tl('사냥꾼'),   base: 'archer', sheet: 'Hunter',  hue: 0, cooldown: 1.0,  rangeMult: 1.1,  atkMult: 0.9,  role: tl('표식'), rarity: 'common', tint: '#6a9a3a', fav: 'orc', unlockCrystals: 200 },
+  { id: 'acolyte',  kr: tl('견습 사제'), base: 'wizard', sheet: 'Acolyte', hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.9,  role: tl('언데드 특화'), rarity: 'common', tint: '#f0e0a0', unlockCrystals: 200 },
   // ---- 희귀 ----
-  { id: 'ranger',   kr: '레인저',   base: 'archer', sheet: 'Ranger',  hue: 0, cooldown: 1.25, rangeMult: 1.3,  atkMult: 1.15, role: '저격·치명타', rarity: 'rare', tint: '#3fa7c9', fav: 'troll', unlockStage: '1-3', unlockCrystals: 300 },
-  { id: 'frost',    kr: '빙결술사', base: 'wizard', sheet: 'Frost',   hue: 0, cooldown: 1.1,  rangeMult: 1.0,  atkMult: 0.7,  role: '범위 빙결', rarity: 'rare', tint: '#7fe0ff', unlockStage: '1-6', unlockCrystals: 500 },
-  { id: 'poisoner', kr: '독술사',   base: 'wizard', sheet: 'Poisoner',  hue: 0, cooldown: 1.1,  rangeMult: 1.0,  atkMult: 0.7,  role: '중독', rarity: 'rare', tint: '#7ac943', fav: 'troll', unlockCrystals: 500 },
-  { id: 'storm',    kr: '번개술사', base: 'wizard', sheet: 'Storm',  hue: 0, cooldown: 1.2,  rangeMult: 1.0,  atkMult: 0.85, role: '연쇄 번개', rarity: 'rare', tint: '#7fb0ff', fav: 'orc', unlockCrystals: 500 },
-  { id: 'crossbow', kr: '석궁병',   base: 'archer', sheet: 'Crossbow',  hue: 0, cooldown: 1.3,  rangeMult: 1.15, atkMult: 1.1,  role: '일직선 관통', rarity: 'rare', tint: '#8a6a4a', fav: 'troll', unlockCrystals: 500 },
-  { id: 'knight',   kr: '기사',     base: 'warrior', sheet: 'Knight', hue: 0, cooldown: 1.1,  rangeMult: 0.95, atkMult: 1.0,  role: '단단한 몹 특화', rarity: 'rare', tint: '#a0b0c0', fav: 'orc', unlockCrystals: 500 },
-  { id: 'berserker', kr: '광전사',  base: 'warrior', sheet: 'Berserker', hue: 0, cooldown: 0.9,  rangeMult: 0.9,  atkMult: 0.85, role: '몹 많을수록 강함', rarity: 'rare', tint: '#d04a3a', fav: 'troll', unlockCrystals: 500 },
-  { id: 'merchant', kr: '상인',     base: 'archer', sheet: 'Merchant',  hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.65, role: '처치 골드 +', rarity: 'rare', tint: '#ffcf3f', unlockCrystals: 500 },
-  { id: 'drummer',  kr: '북치기',   base: 'warrior', sheet: 'Drummer', hue: 0, cooldown: 1.1,  rangeMult: 0.95, atkMult: 0.6,  role: '아군 공속 +', rarity: 'rare', tint: '#e07a3a', unlockCrystals: 500 },
-  { id: 'houndmaster', kr: '조련사', base: 'archer', sheet: 'Houndmaster', hue: 0, cooldown: 0.9,  rangeMult: 1.0,  atkMult: 0.85, role: '빠른 몹 특화', rarity: 'rare', tint: '#9a6a3a', fav: 'orc', unlockCrystals: 500 },
+  { id: 'ranger',   kr: tl('레인저'),   base: 'archer', sheet: 'Ranger',  hue: 0, cooldown: 1.25, rangeMult: 1.3,  atkMult: 1.15, role: tl('저격·치명타'), rarity: 'rare', tint: '#3fa7c9', fav: 'troll', unlockStage: '1-3', unlockCrystals: 300 },
+  { id: 'frost',    kr: tl('빙결술사'), base: 'wizard', sheet: 'Frost',   hue: 0, cooldown: 1.1,  rangeMult: 1.0,  atkMult: 0.7,  role: tl('범위 빙결'), rarity: 'rare', tint: '#7fe0ff', unlockStage: '1-6', unlockCrystals: 500 },
+  { id: 'poisoner', kr: tl('독술사'),   base: 'wizard', sheet: 'Poisoner',  hue: 0, cooldown: 1.1,  rangeMult: 1.0,  atkMult: 0.7,  role: tl('중독'), rarity: 'rare', tint: '#7ac943', fav: 'troll', unlockCrystals: 500 },
+  { id: 'storm',    kr: tl('번개술사'), base: 'wizard', sheet: 'Storm',  hue: 0, cooldown: 1.2,  rangeMult: 1.0,  atkMult: 0.85, role: tl('연쇄 번개'), rarity: 'rare', tint: '#7fb0ff', fav: 'orc', unlockCrystals: 500 },
+  { id: 'crossbow', kr: tl('석궁병'),   base: 'archer', sheet: 'Crossbow',  hue: 0, cooldown: 1.3,  rangeMult: 1.15, atkMult: 1.1,  role: tl('일직선 관통'), rarity: 'rare', tint: '#8a6a4a', fav: 'troll', unlockCrystals: 500 },
+  { id: 'knight',   kr: tl('기사'),     base: 'warrior', sheet: 'Knight', hue: 0, cooldown: 1.1,  rangeMult: 0.95, atkMult: 1.0,  role: tl('단단한 몹 특화'), rarity: 'rare', tint: '#a0b0c0', fav: 'orc', unlockCrystals: 500 },
+  { id: 'berserker', kr: tl('광전사'),  base: 'warrior', sheet: 'Berserker', hue: 0, cooldown: 0.9,  rangeMult: 0.9,  atkMult: 0.85, role: tl('몹 많을수록 강함'), rarity: 'rare', tint: '#d04a3a', fav: 'troll', unlockCrystals: 500 },
+  { id: 'merchant', kr: tl('상인'),     base: 'archer', sheet: 'Merchant',  hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.65, role: tl('처치 골드 +'), rarity: 'rare', tint: '#ffcf3f', unlockCrystals: 500 },
+  { id: 'drummer',  kr: tl('북치기'),   base: 'warrior', sheet: 'Drummer', hue: 0, cooldown: 1.1,  rangeMult: 0.95, atkMult: 0.6,  role: tl('아군 공속 +'), rarity: 'rare', tint: '#e07a3a', unlockCrystals: 500 },
+  { id: 'houndmaster', kr: tl('조련사'), base: 'archer', sheet: 'Houndmaster', hue: 0, cooldown: 0.9,  rangeMult: 1.0,  atkMult: 0.85, role: tl('빠른 몹 특화'), rarity: 'rare', tint: '#9a6a3a', fav: 'orc', unlockCrystals: 500 },
   // ---- 영웅 ----
-  { id: 'paladin',  kr: '성기사',   base: 'warrior', sheet: 'Paladin', hue: 0, cooldown: 1.1, rangeMult: 1.0,  atkMult: 1.0,  role: '보스 특화', rarity: 'epic', tint: '#ffd54f', fav: 'undead', unlockStage: '1-10', unlockCrystals: 800 },
-  { id: 'bomber',   kr: '폭격수',   base: 'wizard', sheet: 'Bomber',  hue: 0, cooldown: 1.7,  rangeMult: 1.05, atkMult: 1.25, role: '대형 폭발', rarity: 'epic', tint: '#ff7a3d', fav: 'orc', unlockStage: '2-5', unlockCrystals: 1200 },
-  { id: 'assassin', kr: '암살자',   base: 'warrior', sheet: 'Assassin', hue: 0, cooldown: 0.7, rangeMult: 0.9,  atkMult: 0.8,  role: '처형', rarity: 'epic', tint: '#a35bd8', fav: 'orc', unlockStage: '3-1', unlockCrystals: 1800 },
-  { id: 'pyro',     kr: '화염술사', base: 'wizard', sheet: 'Pyro',  hue: 0, cooldown: 1.3,  rangeMult: 1.0,  atkMult: 0.85, role: '불 장판', rarity: 'epic', tint: '#ff5a2a', fav: 'troll', unlockCrystals: 1500 },
-  { id: 'reaper',   kr: '사신',     base: 'warrior', sheet: 'Reaper', hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.95, role: '처치 시 강화', rarity: 'epic', tint: '#5a4a7a', fav: 'undead', unlockCrystals: 1500 },
-  { id: 'cleric',   kr: '성직자',   base: 'wizard', sheet: 'Cleric',  hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.85, role: '회복·부활 차단', rarity: 'epic', tint: '#fff0c0', fav: 'undead', unlockCrystals: 1500 },
-  { id: 'cannoneer', kr: '대포병',  base: 'wizard', sheet: 'Cannoneer',  hue: 0, cooldown: 2.2,  rangeMult: 1.1,  atkMult: 1.9,  role: '강타·기절', rarity: 'epic', tint: '#6a6a6a', fav: 'troll', unlockCrystals: 1500 },
-  { id: 'chrono',   kr: '시간술사', base: 'wizard', sheet: 'Chrono',  hue: 0, cooldown: 1.6,  rangeMult: 1.0,  atkMult: 1.2,  role: '범위 정지', rarity: 'epic', tint: '#c0a0ff', unlockCrystals: 1500 },
+  { id: 'paladin',  kr: tl('성기사'),   base: 'warrior', sheet: 'Paladin', hue: 0, cooldown: 1.1, rangeMult: 1.0,  atkMult: 1.0,  role: tl('보스 특화'), rarity: 'epic', tint: '#ffd54f', fav: 'undead', unlockStage: '1-10', unlockCrystals: 800 },
+  { id: 'bomber',   kr: tl('폭격수'),   base: 'wizard', sheet: 'Bomber',  hue: 0, cooldown: 1.7,  rangeMult: 1.05, atkMult: 1.25, role: tl('대형 폭발'), rarity: 'epic', tint: '#ff7a3d', fav: 'orc', unlockStage: '2-5', unlockCrystals: 1200 },
+  { id: 'assassin', kr: tl('암살자'),   base: 'warrior', sheet: 'Assassin', hue: 0, cooldown: 0.7, rangeMult: 0.9,  atkMult: 0.8,  role: tl('처형'), rarity: 'epic', tint: '#a35bd8', fav: 'orc', unlockStage: '3-1', unlockCrystals: 1800 },
+  { id: 'pyro',     kr: tl('화염술사'), base: 'wizard', sheet: 'Pyro',  hue: 0, cooldown: 1.3,  rangeMult: 1.0,  atkMult: 0.85, role: tl('불 장판'), rarity: 'epic', tint: '#ff5a2a', fav: 'troll', unlockCrystals: 1500 },
+  { id: 'reaper',   kr: tl('사신'),     base: 'warrior', sheet: 'Reaper', hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.95, role: tl('처치 시 강화'), rarity: 'epic', tint: '#5a4a7a', fav: 'undead', unlockCrystals: 1500 },
+  { id: 'cleric',   kr: tl('성직자'),   base: 'wizard', sheet: 'Cleric',  hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.85, role: tl('회복·부활 차단'), rarity: 'epic', tint: '#fff0c0', fav: 'undead', unlockCrystals: 1500 },
+  { id: 'cannoneer', kr: tl('대포병'),  base: 'wizard', sheet: 'Cannoneer',  hue: 0, cooldown: 2.2,  rangeMult: 1.1,  atkMult: 1.9,  role: tl('강타·기절'), rarity: 'epic', tint: '#6a6a6a', fav: 'troll', unlockCrystals: 1500 },
+  { id: 'chrono',   kr: tl('시간술사'), base: 'wizard', sheet: 'Chrono',  hue: 0, cooldown: 1.6,  rangeMult: 1.0,  atkMult: 1.2,  role: tl('범위 정지'), rarity: 'epic', tint: '#c0a0ff', unlockCrystals: 1500 },
   // ---- 전설 (상자·뽑기로만) ----
-  { id: 'dragoon',  kr: '용기사',   base: 'warrior', sheet: 'Dragoon', hue: 0, cooldown: 1.4,  rangeMult: 1.1,  atkMult: 1.1,  role: '화염 숨결', rarity: 'legendary', tint: '#ff4a2a', fav: 'troll' },
-  { id: 'archmage', kr: '대마법사', base: 'wizard', sheet: 'Archmage',  hue: 0, cooldown: 2.0,  rangeMult: 1.1,  atkMult: 1.3,  role: '운석', rarity: 'legendary', tint: '#ff7ad8', fav: 'undead' },
-  { id: 'shadow',   kr: '그림자 군주', base: 'warrior', sheet: 'Shadow', hue: 0, cooldown: 0.9, rangeMult: 0.95, atkMult: 0.9, role: '분신', rarity: 'legendary', tint: '#3a2a5a', fav: 'orc' },
-  { id: 'angel',    kr: '천사',     base: 'wizard', sheet: 'Angel',  hue: 0, cooldown: 1.0,  rangeMult: 1.05, atkMult: 0.85, role: '아군 공격력 +', rarity: 'legendary', tint: '#fff8d0', fav: 'undead' },
-  { id: 'stormking', kr: '폭풍왕',  base: 'wizard', sheet: 'Stormking',  hue: 0, cooldown: 1.5,  rangeMult: 1.0,  atkMult: 1.0,  role: '맵 전체 번개', rarity: 'legendary', tint: '#4fa0ff', fav: 'orc' },
-  { id: 'alchemist', kr: '연금술사', base: 'wizard', sheet: 'Alchemist', hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.8,  role: '합성 보너스', rarity: 'legendary', tint: '#4adfa0' },
+  { id: 'dragoon',  kr: tl('용기사'),   base: 'warrior', sheet: 'Dragoon', hue: 0, cooldown: 1.4,  rangeMult: 1.1,  atkMult: 1.1,  role: tl('화염 숨결'), rarity: 'legendary', tint: '#ff4a2a', fav: 'troll' },
+  { id: 'archmage', kr: tl('대마법사'), base: 'wizard', sheet: 'Archmage',  hue: 0, cooldown: 2.0,  rangeMult: 1.1,  atkMult: 1.3,  role: tl('운석'), rarity: 'legendary', tint: '#ff7ad8', fav: 'undead' },
+  { id: 'shadow',   kr: tl('그림자 군주'), base: 'warrior', sheet: 'Shadow', hue: 0, cooldown: 0.9, rangeMult: 0.95, atkMult: 0.9, role: tl('분신'), rarity: 'legendary', tint: '#3a2a5a', fav: 'orc' },
+  { id: 'angel',    kr: tl('천사'),     base: 'wizard', sheet: 'Angel',  hue: 0, cooldown: 1.0,  rangeMult: 1.05, atkMult: 0.85, role: tl('아군 공격력 +'), rarity: 'legendary', tint: '#fff8d0', fav: 'undead' },
+  { id: 'stormking', kr: tl('폭풍왕'),  base: 'wizard', sheet: 'Stormking',  hue: 0, cooldown: 1.5,  rangeMult: 1.0,  atkMult: 1.0,  role: tl('맵 전체 번개'), rarity: 'legendary', tint: '#4fa0ff', fav: 'orc' },
+  { id: 'alchemist', kr: tl('연금술사'), base: 'wizard', sheet: 'Alchemist', hue: 0, cooldown: 1.0,  rangeMult: 1.0,  atkMult: 0.8,  role: tl('합성 보너스'), rarity: 'legendary', tint: '#4adfa0' },
 ];
-export const RARITY_KR: Record<Rarity, string> = { common: '일반', rare: '희귀', epic: '영웅', legendary: '전설' };
+export const RARITY_KR: Record<Rarity, string> = { common: tl('일반'), rare: tl('희귀'), epic: tl('영웅'), legendary: tl('전설') };
 export const RARITY_COLOR: Record<Rarity, string> = { common: '#9aa0a8', rare: '#4f9dff', epic: '#b06bff', legendary: '#ffb93f' };
 export const UNIT_BY_ID: Record<Job, UnitDef> = Object.fromEntries(UNITS.map((u) => [u.id, u])) as Record<Job, UnitDef>;
 export const JOBS: Job[] = UNITS.map((u) => u.id);
@@ -110,11 +111,11 @@ export interface ChestDef {
   color: string;
 }
 export const CHESTS: Record<ChestKind, ChestDef> = {
-  wood:   { kind: 'wood',   kr: '나무 상자', hours: 0.5, cards: 6,   perArena: 2,  gems: [8, 15],    rare: 1,  epic: 0.05, legendary: 0,    color: '#b8864b' },
-  silver: { kind: 'silver', kr: '은 상자',   hours: 3,   cards: 15,  perArena: 5,  gems: [25, 45],   rare: 3,  epic: 0.25, legendary: 0.01, color: '#c8d0d8' },
-  gold:   { kind: 'gold',   kr: '금 상자',   hours: 8,   cards: 40,  perArena: 10, gems: [70, 110],  rare: 8,  epic: 1,    legendary: 0.04, color: '#ffcf3f' },
-  magic:  { kind: 'magic',  kr: '마법 상자', hours: 12,  cards: 90,  perArena: 20, gems: [150, 220], rare: 20, epic: 4,    legendary: 0.2,  color: '#b06bff' },
-  legend: { kind: 'legend', kr: '전설 상자', hours: 24,  cards: 30,  perArena: 5,  gems: [200, 300], rare: 6,  epic: 2,    legendary: 1,    color: '#ffb93f' },
+  wood:   { kind: 'wood',   kr: tl('나무 상자'), hours: 0.5, cards: 6,   perArena: 2,  gems: [8, 15],    rare: 1,  epic: 0.05, legendary: 0,    color: '#b8864b' },
+  silver: { kind: 'silver', kr: tl('은 상자'),   hours: 3,   cards: 15,  perArena: 5,  gems: [25, 45],   rare: 3,  epic: 0.25, legendary: 0.01, color: '#c8d0d8' },
+  gold:   { kind: 'gold',   kr: tl('금 상자'),   hours: 8,   cards: 40,  perArena: 10, gems: [70, 110],  rare: 8,  epic: 1,    legendary: 0.04, color: '#ffcf3f' },
+  magic:  { kind: 'magic',  kr: tl('마법 상자'), hours: 12,  cards: 90,  perArena: 20, gems: [150, 220], rare: 20, epic: 4,    legendary: 0.2,  color: '#b06bff' },
+  legend: { kind: 'legend', kr: tl('전설 상자'), hours: 24,  cards: 30,  perArena: 5,  gems: [200, 300], rare: 6,  epic: 2,    legendary: 1,    color: '#ffb93f' },
 };
 /** 대전 승리 시 받는 상자 순서 (반복) */
 export const CHEST_CYCLE: ChestKind[] = ['wood', 'wood', 'silver', 'wood', 'silver', 'gold', 'wood', 'silver', 'silver', 'wood', 'gold', 'magic'];
@@ -138,7 +139,7 @@ export function perkMult(level: number): number {
 
 // ---------- 몹 종족 ----------
 export const RACES: Race[] = ['troll', 'orc', 'undead'];
-export const RACE_KR: Record<Race, string> = { troll: '트롤', orc: '오크', undead: '언데드' };
+export const RACE_KR: Record<Race, string> = { troll: tl('트롤'), orc: tl('오크'), undead: tl('언데드') };
 export const RACE_SPRITE: Record<Race, string> = { troll: 'Mob_Troll', orc: 'Mob_Orc', undead: 'Mob_Undead' };
 /** 종족별 몹 그림 변형 개수 (sprites/Mob_{종족}_{0..n-1}.png) - 몹 종류마다 다른 그림을 쓴다 */
 export const MOB_VARIANTS: Record<Race, number> = { troll: 3, orc: 6, undead: 4 };
@@ -156,12 +157,12 @@ DMG_MULT.cleric.undead = 1.25;
 // 공격력은 등급마다 3배: 같은 등급 3마리 합성 = 합친 공격력 그대로 + 사거리·스킬 보너스.
 // (2배였을 땐 합성할수록 전력이 33% 줄어 합성이 손해였다)
 export const GRADES: Grade[] = [
-  { key: 'common',    kr: '일반',   spriteIndex: 0, atk: [10, 15],   summonRate: 50,  sellGold: 10,   color: '#b8b8b8' },
-  { key: 'rare',      kr: '고급',   spriteIndex: 1, atk: [30, 45],   summonRate: 33,  sellGold: 25,   color: '#4caf50' },
-  { key: 'elite',     kr: '정예',   spriteIndex: 2, atk: [90, 135],  summonRate: 10,  sellGold: 60,   color: '#2196f3' },
-  { key: 'legendary', kr: '전설',   spriteIndex: 3, atk: [270, 405], summonRate: 6.5, sellGold: 150,  color: '#9c27b0' },
-  { key: 'mythic',    kr: '신화',   spriteIndex: 4, atk: [810, 1215], summonRate: 0.4, sellGold: 400,  color: '#ff9800' },
-  { key: 'eternal',   kr: '태초',   spriteIndex: 5, atk: [2430, 3645], summonRate: 0.1, sellGold: 1000, color: '#f44336' },
+  { key: 'common',    kr: tl('일반'),   spriteIndex: 0, atk: [10, 15],   summonRate: 50,  sellGold: 10,   color: '#b8b8b8' },
+  { key: 'rare',      kr: tl('고급'),   spriteIndex: 1, atk: [30, 45],   summonRate: 33,  sellGold: 25,   color: '#4caf50' },
+  { key: 'elite',     kr: tl('정예'),   spriteIndex: 2, atk: [90, 135],  summonRate: 10,  sellGold: 60,   color: '#2196f3' },
+  { key: 'legendary', kr: tl('전설'),   spriteIndex: 3, atk: [270, 405], summonRate: 6.5, sellGold: 150,  color: '#9c27b0' },
+  { key: 'mythic',    kr: tl('신화'),   spriteIndex: 4, atk: [810, 1215], summonRate: 0.4, sellGold: 400,  color: '#ff9800' },
+  { key: 'eternal',   kr: tl('태초'),   spriteIndex: 5, atk: [2430, 3645], summonRate: 0.1, sellGold: 1000, color: '#f44336' },
 ];
 export const GRADE_BY_KEY: Record<GradeKey, Grade> =
   Object.fromEntries(GRADES.map((g) => [g.key, g])) as Record<GradeKey, Grade>;
@@ -279,47 +280,47 @@ export const SKILLS = {
   critMult: 2,
 } as const;
 export const SKILL_KR: Record<Job, string> = {
-  archer: '다중 사격', wizard: '마력 폭발', warrior: '둔화 강타',
-  ranger: '저격', frost: '눈보라', paladin: '심판', bomber: '대폭발', assassin: '처형',
-  spearman: '관통 찌르기', slinger: '넉백', monk: '연타', hunter: '표식', acolyte: '성광',
-  poisoner: '맹독', storm: '연쇄 번개', crossbow: '관통 화살', knight: '방패 부수기', berserker: '광폭화',
-  merchant: '전리품', drummer: '진군 북소리', houndmaster: '사냥개',
-  pyro: '불바다', reaper: '영혼 수확', cleric: '정화', cannoneer: '포격', chrono: '시간 정지',
-  dragoon: '화염 숨결', archmage: '운석', shadow: '분신', angel: '축복', stormking: '폭풍', alchemist: '연성',
+  archer: tl('다중 사격'), wizard: tl('마력 폭발'), warrior: tl('둔화 강타'),
+  ranger: tl('저격'), frost: tl('눈보라'), paladin: tl('심판'), bomber: tl('대폭발'), assassin: tl('처형'),
+  spearman: tl('관통 찌르기'), slinger: tl('넉백'), monk: tl('연타'), hunter: tl('표식'), acolyte: tl('성광'),
+  poisoner: tl('맹독'), storm: tl('연쇄 번개'), crossbow: tl('관통 화살'), knight: tl('방패 부수기'), berserker: tl('광폭화'),
+  merchant: tl('전리품'), drummer: tl('진군 북소리'), houndmaster: tl('사냥개'),
+  pyro: tl('불바다'), reaper: tl('영혼 수확'), cleric: tl('정화'), cannoneer: tl('포격'), chrono: tl('시간 정지'),
+  dragoon: tl('화염 숨결'), archmage: tl('운석'), shadow: tl('분신'), angel: tl('축복'), stormking: tl('폭풍'), alchemist: tl('연성'),
 };
 export const SKILL_DESC: Record<Job, string> = {
-  archer: '정예부터: 주변 적 1명(전설부터 2명)에게 50% 추가 피해',
-  wizard: '정예부터: 대상 주변 범위에 35% 폭발 피해',
-  warrior: '정예부터: 대상 이동속도 25%(전설부터 38%) 감소',
-  ranger: '긴 사거리. 정예부터: 치명타 확률 30%(전설부터 45%)',
-  frost: '공격력 낮음. 정예부터: 주변 적 모두 30%(전설부터 45%) 둔화',
-  paladin: '정예부터: 보스·정예 몹에게 1.6배(전설부터 2배) 피해',
-  bomber: '느린 공격. 정예부터: 넓은 범위에 60% 폭발 피해',
-  assassin: '빠른 공격. 정예부터: 체력 12%(전설부터 20%) 이하 적 즉시 처치',
-  spearman: '정예부터: 대상 뒤 일직선 1명(전설부터 2명) 관통 60%',
-  slinger: '정예부터: 맞은 적을 길 뒤로 밀어냄',
-  monk: '아주 빠른 약공. 정예부터: 2연타(전설부터 3연타)',
-  hunter: '정예부터: 표식 - 그 적이 받는 모든 피해 +20%',
-  acolyte: '언데드에 강함. 정예부터: 주변 언데드에 성광 피해',
-  poisoner: '정예부터: 중독 - 4초간 지속 피해, 3번까지 겹침',
-  storm: '정예부터: 번개가 주변 적 2명(전설부터 3명)에게 튐',
-  crossbow: '정예부터: 화살이 일직선의 적을 모두 관통',
-  knight: '정예부터: 방패병·거인·킹·마왕·탱커에게 1.6배(전설부터 2배)',
-  berserker: '정예부터: 필드 몹이 많을수록 강해짐 (최대 +80%)',
-  merchant: '공격력 낮음. 정예부터: 막타마다 골드 +1(전설부터 +2)',
-  drummer: '공격력 낮음. 정예부터: 주변 아군 공격 속도 +15%(전설부터 +22%)',
-  houndmaster: '정예부터: 빠른 몹(질주 엘프 등)에게 1.7배(전설부터 2.1배)',
-  pyro: '정예부터: 맞은 자리에 불 장판 - 지나가는 적에게 지속 피해',
-  reaper: '정예부터: 처치하면 영혼 - 다음 공격 2배, 망령 부활 막음',
-  cleric: '언데드에 강함. 정예부터: 정화 - 신관 회복·망령 부활 막음',
-  cannoneer: '느린 강타. 정예부터: 기절 + 작은 폭발',
-  chrono: '정예부터: 주변 적의 시간을 잠깐 멈춤',
-  dragoon: '정예부터: 일직선 화염 숨결로 줄지어 오는 적을 태움',
-  archmage: '느린 공격. 정예부터: 넓은 운석 폭발 80%',
-  shadow: '정예부터: 분신이 다른 적을 한 번 더 공격',
-  angel: '정예부터: 모든 아군 공격력 +8%(전설부터 +12%), 여럿이면 합산',
-  stormking: '정예부터: 공격마다 맵 어디든 번개 3개(전설부터 5개)',
-  alchemist: '정예부터: 합성할 때 6%(전설부터 10%) 확률로 한 등급 더',
+  archer: tl('정예부터: 주변 적 1명(전설부터 2명)에게 50% 추가 피해'),
+  wizard: tl('정예부터: 대상 주변 범위에 35% 폭발 피해'),
+  warrior: tl('정예부터: 대상 이동속도 25%(전설부터 38%) 감소'),
+  ranger: tl('긴 사거리. 정예부터: 치명타 확률 30%(전설부터 45%)'),
+  frost: tl('공격력 낮음. 정예부터: 주변 적 모두 30%(전설부터 45%) 둔화'),
+  paladin: tl('정예부터: 보스·정예 몹에게 1.6배(전설부터 2배) 피해'),
+  bomber: tl('느린 공격. 정예부터: 넓은 범위에 60% 폭발 피해'),
+  assassin: tl('빠른 공격. 정예부터: 체력 12%(전설부터 20%) 이하 적 즉시 처치'),
+  spearman: tl('정예부터: 대상 뒤 일직선 1명(전설부터 2명) 관통 60%'),
+  slinger: tl('정예부터: 맞은 적을 길 뒤로 밀어냄'),
+  monk: tl('아주 빠른 약공. 정예부터: 2연타(전설부터 3연타)'),
+  hunter: tl('정예부터: 표식 - 그 적이 받는 모든 피해 +20%'),
+  acolyte: tl('언데드에 강함. 정예부터: 주변 언데드에 성광 피해'),
+  poisoner: tl('정예부터: 중독 - 4초간 지속 피해, 3번까지 겹침'),
+  storm: tl('정예부터: 번개가 주변 적 2명(전설부터 3명)에게 튐'),
+  crossbow: tl('정예부터: 화살이 일직선의 적을 모두 관통'),
+  knight: tl('정예부터: 방패병·거인·킹·마왕·탱커에게 1.6배(전설부터 2배)'),
+  berserker: tl('정예부터: 필드 몹이 많을수록 강해짐 (최대 +80%)'),
+  merchant: tl('공격력 낮음. 정예부터: 막타마다 골드 +1(전설부터 +2)'),
+  drummer: tl('공격력 낮음. 정예부터: 주변 아군 공격 속도 +15%(전설부터 +22%)'),
+  houndmaster: tl('정예부터: 빠른 몹(질주 엘프 등)에게 1.7배(전설부터 2.1배)'),
+  pyro: tl('정예부터: 맞은 자리에 불 장판 - 지나가는 적에게 지속 피해'),
+  reaper: tl('정예부터: 처치하면 영혼 - 다음 공격 2배, 망령 부활 막음'),
+  cleric: tl('언데드에 강함. 정예부터: 정화 - 신관 회복·망령 부활 막음'),
+  cannoneer: tl('느린 강타. 정예부터: 기절 + 작은 폭발'),
+  chrono: tl('정예부터: 주변 적의 시간을 잠깐 멈춤'),
+  dragoon: tl('정예부터: 일직선 화염 숨결로 줄지어 오는 적을 태움'),
+  archmage: tl('느린 공격. 정예부터: 넓은 운석 폭발 80%'),
+  shadow: tl('정예부터: 분신이 다른 적을 한 번 더 공격'),
+  angel: tl('정예부터: 모든 아군 공격력 +8%(전설부터 +12%), 여럿이면 합산'),
+  stormking: tl('정예부터: 공격마다 맵 어디든 번개 3개(전설부터 5개)'),
+  alchemist: tl('정예부터: 합성할 때 6%(전설부터 10%) 확률로 한 등급 더'),
 };
 
 // ---------- 합성 (같은 직업·등급 3개 → 상위 등급 1개) ----------
@@ -358,37 +359,37 @@ export interface AttackDef {
 }
 export const RESIST_MULT = 0.4;
 export const ATTACKS: AttackDef[] = [
-  { key: 'swarm', kr: '고블린 무리', desc: '약한 몹 8마리', race: 'orc', variant: 0, cost: 40, count: 8, hpMult: 0.55, speed: 1.1, size: 0.85, cooldown: 0,
+  { key: 'swarm', kr: tl('고블린 무리'), desc: tl('약한 몹 8마리'), race: 'orc', variant: 0, cost: 40, count: 8, hpMult: 0.55, speed: 1.1, size: 0.85, cooldown: 0,
     counters: ['wizard', 'bomber'] },
-  { key: 'rush', kr: '질주 엘프', desc: '아주 빠른 몹 4마리', race: 'troll', variant: 1, cost: 50, count: 4, hpMult: 0.6, speed: 1.9, size: 0.85, cooldown: 0,
+  { key: 'rush', kr: tl('질주 엘프'), desc: tl('아주 빠른 몹 4마리'), race: 'troll', variant: 1, cost: 50, count: 4, hpMult: 0.6, speed: 1.9, size: 0.85, cooldown: 0,
     counters: ['frost', 'warrior'] },
-  { key: 'giant', kr: '거인', desc: '느리고 단단한 1마리', race: 'troll', variant: 0, cost: 80, count: 1, hpMult: 7, speed: 0.55, size: 1.7, cooldown: 0,
+  { key: 'giant', kr: tl('거인'), desc: tl('느리고 단단한 1마리'), race: 'troll', variant: 0, cost: 80, count: 1, hpMult: 7, speed: 0.55, size: 1.7, cooldown: 0,
     counters: ['assassin', 'paladin'], gold: 12 },
-  { key: 'ghost', kr: '유령', desc: '물리 공격에 강함', race: 'undead', variant: 1, cost: 60, count: 3, hpMult: 1.05, speed: 1, size: 1, cooldown: 0,
+  { key: 'ghost', kr: tl('유령'), desc: tl('물리 공격에 강함'), race: 'undead', variant: 1, cost: 60, count: 3, hpMult: 1.05, speed: 1, size: 1, cooldown: 0,
     counters: ['wizard', 'frost'], resist: ['warrior', 'archer', 'ranger', 'assassin'] },
-  { key: 'shield', kr: '방패병', desc: '화살에 강함', race: 'troll', variant: 2, cost: 65, count: 3, hpMult: 1.9, speed: 0.85, size: 1.05, cooldown: 0,
+  { key: 'shield', kr: tl('방패병'), desc: tl('화살에 강함'), race: 'troll', variant: 2, cost: 65, count: 3, hpMult: 1.9, speed: 0.85, size: 1.05, cooldown: 0,
     counters: ['wizard', 'bomber', 'warrior'], resist: ['archer', 'ranger'] },
-  { key: 'priest', kr: '어둠 신관', desc: '주변 몹을 회복', race: 'orc', variant: 3, cost: 90, count: 1, hpMult: 3.5, speed: 0.9, size: 1.1, cooldown: 0,
+  { key: 'priest', kr: tl('어둠 신관'), desc: tl('주변 몹을 회복'), race: 'orc', variant: 3, cost: 90, count: 1, hpMult: 3.5, speed: 0.9, size: 1.1, cooldown: 0,
     counters: ['assassin', 'ranger'], heal: 0.06, gold: 8 },
-  { key: 'egg', kr: '분열 알', desc: '죽으면 3마리로', race: 'undead', variant: 3, cost: 70, count: 2, hpMult: 2.2, speed: 0.9, size: 1.15, cooldown: 0,
+  { key: 'egg', kr: tl('분열 알'), desc: tl('죽으면 3마리로'), race: 'undead', variant: 3, cost: 70, count: 2, hpMult: 2.2, speed: 0.9, size: 1.15, cooldown: 0,
     counters: ['bomber', 'wizard'], split: 3 },
-  { key: 'wraith', kr: '망령', desc: '한 번 되살아남', race: 'undead', variant: 2, cost: 60, count: 5, hpMult: 0.5, speed: 1.05, size: 0.95, cooldown: 0,
+  { key: 'wraith', kr: tl('망령'), desc: tl('한 번 되살아남'), race: 'undead', variant: 2, cost: 60, count: 5, hpMult: 0.5, speed: 1.05, size: 0.95, cooldown: 0,
     counters: ['bomber', 'archer'], revive: true },
-  { key: 'king', kr: '고블린 킹', desc: '졸개를 계속 부름', race: 'orc', variant: 4, cost: 120, count: 1, hpMult: 7, speed: 0.7, size: 1.45, cooldown: 0,
+  { key: 'king', kr: tl('고블린 킹'), desc: tl('졸개를 계속 부름'), race: 'orc', variant: 4, cost: 120, count: 1, hpMult: 7, speed: 0.7, size: 1.45, cooldown: 0,
     counters: ['ranger', 'paladin'], spawn: 3, gold: 16 },
-  { key: 'demon', kr: '마왕', desc: '아주 강함 · 긴 쿨타임', race: 'orc', variant: 5, cost: 140, count: 1, hpMult: 26, speed: 0.55, size: 1.9, cooldown: 30,
+  { key: 'demon', kr: tl('마왕'), desc: tl('아주 강함 · 긴 쿨타임'), race: 'orc', variant: 5, cost: 140, count: 1, hpMult: 26, speed: 0.55, size: 1.9, cooldown: 30,
     counters: ['paladin', 'assassin'], gold: 30 },
-  { key: 'thief', kr: '그림자 도적', desc: '잠깐씩 숨어 노릴 수 없음', race: 'orc', variant: 8, cost: 60, count: 4, hpMult: 0.9, speed: 1.15, size: 0.95, cooldown: 0,
+  { key: 'thief', kr: tl('그림자 도적'), desc: tl('잠깐씩 숨어 노릴 수 없음'), race: 'orc', variant: 8, cost: 60, count: 4, hpMult: 0.9, speed: 1.15, size: 0.95, cooldown: 0,
     counters: ['wizard', 'bomber', 'pyro'], stealth: 1.8 },
-  { key: 'golem', kr: '돌 골렘', desc: '마법에 강하고 단단함', race: 'troll', variant: 3, cost: 85, count: 1, hpMult: 6, speed: 0.55, size: 1.6, cooldown: 0,
+  { key: 'golem', kr: tl('돌 골렘'), desc: tl('마법에 강하고 단단함'), race: 'troll', variant: 3, cost: 85, count: 1, hpMult: 6, speed: 0.55, size: 1.6, cooldown: 0,
     counters: ['knight', 'spearman', 'assassin'], resist: ['wizard', 'storm', 'bomber', 'pyro', 'archmage', 'stormking'], gold: 12 },
-  { key: 'berserk', kr: '광폭 오크', desc: '체력 절반 아래면 질주', race: 'orc', variant: 7, cost: 70, count: 3, hpMult: 1.6, speed: 0.85, size: 1.05, cooldown: 0,
+  { key: 'berserk', kr: tl('광폭 오크'), desc: tl('체력 절반 아래면 질주'), race: 'orc', variant: 7, cost: 70, count: 3, hpMult: 1.6, speed: 0.85, size: 1.05, cooldown: 0,
     counters: ['frost', 'chrono', 'assassin'], enrage: 1.9 },
-  { key: 'witch', kr: '점멸 마녀', desc: '3초마다 앞으로 순간이동', race: 'undead', variant: 0, cost: 65, count: 3, hpMult: 1.1, speed: 0.9, size: 1, cooldown: 0,
+  { key: 'witch', kr: tl('점멸 마녀'), desc: tl('3초마다 앞으로 순간이동'), race: 'undead', variant: 0, cost: 65, count: 3, hpMult: 1.1, speed: 0.9, size: 1, cooldown: 0,
     counters: ['frost', 'chrono', 'storm'], blink: 110 },
-  { key: 'shaman', kr: '수호 주술사', desc: '주변 몹 받는 피해 -35%', race: 'orc', variant: 6, cost: 95, count: 1, hpMult: 3.2, speed: 0.9, size: 1.1, cooldown: 0,
+  { key: 'shaman', kr: tl('수호 주술사'), desc: tl('주변 몹 받는 피해 -35%'), race: 'orc', variant: 6, cost: 95, count: 1, hpMult: 3.2, speed: 0.9, size: 1.1, cooldown: 0,
     counters: ['ranger', 'crossbow', 'assassin'], guard: 0.35, gold: 8 },
-  { key: 'slime', kr: '번식 유령', desc: '5초 뒤 한 마리씩 불어남', race: 'undead', variant: 4, cost: 75, count: 2, hpMult: 1.5, speed: 0.9, size: 1.05, cooldown: 0,
+  { key: 'slime', kr: tl('번식 유령'), desc: tl('5초 뒤 한 마리씩 불어남'), race: 'undead', variant: 4, cost: 75, count: 2, hpMult: 1.5, speed: 0.9, size: 1.05, cooldown: 0,
     counters: ['ranger', 'cannoneer', 'reaper'], breed: true },
 ];
 /** 몹 카드 전용 그림 (웨이브 몹 그림 변형 MOB_VARIANTS 밖의 번호) - 미리 받기용 */
@@ -396,18 +397,18 @@ export const CARD_ONLY_VARIANTS = ATTACKS.filter((a) => a.variant >= MOB_VARIANT
 /** 추천 덱 (덱 화면 '추천 덱') - 없는 카드가 있으면 잠금으로 보인다 */
 export interface DeckPreset<K> { name: string; desc: string; cards: K[] }
 export const UNIT_PRESETS: DeckPreset<Job>[] = [
-  { name: '기본기', desc: '처음 시작하기 좋은 골고루 덱', cards: ['archer', 'wizard', 'warrior', 'ranger'] },
-  { name: '물량 정리', desc: '몰려오는 몹을 범위 공격으로 쓸어 담아요 · 고블린 무리·분열 알·도적', cards: ['wizard', 'bomber', 'pyro', 'frost'] },
-  { name: '거대 몹 사냥', desc: '거인·골렘·마왕처럼 큰 몹을 빨리 녹여요', cards: ['paladin', 'knight', 'assassin', 'ranger'] },
-  { name: '발 묶기', desc: '빠른 몹·점멸 마녀·광폭 오크를 붙잡아 둬요', cards: ['frost', 'warrior', 'chrono', 'storm'] },
-  { name: '저격 처형', desc: '신관·주술사 같은 핵심 몹을 먼저 끊어요', cards: ['ranger', 'crossbow', 'assassin', 'hunter'] },
-  { name: '전설 조합', desc: '전설 유닛만으로 끝까지 버텨요', cards: ['archmage', 'angel', 'dragoon', 'stormking'] },
+  { name: tl('기본기'), desc: tl('처음 시작하기 좋은 골고루 덱'), cards: ['archer', 'wizard', 'warrior', 'ranger'] },
+  { name: tl('물량 정리'), desc: tl('몰려오는 몹을 범위 공격으로 쓸어 담아요 · 고블린 무리·분열 알·도적'), cards: ['wizard', 'bomber', 'pyro', 'frost'] },
+  { name: tl('거대 몹 사냥'), desc: tl('거인·골렘·마왕처럼 큰 몹을 빨리 녹여요'), cards: ['paladin', 'knight', 'assassin', 'ranger'] },
+  { name: tl('발 묶기'), desc: tl('빠른 몹·점멸 마녀·광폭 오크를 붙잡아 둬요'), cards: ['frost', 'warrior', 'chrono', 'storm'] },
+  { name: tl('저격 처형'), desc: tl('신관·주술사 같은 핵심 몹을 먼저 끊어요'), cards: ['ranger', 'crossbow', 'assassin', 'hunter'] },
+  { name: tl('전설 조합'), desc: tl('전설 유닛만으로 끝까지 버텨요'), cards: ['archmage', 'angel', 'dragoon', 'stormking'] },
 ];
 export const ATTACK_PRESETS: DeckPreset<AttackKey>[] = [
-  { name: '물량 공세', desc: '몹 수로 밀어붙여요 · 범위 공격이 약한 상대에게', cards: ['swarm', 'egg', 'slime', 'king'] },
-  { name: '철벽 행진', desc: '단단한 몹을 회복시키며 버텨요 · 한 방이 약한 상대에게', cards: ['giant', 'golem', 'shield', 'priest'] },
-  { name: '기습', desc: '빠르고 잡기 까다로운 몹 · 둔화가 없는 상대에게', cards: ['rush', 'thief', 'witch', 'berserk'] },
-  { name: '마왕 강림', desc: '주술사 보호막 아래 마왕을 보내요', cards: ['demon', 'shaman', 'priest', 'wraith'] },
+  { name: tl('물량 공세'), desc: tl('몹 수로 밀어붙여요 · 범위 공격이 약한 상대에게'), cards: ['swarm', 'egg', 'slime', 'king'] },
+  { name: tl('철벽 행진'), desc: tl('단단한 몹을 회복시키며 버텨요 · 한 방이 약한 상대에게'), cards: ['giant', 'golem', 'shield', 'priest'] },
+  { name: tl('기습'), desc: tl('빠르고 잡기 까다로운 몹 · 둔화가 없는 상대에게'), cards: ['rush', 'thief', 'witch', 'berserk'] },
+  { name: tl('마왕 강림'), desc: tl('주술사 보호막 아래 마왕을 보내요'), cards: ['demon', 'shaman', 'priest', 'wraith'] },
 ];
 export const ATTACK_BY_KEY = Object.fromEntries(ATTACKS.map((a) => [a.key, a])) as Record<AttackKey, AttackDef>;
 export const STARTER_ATTACKS: AttackKey[] = ['swarm', 'rush', 'giant', 'egg'];
@@ -463,11 +464,11 @@ export function rollJob(deck: Job[] = STARTER_UNITS): Job {
 // 하드코어 곡선을 위해 기획서 원안(+2%/레벨 등)보다 강화된 값 사용.
 // 연구 성장이 지수 HP 벽을 넘게 해주는 핵심 진행 요소.
 export const RESEARCH: ResearchDef[] = [
-  { key: 'atk',       kr: '공격력 연구',   max: 20, desc: '레벨 당 공격력 +4%',        per: 0.04 },
-  { key: 'startGold', kr: '시작 골드 연구', max: 20, desc: '레벨 당 시작 골드 +10',      per: 10 },
-  { key: 'goldGain',  kr: '골드 획득 연구', max: 20, desc: '몬스터 처치 골드 +4%',       per: 0.04 },
-  { key: 'rare',      kr: '희귀 소환 연구', max: 10, desc: '전설 이상 등장 확률 소폭 증가', per: 0.5 },
-  { key: 'boss',      kr: '보스 피해 연구', max: 20, desc: '보스 대상 공격력 +4%',        per: 0.04 },
+  { key: 'atk',       kr: tl('공격력 연구'),   max: 20, desc: tl('레벨 당 공격력 +4%'),        per: 0.04 },
+  { key: 'startGold', kr: tl('시작 골드 연구'), max: 20, desc: tl('레벨 당 시작 골드 +10'),      per: 10 },
+  { key: 'goldGain',  kr: tl('골드 획득 연구'), max: 20, desc: tl('몬스터 처치 골드 +4%'),       per: 0.04 },
+  { key: 'rare',      kr: tl('희귀 소환 연구'), max: 10, desc: tl('전설 이상 등장 확률 소폭 증가'), per: 0.5 },
+  { key: 'boss',      kr: tl('보스 피해 연구'), max: 20, desc: tl('보스 대상 공격력 +4%'),        per: 0.04 },
 ];
 export function researchCost(level: number): number {
   return 5 + level * 5;
@@ -530,58 +531,58 @@ export function productEfficiency(p: ProductDef, price = p.vx): number {
 // 보석 상품은 비쌀수록 보너스(110~150%), 패키지는 효율을 크게 줘서(300%) 첫 결제와 월정액을 유도.
 export const PRODUCTS: ProductDef[] = [
   // 패키지
-  { id: 'starter_pack', kr: '스타터 패키지', icon: 'chest', category: 'package', vx: 100, oneTime: true, badge: '1회 한정',
-    desc: '보석 150 + 소환권 10 + 골드 부스터 1',
+  { id: 'starter_pack', kr: tl('스타터 패키지'), icon: 'chest', category: 'package', vx: 100, oneTime: true, badge: tl('1회 한정'),
+    desc: tl('보석 150 + 소환권 10 + 골드 부스터 1'),
     grant: { crystals: 150, items: { summonTicket: 10, goldBooster: 1 } } },
-  { id: 'monthly_pass', kr: '월정액 (30일)', icon: 'calendar', category: 'package', vx: 500, badge: '추천',
-    desc: `즉시 보석 300 + 30일간 매일 보석 ${MONTHLY_DAILY_CRYSTALS}`,
+  { id: 'monthly_pass', kr: tl('월정액 (30일)'), icon: 'calendar', category: 'package', vx: 500, badge: tl('추천'),
+    desc: tl('즉시 보석 300 + 30일간 매일 보석 {0}', MONTHLY_DAILY_CRYSTALS),
     grant: { crystals: 300, monthlyDays: 30 } },
-  { id: 'ad_remove', kr: '광고 제거 패키지', icon: 'bolt', category: 'package', vx: AD_REMOVE_VX, oneTime: true, badge: '1회 한정',
-    desc: '광고 시청 없이 바로 보상 + 3배속 해금 + 보석 500',
+  { id: 'ad_remove', kr: tl('광고 제거 패키지'), icon: 'bolt', category: 'package', vx: AD_REMOVE_VX, oneTime: true, badge: tl('1회 한정'),
+    desc: tl('광고 시청 없이 바로 보상 + 3배속 해금 + 보석 500'),
     grant: { adRemove: true, crystals: 500 } },
   // 시즌 패스
-  { id: 'season_premium', kr: 'PvP 시즌 패스', icon: 'trophy', category: 'pass', vx: 1000,
-    desc: '이번 시즌 프리미엄 보상 트랙 해금 (지난 단계 보상도 수령 가능)',
+  { id: 'season_premium', kr: tl('PvP 시즌 패스'), icon: 'trophy', category: 'pass', vx: 1000,
+    desc: tl('이번 시즌 프리미엄 보상 트랙 해금 (지난 단계 보상도 수령 가능)'),
     grant: { seasonPremium: true } },
   // 부스터 (일반 모드 전용 - PvP 에서는 사용 불가)
-  { id: 'summon_ticket_pack', kr: '소환권 24장', icon: 'ticket', category: 'booster', vx: 200,
-    desc: '골드 없이 소환 24회 (일반 모드)', grant: { items: { summonTicket: 24 } } },
-  { id: 'mythic_ticket', kr: '신화 확정 소환권', icon: 'star', category: 'booster', vx: 500,
-    desc: '신화 등급 유닛 1회 확정 소환 (일반 모드)', grant: { items: { mythicTicket: 1 } } },
-  { id: 'gold_booster_pack', kr: '골드 부스터 5개', icon: 'bag', category: 'booster', vx: 200,
-    desc: '사용한 판의 시작 골드 2배 (일반 모드)', grant: { items: { goldBooster: 5 } } },
+  { id: 'summon_ticket_pack', kr: tl('소환권 24장'), icon: 'ticket', category: 'booster', vx: 200,
+    desc: tl('골드 없이 소환 24회 (일반 모드)'), grant: { items: { summonTicket: 24 } } },
+  { id: 'mythic_ticket', kr: tl('신화 확정 소환권'), icon: 'star', category: 'booster', vx: 500,
+    desc: tl('신화 등급 유닛 1회 확정 소환 (일반 모드)'), grant: { items: { mythicTicket: 1 } } },
+  { id: 'gold_booster_pack', kr: tl('골드 부스터 5개'), icon: 'bag', category: 'booster', vx: 200,
+    desc: tl('사용한 판의 시작 골드 2배 (일반 모드)'), grant: { items: { goldBooster: 5 } } },
   // 팝업 한정 패키지 (24시간) - 패배 연속 / 새 아레나 / 새 챕터 때 뜬다 (offers.ts)
-  { id: 'offer_comeback', kr: '다시 일어서기 패키지', icon: 'chest', category: 'offer', vx: 200, badge: '24시간 한정',
-    desc: '보석 300 + 소환권 10 + 골드 부스터 2', grant: { crystals: 300, items: { summonTicket: 10, goldBooster: 2 } } },
-  { id: 'offer_arena', kr: '승급 축하 패키지', icon: 'crown', category: 'offer', vx: 500, badge: '24시간 한정',
-    desc: '보석 1,000 + 신화 확정 소환권 1', grant: { crystals: 1000, items: { mythicTicket: 1 } } },
-  { id: 'offer_chapter', kr: '새 챕터 패키지', icon: 'map', category: 'offer', vx: 500, badge: '24시간 한정',
-    desc: '보석 800 + 소환권 30 + 골드 부스터 4', grant: { crystals: 800, items: { summonTicket: 30, goldBooster: 4 } } },
+  { id: 'offer_comeback', kr: tl('다시 일어서기 패키지'), icon: 'chest', category: 'offer', vx: 200, badge: tl('24시간 한정'),
+    desc: tl('보석 300 + 소환권 10 + 골드 부스터 2'), grant: { crystals: 300, items: { summonTicket: 10, goldBooster: 2 } } },
+  { id: 'offer_arena', kr: tl('승급 축하 패키지'), icon: 'crown', category: 'offer', vx: 500, badge: tl('24시간 한정'),
+    desc: tl('보석 1,000 + 신화 확정 소환권 1'), grant: { crystals: 1000, items: { mythicTicket: 1 } } },
+  { id: 'offer_chapter', kr: tl('새 챕터 패키지'), icon: 'map', category: 'offer', vx: 500, badge: tl('24시간 한정'),
+    desc: tl('보석 800 + 소환권 30 + 골드 부스터 4'), grant: { crystals: 800, items: { summonTicket: 30, goldBooster: 4 } } },
   // 유닛 패키지 - 바로 해금 + Lv5 (계정당 1회)
-  { id: 'unit_ranger', kr: '레인저 패키지', icon: 'helmet', category: 'unit', vx: 300, oneTime: true,
-    desc: '레인저 즉시 해금 + Lv5 + 보석 200', grant: { units: { ranger: 5 }, crystals: 200 } },
-  { id: 'unit_frost', kr: '빙결술사 패키지', icon: 'helmet', category: 'unit', vx: 300, oneTime: true,
-    desc: '빙결술사 즉시 해금 + Lv5', grant: { units: { frost: 5 } } },
-  { id: 'unit_paladin', kr: '성기사 패키지', icon: 'helmet', category: 'unit', vx: 500, oneTime: true,
-    desc: '성기사 즉시 해금 + Lv5 + 보석 300', grant: { units: { paladin: 5 }, crystals: 300 } },
-  { id: 'unit_bomber', kr: '폭격수 패키지', icon: 'helmet', category: 'unit', vx: 500, oneTime: true,
-    desc: '폭격수 즉시 해금 + Lv5', grant: { units: { bomber: 5 } } },
-  { id: 'unit_assassin', kr: '암살자 패키지', icon: 'helmet', category: 'unit', vx: 700, oneTime: true,
-    desc: '암살자 즉시 해금 + Lv5', grant: { units: { assassin: 5 } } },
+  { id: 'unit_ranger', kr: tl('레인저 패키지'), icon: 'helmet', category: 'unit', vx: 300, oneTime: true,
+    desc: tl('레인저 즉시 해금 + Lv5 + 보석 200'), grant: { units: { ranger: 5 }, crystals: 200 } },
+  { id: 'unit_frost', kr: tl('빙결술사 패키지'), icon: 'helmet', category: 'unit', vx: 300, oneTime: true,
+    desc: tl('빙결술사 즉시 해금 + Lv5'), grant: { units: { frost: 5 } } },
+  { id: 'unit_paladin', kr: tl('성기사 패키지'), icon: 'helmet', category: 'unit', vx: 500, oneTime: true,
+    desc: tl('성기사 즉시 해금 + Lv5 + 보석 300'), grant: { units: { paladin: 5 }, crystals: 300 } },
+  { id: 'unit_bomber', kr: tl('폭격수 패키지'), icon: 'helmet', category: 'unit', vx: 500, oneTime: true,
+    desc: tl('폭격수 즉시 해금 + Lv5'), grant: { units: { bomber: 5 } } },
+  { id: 'unit_assassin', kr: tl('암살자 패키지'), icon: 'helmet', category: 'unit', vx: 700, oneTime: true,
+    desc: tl('암살자 즉시 해금 + Lv5'), grant: { units: { assassin: 5 } } },
   // 상자 (사면 바로 열림)
-  { id: 'chest_gold', kr: '금 상자', icon: 'chest', category: 'chest', vx: 300,
-    desc: '카드 40장+ · 영웅 1장', grant: { chest: 'gold' } },
-  { id: 'chest_magic', kr: '마법 상자', icon: 'chest', category: 'chest', vx: 700,
-    desc: '카드 90장+ · 영웅 4장', grant: { chest: 'magic' } },
-  { id: 'chest_legend', kr: '전설 상자', icon: 'crown', category: 'chest', vx: 1000,
-    desc: '전설 카드 1장 보장', grant: { chest: 'legend' } },
+  { id: 'chest_gold', kr: tl('금 상자'), icon: 'chest', category: 'chest', vx: 300,
+    desc: tl('카드 40장+ · 영웅 1장'), grant: { chest: 'gold' } },
+  { id: 'chest_magic', kr: tl('마법 상자'), icon: 'chest', category: 'chest', vx: 700,
+    desc: tl('카드 90장+ · 영웅 4장'), grant: { chest: 'magic' } },
+  { id: 'chest_legend', kr: tl('전설 상자'), icon: 'crown', category: 'chest', vx: 1000,
+    desc: tl('전설 카드 1장 보장'), grant: { chest: 'legend' } },
   // 보석
-  { id: 'crystal_100', kr: '보석 100', icon: 'gem', category: 'crystal', vx: 100, desc: '', grant: { crystals: 100 } },
-  { id: 'crystal_550', kr: '보석 550', icon: 'gem', category: 'crystal', vx: 500, desc: '', grant: { crystals: 550 } },
-  { id: 'crystal_1200', kr: '보석 1,200', icon: 'gem', category: 'crystal', vx: 1000, desc: '', grant: { crystals: 1200 } },
-  { id: 'crystal_2600', kr: '보석 2,600', icon: 'gem', category: 'crystal', vx: 2000, desc: '', grant: { crystals: 2600 } },
-  { id: 'crystal_7000', kr: '보석 7,000', icon: 'gem', category: 'crystal', vx: 5000, desc: '', grant: { crystals: 7000 } },
-  { id: 'crystal_15000', kr: '보석 15,000', icon: 'gem', category: 'crystal', vx: 10000, desc: '', grant: { crystals: 15000 } },
+  { id: 'crystal_100', kr: tl('보석 100'), icon: 'gem', category: 'crystal', vx: 100, desc: '', grant: { crystals: 100 } },
+  { id: 'crystal_550', kr: tl('보석 550'), icon: 'gem', category: 'crystal', vx: 500, desc: '', grant: { crystals: 550 } },
+  { id: 'crystal_1200', kr: tl('보석 1,200'), icon: 'gem', category: 'crystal', vx: 1000, desc: '', grant: { crystals: 1200 } },
+  { id: 'crystal_2600', kr: tl('보석 2,600'), icon: 'gem', category: 'crystal', vx: 2000, desc: '', grant: { crystals: 2600 } },
+  { id: 'crystal_7000', kr: tl('보석 7,000'), icon: 'gem', category: 'crystal', vx: 5000, desc: '', grant: { crystals: 7000 } },
+  { id: 'crystal_15000', kr: tl('보석 15,000'), icon: 'gem', category: 'crystal', vx: 10000, desc: '', grant: { crystals: 15000 } },
 ];
 /** 팝업 한정 상품: 어떤 순간에 뜨는지 → 상품 id */
 export type OfferKind = 'comeback' | 'arena' | 'chapter';
@@ -594,9 +595,9 @@ export const UNIT_PACK: Partial<Record<Job, string>> = {
 export const PRODUCT_BY_ID: Record<string, ProductDef> = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
 
 export const ITEM_KR: Record<ItemKey, { kr: string; icon: IconName; desc: string }> = {
-  summonTicket: { kr: '소환권', icon: 'ticket', desc: '판 안에서 골드 없이 유닛 1회 소환' },
-  mythicTicket: { kr: '신화 확정권', icon: 'star', desc: '판 안에서 신화 등급 유닛을 바로 소환' },
-  goldBooster: { kr: '골드 부스터', icon: 'bag', desc: '켜고 시작하면 그 판 시작 골드 2배 (일반 모드)' },
+  summonTicket: { kr: tl('소환권'), icon: 'ticket', desc: tl('판 안에서 골드 없이 유닛 1회 소환') },
+  mythicTicket: { kr: tl('신화 확정권'), icon: 'star', desc: tl('판 안에서 신화 등급 유닛을 바로 소환') },
+  goldBooster: { kr: tl('골드 부스터'), icon: 'bag', desc: tl('켜고 시작하면 그 판 시작 골드 2배 (일반 모드)') },
 };
 
 // ---------- PvP 시즌 패스 ----------
@@ -615,12 +616,12 @@ export const SEASON_TIERS: { free: SeasonReward; premium: SeasonReward }[] = Arr
 // PvP 트로피 → 티어
 // 아레나(티어) - 트로피 로드와 같은 축 (v1: 약 3시간에 플래티넘 근처)
 export const PVP_TIERS = [
-  { min: 0, kr: '브론즈', color: '#cd7f32' },
-  { min: 80, kr: '실버', color: '#c0c0c0' },
-  { min: 200, kr: '골드', color: '#ffcf3f' },
-  { min: 320, kr: '플래티넘', color: '#6fe0d0' },
-  { min: 500, kr: '다이아', color: '#6fb6ff' },
-  { min: 800, kr: '마스터', color: '#ff6bd5' },
+  { min: 0, kr: tl('브론즈'), color: '#cd7f32' },
+  { min: 80, kr: tl('실버'), color: '#c0c0c0' },
+  { min: 200, kr: tl('골드'), color: '#ffcf3f' },
+  { min: 320, kr: tl('플래티넘'), color: '#6fe0d0' },
+  { min: 500, kr: tl('다이아'), color: '#6fb6ff' },
+  { min: 800, kr: tl('마스터'), color: '#ff6bd5' },
 ];
 export function pvpTier(trophies: number): { kr: string; color: string } {
   let t = PVP_TIERS[0];
@@ -642,9 +643,9 @@ export interface StageDef {
   unlocks?: Job;       // 첫 클리어 시 해금 유닛
 }
 export const CHAPTERS = [
-  { n: 1, kr: '초원의 관문', waves: 10, desc: '기본기를 익히는 첫 전장' },
-  { n: 2, kr: '어둠의 숲', waves: 15, desc: '빠른 몹과 탱커가 몰려온다' },
-  { n: 3, kr: '망자의 성채', waves: 20, desc: '연구와 유닛 성장이 필요한 최종 전장' },
+  { n: 1, kr: tl('초원의 관문'), waves: 10, desc: tl('기본기를 익히는 첫 전장') },
+  { n: 2, kr: tl('어둠의 숲'), waves: 15, desc: tl('빠른 몹과 탱커가 몰려온다') },
+  { n: 3, kr: tl('망자의 성채'), waves: 20, desc: tl('연구와 유닛 성장이 필요한 최종 전장') },
 ] as const;
 export const STAGES_PER_CHAPTER = 10;
 // 난이도 곡선: 챕터 내에서 점진 상승, 챕터 시작 시 웨이브 수 증가로 한 번 더 상승
@@ -732,7 +733,7 @@ export function starsFor(peakMobs: number): number {
 export const FEATURE_UNLOCK: Record<'units' | 'research' | 'quests' | 'pvp' | 'endless', string> =
   { units: '1-1', research: '1-2', quests: '1-3', pvp: '1-1', endless: '1-10' };
 export const FEATURE_KR: Record<keyof typeof FEATURE_UNLOCK, string> = {
-  units: '유닛', research: '연구', quests: '퀘스트', pvp: 'PvP 대전', endless: '무한 모드',
+  units: tl('유닛'), research: tl('연구'), quests: tl('퀘스트'), pvp: tl('PvP 대전'), endless: tl('무한 모드'),
 };
 
 // ---------- 게임 종료 시 크리스탈 보상 ----------
@@ -744,19 +745,19 @@ export function crystalReward(wave: number): number {
 
 // ---------- 퀘스트 ----------
 export const DAILY_QUESTS: DailyQuestDef[] = [
-  { key: 'summon30',  kr: '유닛 30회 소환',   goal: 30, stat: 'summons',  reward: 20 },
-  { key: 'kill200',   kr: '몬스터 200마리 처치', goal: 200, stat: 'kills',  reward: 20 },
-  { key: 'wave20',    kr: '20웨이브 도달',    goal: 20, stat: 'bestWave', reward: 30 },
-  { key: 'sell20',    kr: '유닛 20회 판매',   goal: 20, stat: 'sells',    reward: 15 },
+  { key: 'summon30',  kr: tl('유닛 30회 소환'),   goal: 30, stat: 'summons',  reward: 20 },
+  { key: 'kill200',   kr: tl('몬스터 200마리 처치'), goal: 200, stat: 'kills',  reward: 20 },
+  { key: 'wave20',    kr: tl('20웨이브 도달'),    goal: 20, stat: 'bestWave', reward: 30 },
+  { key: 'sell20',    kr: tl('유닛 20회 판매'),   goal: 20, stat: 'sells',    reward: 15 },
 ];
 
 export const ACHIEVEMENTS: AchievementDef[] = [
-  { key: 'firstLegendary', kr: '전설 유닛 최초 획득', reward: 50 },
-  { key: 'firstMythic',    kr: '신화 유닛 최초 획득', reward: 100 },
-  { key: 'firstEternal',   kr: '태초 유닛 최초 획득', reward: 300 },
-  { key: 'clear10',        kr: '10웨이브 클리어',     reward: 30 },
-  { key: 'clear20',        kr: '20웨이브 클리어',     reward: 60 },
-  { key: 'clear30',        kr: '30웨이브 클리어',     reward: 100 },
-  { key: 'clear40',        kr: '40웨이브 클리어',     reward: 200 },
-  { key: 'clear50',        kr: '50웨이브 클리어',     reward: 500 },
+  { key: 'firstLegendary', kr: tl('전설 유닛 최초 획득'), reward: 50 },
+  { key: 'firstMythic',    kr: tl('신화 유닛 최초 획득'), reward: 100 },
+  { key: 'firstEternal',   kr: tl('태초 유닛 최초 획득'), reward: 300 },
+  { key: 'clear10',        kr: tl('10웨이브 클리어'),     reward: 30 },
+  { key: 'clear20',        kr: tl('20웨이브 클리어'),     reward: 60 },
+  { key: 'clear30',        kr: tl('30웨이브 클리어'),     reward: 100 },
+  { key: 'clear40',        kr: tl('40웨이브 클리어'),     reward: 200 },
+  { key: 'clear50',        kr: tl('50웨이브 클리어'),     reward: 500 },
 ];

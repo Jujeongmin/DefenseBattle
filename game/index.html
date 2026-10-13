@@ -40,15 +40,15 @@
           <!-- 나 vs 상대: 필드 몹 수 막대 두 개를 한 줄에 (먼저 100 마리가 되는 쪽이 진다) -->
           <div class="opp-info vs-hud">
             <div class="vs-names">
-              <span class="vs-tag me">나</span><span id="my-nick" class="vs-nick"></span>
+              <span class="vs-tag me" data-i18n="나">나</span><span id="my-nick" class="vs-nick"></span>
               <b class="vs-mark">VS</b>
-              <span id="opp-nick" class="vs-nick opp">상대</span><span id="opp-bot" class="hidden"><i class="pi pi-robot"></i></span><span class="vs-tag opp">상대</span>
+              <span id="opp-nick" class="vs-nick opp" data-i18n="상대">상대</span><span id="opp-bot" class="hidden"><i class="pi pi-robot"></i></span><span class="vs-tag opp" data-i18n="상대">상대</span>
             </div>
             <div class="vs-bars">
               <div class="vs-bar me"><div id="my-fill"></div><span id="my-count">0/100</span></div>
               <div class="vs-bar opp"><div id="opp-fill"></div><span id="opp-count">0/100</span></div>
             </div>
-            <div class="vs-deck"><span class="vs-deck-label">상대 카드</span><div id="opp-deck"></div></div>
+            <div class="vs-deck"><span class="vs-deck-label" data-i18n="상대 카드">상대 카드</span><div id="opp-deck"></div></div>
             <span id="opp-trophy" class="hidden"></span><span id="opp-sub" class="hidden"></span>
             <!-- 상대 전장 미니맵: 이 줄 오른쪽 끝 (내 전장을 가리지 않음), 카드를 끄는 동안 크게 펼친다 -->
             <canvas id="opp-canvas" width="72" height="72"></canvas>
@@ -76,15 +76,15 @@
           <!-- PvP 몹 던지기 카드 (ui.ts 가 채움): 위쪽 상대 전장으로 끌어다 놓는다 -->
           <div id="attack-row" class="hidden"></div>
           <div class="control-buttons">
-            <button id="btn-sell-panel" class="side-btn"><i class="pi pi-helmet"></i>영웅<span id="merge-dot" class="dot hidden"></span></button>
+            <button id="btn-sell-panel" class="side-btn"><i class="pi pi-helmet"></i><span data-i18n="영웅@@button">영웅</span><span id="merge-dot" class="dot hidden"></span></button>
             <div class="summon-wrap">
               <div id="ticket-row"></div>
               <button id="btn-summon" class="summon-btn">
-                <span class="summon-title">소환</span>
+                <span class="summon-title" data-i18n="소환">소환</span>
                 <span class="summon-cost"><i class="pi pi-coin"></i>20</span>
               </button>
             </div>
-            <button id="btn-menu" class="side-btn"><i class="pi pi-home"></i>나가기</button>
+            <button id="btn-menu" class="side-btn"><i class="pi pi-home"></i><span data-i18n="나가기">나가기</span></button>
           </div>
           <div id="unit-stacks"></div>
         </section>

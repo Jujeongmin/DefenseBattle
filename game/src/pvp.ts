@@ -11,6 +11,7 @@ import { isOnlineEnv } from './platform';
 import type { AttackPayload, Job, Rarity, ResearchKey } from './types';
 import type { PvpReward } from './econ';
 
+import { tl } from './i18n';
 export interface MatchInfo {
   roomId: string;
   seed: number;
@@ -171,9 +172,9 @@ export async function findMatch(onStatus: (sec: number) => void, signal: { cance
 // ---------------------------------------------------------------
 //  봇 상대 - 같은 시드의 헤드리스 게임을 페이지 안에서 돌린다
 // ---------------------------------------------------------------
-const NICK_HEAD = ['용사', '전사', '궁수', '기사', '검객', '사냥꾼', '마법사', '도적'];
-const NICK_TAGS = ['달빛궁수', '합성장인', '철벽수비', '몹사냥꾼', '번개마법사', '고블린킬러', '새벽용사', '빙결여왕',
-  '랜덤의신', '초보탈출', '성기사짱', '타워장인', 'MoonArcher', 'TowerKing', 'NovaKnight', 'LuckyMerge'];
+const NICK_HEAD = [tl('용사'), tl('전사'), tl('궁수'), tl('기사'), tl('검객'), tl('사냥꾼'), tl('마법사'), tl('도적')];
+const NICK_TAGS = [tl('달빛궁수'), tl('합성장인'), tl('철벽수비'), tl('몹사냥꾼'), tl('번개마법사'), tl('고블린킬러'), tl('새벽용사'), tl('빙결여왕'),
+  tl('랜덤의신'), tl('초보탈출'), tl('성기사짱'), tl('타워장인'), 'MoonArcher', 'TowerKing', 'NovaKnight', 'LuckyMerge'];
 function botNick(): string {
   if (Math.random() < 0.55) return `${NICK_HEAD[Math.floor(Math.random() * NICK_HEAD.length)]}${1000 + Math.floor(Math.random() * 9000)}`;
   const tag = NICK_TAGS[Math.floor(Math.random() * NICK_TAGS.length)];

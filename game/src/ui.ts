@@ -16,6 +16,7 @@ import type { Job, Race, GradeKey } from './types';
 
 
 
+import { tl } from './i18n';
 export interface UIContext {
   kind: 'stage' | 'endless' | 'pvp';
   stageId?: string;
@@ -76,7 +77,7 @@ export class UI {
     this.speeds = pvp ? [1] : meta.adRemoved ? [1, 2, 3] : [1, 2];
     this.bind();
     game.on('roster', () => { this.renderStacks(); this.sellOpen?.(); });
-    game.on('achievement', (a) => toast(`${icon('medal')} 업적 달성: ${a.kr} (+${a.reward}${icon('gem')})`));
+    game.on('achievement', (a) => toast(tl('{0} 업적 달성: {1} (+{2}{3})', icon('medal'), a.kr, a.reward, icon('gem'))));
     game.on('shoot', (job) => audio.attack(job === 'archer' || job === 'ranger' ? 'archer' : job === 'wizard' || job === 'frost' || job === 'bomber' ? 'wizard' : 'warrior'));
     game.on('kill', (boss) => audio.kill(boss));
     game.on('bossSpawn', () => { audio.boss(); if (!pvp) audio.switchBgm('boss'); });
@@ -95,7 +96,7 @@ export class UI {
     $('btn-pause').classList.toggle('hidden', pvp);
     $('btn-speed').textContent = '1x';
     $('btn-pause').innerHTML = icon('pause');
-    $('stage-label').textContent = ctx.kind === 'stage' ? ctx.stageId ?? '' : ctx.kind === 'endless' ? '무한' : 'PvP';
+    $('stage-label').textContent = ctx.kind === 'stage' ? ctx.stageId ?? '' : ctx.kind === 'endless' ? tl('무한') : 'PvP';
     if (pvp) this.buildAttackCards();
     $('sell-panel').classList.add('hidden');
     $('coach').classList.add('hidden');
@@ -142,7 +143,7 @@ export class UI {
     };
     $('btn-speed').onclick = () => {
       audio.button();
-      if (this.speeds.length === 2 && this.speedIdx === 1 && !meta.adRemoved) toast('3배속은 광고 제거 패키지로 해금돼요');
+      if (this.speeds.length === 2 && this.speedIdx === 1 && !meta.adRemoved) toast(tl('3배속은 광고 제거 패키지로 해금돼요'));
       this.speedIdx = (this.speedIdx + 1) % this.speeds.length;
       this.game.speed = this.speeds[this.speedIdx];
       $('btn-speed').textContent = this.game.speed + 'x';
@@ -295,7 +296,7 @@ export class UI {
             this.hideThrowHint();
           } else this.flashGold();
         } else if (moved < 12) {
-          toast(`카드를 위쪽 <b>상대 전장</b>으로 끌어다 던지세요`);
+          toast(tl('카드를 위쪽 <b>상대 전장</b>으로 끌어다 던지세요'));
         }
       };
       card.onpointercancel = end;
@@ -336,7 +337,7 @@ export class UI {
       if (!this.hintEl) {
         this.hintEl = document.createElement('div');
         this.hintEl.className = 'throw-hint';
-        this.hintEl.innerHTML = `<div class="bubble">카드를 끌어서<br><b>상대 전장</b>에 던지세요!</div><div class="hand">${icon('pointer')}</div>`;
+        this.hintEl.innerHTML = `<div class="bubble">${tl('카드를 끌어서<br><b>상대 전장</b>에 던지세요!')}</div><div class="hand">${icon('pointer')}</div>`;
         $('game-frame').appendChild(this.hintEl);
       }
       const f = $('game-frame').getBoundingClientRect();
@@ -364,8 +365,8 @@ export class UI {
     if (key === this.lastTickets) return;
     this.lastTickets = key;
     const chips: string[] = [];
-    if (meta.items.summonTicket > 0) chips.push(`<button class="ticket-chip" data-t="summonTicket" title="무료 소환권" aria-label="무료 소환권">${icon('ticket')}×${meta.items.summonTicket}</button>`);
-    if (meta.items.mythicTicket > 0) chips.push(`<button class="ticket-chip mythic" data-t="mythicTicket" title="신화 확정 소환권" aria-label="신화 확정 소환권">${icon('star')}×${meta.items.mythicTicket}</button>`);
+    if (meta.items.summonTicket > 0) chips.push(`<button class="ticket-chip" data-t="summonTicket" title="${tl('무료 소환권')}" aria-label="${tl('무료 소환권')}">${icon('ticket')}×${meta.items.summonTicket}</button>`);
+    if (meta.items.mythicTicket > 0) chips.push(`<button class="ticket-chip mythic" data-t="mythicTicket" title="${tl('신화 확정 소환권')}" aria-label="${tl('신화 확정 소환권')}">${icon('star')}×${meta.items.mythicTicket}</button>`);
     row.innerHTML = chips.join('');
     row.querySelectorAll<HTMLButtonElement>('[data-t]').forEach((b) => {
       b.onclick = async () => {
@@ -396,12 +397,12 @@ export class UI {
       div.className = `stack${count ? '' : ' empty'}`;
       div.style.borderColor = count ? GRADES[top].color : '';
       div.innerHTML = `
-        ${merges.has(job) ? '<div class="merge-tag">합성!</div>' : ''}
+        ${merges.has(job) ? tl('<div class="merge-tag">합성!</div>') : ''}
         <div class="count">${count}</div>
         <div class="dmg-pct">${icon(strong ? 'up' : 'down')}</div>
         ${spriteIcon(unitIconUrl(job, top))}
         <div class="name">${JOB_KR[job]} Lv.${level}</div>
-        <button class="up-btn" data-job="${job}">강화 ${icon('coin')}${cost}</button>`;
+        <button class="up-btn" data-job="${job}">${tl('강화')} ${icon('coin')}${cost}</button>`;
       const btn = div.querySelector('.up-btn') as HTMLButtonElement;
       btn.disabled = count === 0 || this.game.gold < cost;
       btn.onclick = () => { if (this.game.upgrade(job)) audio.button(); };
@@ -434,7 +435,7 @@ export class UI {
             <div class="gc-name" style="color:${gr.color}">${gr.kr}</div>
             ${spriteIcon(unitIconUrl(job, gi))}
             <div class="gc-count">${cnt}/${MERGE_COUNT}</div>
-            <div class="gc-gold" style="color:${isTop ? '#888' : GRADES[gi + 1].color}">${isTop ? '최고' : `→${GRADES[gi + 1].kr}`}</div>
+            <div class="gc-gold" style="color:${isTop ? '#888' : GRADES[gi + 1].color}">${isTop ? tl('최고') : `→${GRADES[gi + 1].kr}`}</div>
           </div>`;
         }
         const sellQty = qty === Infinity ? cnt : Math.min(qty, cnt);
@@ -449,17 +450,17 @@ export class UI {
         <div class="dialog sell-dialog${firstOpen ? ' anim' : ''}">
           <button class="close-x">${icon('close')}</button>
           <div class="sell-head">
-            <h2>영웅 관리</h2>
+            <h2>${tl('영웅 관리')}</h2>
             ${mode === 'sell' ? `<div class="qty-row">
               <button data-qty="1" class="${qty === 1 ? 'active' : ''}">1</button>
               <button data-qty="10" class="${qty === 10 ? 'active' : ''}">10</button>
               <button data-qty="all" class="${qty === Infinity ? 'active' : ''}">ALL</button></div>` : ''}
           </div>
           <div class="mode-tabs">
-            <button data-mode="merge" class="merge ${mode === 'merge' ? 'active' : ''}">${icon('hammer')} 합성${mergeJobs.size ? ' •' : ''}</button>
-            <button data-mode="sell" class="sell ${mode === 'sell' ? 'active' : ''}">${icon('coin')} 판매</button>
+            <button data-mode="merge" class="merge ${mode === 'merge' ? 'active' : ''}">${icon('hammer')} ${tl('합성')}${mergeJobs.size ? ' •' : ''}</button>
+            <button data-mode="sell" class="sell ${mode === 'sell' ? 'active' : ''}">${icon('coin')} ${tl('판매')}</button>
           </div>
-          <div class="sell-hint">${mode === 'merge' ? `같은 카드 ${MERGE_COUNT}장 → 한 등급 위로` : '팔아서 골드 얻기'}</div>
+          <div class="sell-hint">${mode === 'merge' ? tl('같은 카드 {0}장 → 한 등급 위로', MERGE_COUNT) : tl('팔아서 골드 얻기')}</div>
           <div class="grade-row">${cards}</div>
           <div class="job-tabs">
             ${jobs().map((j) => `<button data-job="${j}" class="${j === job ? 'active' : ''}">${JOB_KR[j]}${mergeJobs.has(j) ? '<span class="dot"></span>' : ''}</button>`).join('')}
@@ -479,7 +480,7 @@ export class UI {
         b.onclick = () => {
           const gk = b.dataset.grade as GradeKey;
           if (mode === 'merge') {
-            if (!g.merge(job, gk)) toast(`같은 등급 ${MERGE_COUNT}개가 필요해요`);
+            if (!g.merge(job, gk)) toast(tl('같은 등급 {0}개가 필요해요', MERGE_COUNT));
           } else if (g.sellMany(job, gk, qty) > 0) {
             audio.coin();
           }
@@ -510,7 +511,7 @@ export class UI {
     $('opp-fill').style.width = pct + '%';
     $('opp-count').textContent = `${s.mobCount}/${WAVE.gameOverMobCount}`;
     $('opp-fill').classList.toggle('warn', pct >= 70);
-    $('opp-sub').textContent = `Wave ${s.wave} · 유닛 ${s.unitCount}${s.bossHp >= 0 ? ` · 보스 ${Math.round(s.bossHp * 100)}%` : ''}`;
+    $('opp-sub').textContent = tl('Wave {0} · 유닛 {1}{2}', s.wave, s.unitCount, s.bossHp >= 0 ? tl(' · 보스 {0}%', Math.round(s.bossHp * 100)) : '');
     this.opp?.push(s);
     // 상대 덱: 무엇이 날아올지(몹 카드)와 무엇으로 막는지(유닛) - 상성을 보고 카드를 고른다
     const key = `${s.atk?.join(',')}|${s.deck?.join(',')}`;
@@ -521,7 +522,7 @@ export class UI {
       const oppJobs = (s.deck ?? []).map((j) => JOBS[j]).filter(Boolean);
       preloadUnits(oppJobs); // 상대 전장 그림
       const deck = oppJobs.map((j) => spriteIcon(unitIconUrl(j))).join('');
-      $('opp-deck').innerHTML = `<div class="od-row" title="상대 몹 카드">${atk}</div><div class="od-row units" title="상대 유닛">${deck}</div>`;
+      $('opp-deck').innerHTML = `<div class="od-row" title="${tl('상대 몹 카드')}">${atk}</div><div class="od-row units" title="${tl('상대 유닛')}">${deck}</div>`;
     }
   }
 
@@ -538,7 +539,7 @@ export class UI {
         setTimeout(() => el.classList.add('hidden'), 500);
         return;
       }
-      el.innerHTML = `${Math.ceil(left)}<small>${this.ctx.kind === 'pvp' ? '몹을 보내 상대를 무너뜨리세요!' : ''}</small>`;
+      el.innerHTML = `${Math.ceil(left)}<small>${this.ctx.kind === 'pvp' ? tl('몹을 보내 상대를 무너뜨리세요!') : ''}</small>`;
       setTimeout(tick, 100);
     };
     tick();
@@ -553,11 +554,11 @@ export class UI {
     const seen = (k: string) => meta.seenFeatures.includes(`tip:${k}`);
     let tip: { key: string; text: string; target?: string } | null = null;
     if (gapCount > 0 && g.units.length >= 3 && g.time > 6 && !seen('gap')) {
-      tip = { key: 'gap', text: `${icon('warning')} 길의 <b>빨간 곳</b>은 유닛 공격이 닿지 않는 빈틈이에요.<br>유닛을 끌어 옮겨서 빈틈을 막아요` };
+      tip = { key: 'gap', text: `${icon('warning')} ${tl('길의 <b>빨간 곳</b>은 유닛 공격이 닿지 않는 빈틈이에요.<br>유닛을 끌어 옮겨서 빈틈을 막아요')}` };
     } else if (g.isPvp && g.time > 25 && !seen('peek')) {
-      tip = { key: 'peek', target: 'opp-canvas', text: `상대 전장을 <b>누르고 있으면</b>(PC는 마우스를 올리면)<br>크게 볼 수 있어요` };
+      tip = { key: 'peek', target: 'opp-canvas', text: tl('상대 전장을 <b>누르고 있으면</b>(PC는 마우스를 올리면)<br>크게 볼 수 있어요') };
     } else if (g.isPvp && g.wave >= 8 && !seen('late')) {
-      tip = { key: 'late', target: 'attack-row', text: `웨이브가 지날수록 몹 체력이 크게 늘어요.<br>후반엔 소환보다 <b>몹 카드로 상대를 압박</b>하는 게 효율적이에요` };
+      tip = { key: 'late', target: 'attack-row', text: tl('웨이브가 지날수록 몹 체력이 크게 늘어요.<br>후반엔 소환보다 <b>몹 카드로 상대를 압박</b>하는 게 효율적이에요') };
     }
     if (!tip) return;
     meta.seenFeatures.push(`tip:${tip.key}`);
@@ -586,7 +587,7 @@ export class UI {
     const stars = v.stars !== undefined
       ? `<div class="stars">${[0, 1, 2].map((i) => `<span class="${i < v.stars! ? '' : 'off'}">${icon('star')}</span>`).join('')}</div>` : '';
     const unlock = v.unlocked ? `<div class="unlock">${spriteIcon(unitIconUrl(v.unlocked, 2))}
-      <div><div style="font-size:18px">새 유닛 해금: ${JOB_KR[v.unlocked]}</div><div class="fine" style="text-align:left">덱에 넣어 보세요</div></div></div>` : '';
+      <div><div style="font-size:18px">${tl('새 유닛 해금:')} ${JOB_KR[v.unlocked]}</div><div class="fine" style="text-align:left">${tl('덱에 넣어 보세요')}</div></div></div>` : '';
     panel.innerHTML = `<div class="dialog result">
       <h2 class="${v.win ? 'win' : 'lose'}">${v.title}</h2>
       ${stars}

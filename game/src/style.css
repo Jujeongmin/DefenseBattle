@@ -2,6 +2,13 @@
    스킨: Tiny Swords 9-slice(버튼/종이/나무/리본) + Kenney 1-bit 아이콘 + Galmuri 픽셀 폰트
    원본 가공: tools/build_ui_assets.py
    ============================================================ */
+/* 일본어·중국어: Fusion Pixel 12px (OFL) - html[lang] 이 그 언어일 때만 쓰므로 그때만 내려받는다 */
+@font-face { font-family: 'FusionPixel-ja'; src: url('/fonts/FusionPixel-ja.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'FusionPixel-hans'; src: url('/fonts/FusionPixel-zh-hans.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'FusionPixel-hant'; src: url('/fonts/FusionPixel-zh-hant.woff2') format('woff2'); font-display: swap; }
+html[lang="ja"] { --font: 'Galmuri11', 'FusionPixel-ja', system-ui, sans-serif; }
+html[lang="zh-Hans"] { --font: 'Galmuri11', 'FusionPixel-hans', system-ui, sans-serif; }
+html[lang="zh-Hant"] { --font: 'Galmuri11', 'FusionPixel-hant', system-ui, sans-serif; }
 @font-face {
   font-family: 'Galmuri11';
   src: url('/fonts/Galmuri11.woff2') format('woff2');
@@ -1409,7 +1416,10 @@ input.vol::-moz-range-thumb {
 input.vol::-moz-range-track { background: transparent; }
 
 /* ---------- 확률 정보 (상점) ---------- */
-.section-title .odds-btn { margin-left: auto; padding: 2px 8px; font-size: 11px; }
+.section-title .odds-btn { margin-left: auto; padding: 2px 8px; font-size: 11px; white-space: nowrap; flex: none; }
+/* 제목은 한 줄로, 옆 설명만 줄을 바꾼다 (영어처럼 긴 언어) */
+.section-title { gap: 6px; white-space: nowrap; }
+.section-title > .fine { white-space: normal; flex: 1 1 auto; min-width: 0; text-align: right; }
 .odds-dialog { width: min(440px, 100%); }
 table.odds { width: 100%; border-collapse: collapse; font-size: 10px; letter-spacing: -0.3px; margin: 4px 0 6px; text-align: center; }
 table.odds th { background: rgba(42, 29, 22, 0.18); font-weight: 700; padding: 4px 2px; }
@@ -1494,3 +1504,6 @@ table.odds th .pi { width: 12px; height: 12px; }
 .sp-arrow .pi { width: 14px; height: 14px; }
 .sp-arrow.l { left: -6px; } .sp-arrow.l .pi { transform: scaleX(-1); }
 .sp-arrow.r { right: -6px; }
+.lang-row .info { display: flex; flex-direction: column; gap: 6px; }
+.lang-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.lang-list .btn { padding: 4px 8px; font-size: 12px; }

@@ -19,6 +19,7 @@ import { icon } from './icons';
 import { openOverlay, closeOverlay, bindActions, spriteIcon, toast } from './dom';
 import type { ItemKey, Job } from './types';
 
+import { tl } from './i18n';
 const HOUR = 60 * 60 * 1000;
 
 export function offerActive(id: string): boolean {
@@ -60,7 +61,7 @@ export function revealNextUnitPack(): boolean {
     saveMeta();
     if (productOwned(id) || (meta.units[job] ?? 0) >= 5) continue; // 이미 샀거나 Lv5 이상이면 조용히 넘어간다
     const u = UNIT_BY_ID[job];
-    setTimeout(() => popup(id, `${u.kr} 패키지 등장!`, `곧 트로피 로드에서 ${u.kr}이(가) 열려요. 지금 바로 받아 Lv5로 시작하세요 · 상점에서도 살 수 있어요`), 700);
+    setTimeout(() => popup(id, tl('{0} 패키지 등장!', u.kr), tl('곧 트로피 로드에서 {0}이(가) 열려요. 지금 바로 받아 Lv5로 시작하세요 · 상점에서도 살 수 있어요', u.kr)), 700);
     return true;
   }
   return false;
@@ -75,7 +76,7 @@ function grantRows(p: ProductDef): string {
   for (const [j, lv] of Object.entries(g.units ?? {})) {
     rows.push(`<div class="og-row">${spriteIcon(unitIconUrl(j as Job), 'frame-sprite og-unit')}<span>${UNIT_BY_ID[j as Job].kr} <b>Lv${lv}</b></span></div>`);
   }
-  if (g.crystals) rows.push(`<div class="og-row">${icon('gem')}<span>보석 <b>${g.crystals.toLocaleString()}</b></span></div>`);
+  if (g.crystals) rows.push(`<div class="og-row">${icon('gem')}<span>${tl('보석')} <b>${g.crystals.toLocaleString()}</b></span></div>`);
   for (const [k, n] of Object.entries(g.items ?? {})) {
     const it = ITEM_KR[k as ItemKey];
     rows.push(`<div class="og-row">${icon(it.icon)}<span>${it.kr} <b>×${n}</b></span></div>`);
@@ -91,14 +92,14 @@ function popup(id: string, title: string, why: string, onDone?: () => void): voi
   const el = openOverlay('modal', `<div class="dialog offer-dialog"><button class="close-x">${icon('close')}</button>
     <h2>${title}</h2>
     <div class="offer-why">${why}</div>
-    <div class="offer-box">${eff > 100 ? `<span class="eff">효율<b>${eff}%</b></span>` : ''}
+    <div class="offer-box">${eff > 100 ? `<span class="eff">${tl('효율')}<b>${eff}%</b></span>` : ''}
       <img class="offer-img" src="/ui/shop/${p.id}.png" alt="">
       <div class="offer-name">${p.kr}</div>
       <div class="offer-grant">${grantRows(p)}</div>
     </div>
-    ${limited ? `<div class="offer-timer">${icon('timer')} <span id="offer-left">${timeLeft(id)}</span> 남음</div>` : ''}
+    ${limited ? `<div class="offer-timer">${icon('timer')} <span id="offer-left">${timeLeft(id)}</span> ${tl('남음')}</div>` : ''}
     <button class="btn gold offer-buy" data-act="buy">VX ${price(id)}</button>
-    <button class="btn offer-later" data-close>다음에</button></div>`, onDone);
+    <button class="btn offer-later" data-close>${tl('다음에')}</button></div>`, onDone);
   // 남은 시간 1초마다
   if (limited) {
     const t = setInterval(() => {
@@ -113,11 +114,11 @@ function popup(id: string, title: string, why: string, onDone?: () => void): voi
       const got = await purchase(id);
       if (got.length) {
         audio.fanfareUnlock();
-        toast(`구매 완료: ${p.kr}`);
+        toast(tl('구매 완료: {0}', p.kr));
         closeOverlay('modal');
         if (pendingReveals.length) setTimeout(() => flushReveals(), 250); // 상자 상품이면 공개
       } else {
-        toast('결제가 완료되지 않았어요');
+        toast(tl('결제가 완료되지 않았어요'));
         (b as HTMLButtonElement).disabled = false;
       }
     },
@@ -125,9 +126,9 @@ function popup(id: string, title: string, why: string, onDone?: () => void): voi
 }
 
 const OFFER_TEXT: Record<OfferKind, { title: string; why: string }> = {
-  comeback: { title: '다시 일어서기!', why: '연속으로 졌어요. 소환권과 보석으로 덱을 다시 키워 보세요' },
-  arena: { title: '아레나 승급 축하!', why: '새 아레나에 올랐어요. 승급 기념 특가' },
-  chapter: { title: '새 챕터 열림!', why: '다음 챕터는 더 강한 몹이 나와요. 미리 준비하세요' },
+  comeback: { title: tl('다시 일어서기!'), why: tl('연속으로 졌어요. 소환권과 보석으로 덱을 다시 키워 보세요') },
+  arena: { title: tl('아레나 승급 축하!'), why: tl('새 아레나에 올랐어요. 승급 기념 특가') },
+  chapter: { title: tl('새 챕터 열림!'), why: tl('다음 챕터는 더 강한 몹이 나와요. 미리 준비하세요') },
 };
 
 /** 한정 상품 띄우기 (같은 상품 팝업은 하루 한 번). 띄웠으면 true */
@@ -153,10 +154,10 @@ export function afterMatch(ev: { tierUp?: boolean; chapterUp?: boolean; losing?:
 export function showShortage(need: number, job?: Job, onDone?: () => void): void {
   const pack = job ? unitPackAvailable(job) : null;
   if (pack) {
-    popup(pack, `${UNIT_BY_ID[job!].kr} 바로 받기`, `보석 ${need.toLocaleString()}개가 부족해요. 패키지로 바로 해금하고 Lv5까지 올려요`, onDone);
+    popup(pack, tl('{0} 바로 받기', UNIT_BY_ID[job!].kr), tl('보석 {0}개가 부족해요. 패키지로 바로 해금하고 Lv5까지 올려요', need.toLocaleString()), onDone);
     return;
   }
   const gems = PRODUCTS.filter((p) => p.category === 'crystal').sort((a, b) => (a.grant.crystals ?? 0) - (b.grant.crystals ?? 0));
   const fit = gems.find((p) => (p.grant.crystals ?? 0) >= need) ?? gems[gems.length - 1];
-  popup(fit.id, '보석이 부족해요', `보석 ${need.toLocaleString()}개가 더 필요해요`, onDone);
+  popup(fit.id, tl('보석이 부족해요'), tl('보석 {0}개가 더 필요해요', need.toLocaleString()), onDone);
 }

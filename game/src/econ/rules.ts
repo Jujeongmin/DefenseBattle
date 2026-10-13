@@ -12,6 +12,7 @@ import {
 } from '../config';
 import type { MetaData, Job, Rarity, ItemKey, ResearchKey } from '../types';
 
+import { tl } from '../i18n';
 /** 경제 상태 = 저장본 중 서버가 권위를 갖는 부분 */
 export const ECON_KEYS = [
   'crystals', 'items', 'cards', 'units', 'research', 'chests', 'chestCycle', 'roadClaimed', 'stages',
@@ -155,7 +156,7 @@ export function gacha(e: Econ, n: 1 | 10, ctx: Ctx): Reveal | null {
   if (n === 10 && !rolls.some((r) => r === 'epic' || r === 'legendary')) rolls[rolls.length - 1] = 'epic';
   const cards = new Map<Job, number>();
   for (const r of rolls) { const p = pool(r); const j = p[Math.floor(ctx.rng() * p.length)]; cards.set(j, (cards.get(j) ?? 0) + GACHA.count[r]); }
-  return { title: `유닛 뽑기 ${n}회`, drops: grantDrops(e, cards, 0), gems: 0, kind: 'gacha' };
+  return { title: tl('유닛 뽑기 {0}회', n), drops: grantDrops(e, cards, 0), gems: 0, kind: 'gacha' };
 }
 
 // ---------------- 보상 ----------------

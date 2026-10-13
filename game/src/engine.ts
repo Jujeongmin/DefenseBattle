@@ -18,6 +18,7 @@ import type {
 } from './types';
 import { icon } from './icons';
 
+import { tl } from './i18n';
 // ---- 맵 기하 (논리 좌표: 720 x 720) ----
 export const MAP = { size: 720 } as const;
 const P = 70; // 경로 바깥 여백
@@ -358,7 +359,7 @@ export class Game {
     this.attackReadyAt[card] = this.time + def.cooldown;
     this.sentCount += 1;
     const payload: AttackPayload = { card, wave: Math.max(1, this.wave), pos };
-    this.pushLog(`${def.kr} 던짐!`);
+    this.pushLog(tl('{0} 던짐!', def.kr));
     this.emit('attack', payload);
     return true;
   }
@@ -375,7 +376,7 @@ export class Game {
       this.pending.push({ card, hp, delay, pos });
       this.effects.push({ type: 'drop', x: at.x + (Math.random() - 0.5) * 36, y: at.y + (Math.random() - 0.5) * 36, ttl: delay, dur: delay, card, seed: Math.random() });
     }
-    this.pushLog(`${icon('warning')} 상대의 ${def.kr}!`);
+    this.pushLog(tl('{0} 상대의 {1}!', icon('warning'), def.kr));
     if (def.cost >= 80) this.shake = Math.max(this.shake, 6);
     this.emit('incoming', p);
   }
@@ -497,7 +498,7 @@ export class Game {
     let alch = 0;
     for (const a of this.units) if (a.job === 'alchemist' && a.gradeIndex >= SKILL_FROM_INDEX) alch += a.gradeIndex >= FULL_RANGE_FROM_INDEX ? SKILLS.alchemist.chanceHigh : SKILLS.alchemist.chance;
     const skip = GRADES[GRADE_INDEX[next.key] + 1];
-    if (skip && Math.random() < Math.min(SKILLS.alchemist.cap, alch)) { next = skip; this.pushLog(`연금술! ${GRADE_BY_KEY[skip.key].kr} 등급`); }
+    if (skip && Math.random() < Math.min(SKILLS.alchemist.cap, alch)) { next = skip; this.pushLog(tl('연금술! {0} 등급', GRADE_BY_KEY[skip.key].kr)); }
     const unit = this.createUnit(job, next.key, 'merge');
     const z = this.zones[zoneId];
     this.effects.push({ type: 'merge', x: unit.x, y: unit.y, ttl: 0.7, color: next.color });
@@ -539,12 +540,12 @@ export class Game {
     this.placeInZone(unit, zone); // 구역 안 랜덤 배치 (겹침 허용)
 
     const rate = grade.summonRate;
-    const verb = source === 'merge' ? '합성' : '소환';
+    const verb = source === 'merge' ? tl('합성') : tl('소환');
     const text = source === 'merge'
-      ? `${icon('hammer')} ${JOB_KR[job]} ${grade.kr}등급 합성`
-      : `${rate}% ${JOB_KR[job]} ${grade.kr}등급 소환`;
+      ? tl('{0} {1} {2}등급 합성', icon('hammer'), JOB_KR[job], grade.kr)
+      : tl('{0}% {1} {2}등급 소환', rate, JOB_KR[job], grade.kr);
     if (gIdx >= GRADE_INDEX['mythic']) {
-      this.mythicBanner = { text: `${JOB_KR[job]} ${grade.kr} 등급 ${verb}!`, ttl: 4 };
+      this.mythicBanner = { text: tl('{0} {1} 등급 {2}!', JOB_KR[job], grade.kr, verb), ttl: 4 };
       this.shake = Math.max(this.shake, 5);
     } else {
       this.pushLog(text);
@@ -745,7 +746,7 @@ export class Game {
     this.updateEffects(dt);
 
     if (this.mobs.length > this.peakMobs) this.peakMobs = this.mobs.length;
-    if (this.mobs.length >= WAVE.gameOverMobCount) this.gameOver('몹이 100마리를 넘었습니다');
+    if (this.mobs.length >= WAVE.gameOverMobCount) this.gameOver(tl('몹이 100마리를 넘었습니다'));
   }
 
   updateWaveState(dt: number): void {
@@ -780,7 +781,7 @@ export class Game {
         this.waveState = 'rest';
         this.restTimer = WAVE.restBetween;
       } else if (this.bossTimer <= 0) {
-        this.gameOver('보스 제한시간 초과');
+        this.gameOver(tl('보스 제한시간 초과'));
       }
     }
   }
@@ -1248,7 +1249,7 @@ export class Game {
     this.over = true;
     this.cleared = true;
     if (!this.opts.stageId) this.tryAchieve('clear50');
-    this.finish(this.opts.stageId ? `스테이지 ${this.opts.stageId} 클리어!` : '50 웨이브 클리어!');
+    this.finish(this.opts.stageId ? tl('스테이지 {0} 클리어!', this.opts.stageId) : tl('50 웨이브 클리어!'));
   }
   revived = false;
   /** 부활 (보상형 광고): 일반 몹 정리 + 보스 시간 연장. 판당 1회 */
@@ -1263,7 +1264,7 @@ export class Game {
     this.mobs = this.mobs.filter((m) => m.boss);
     if (this.waveState === 'waiting_boss') this.bossTimer = Math.max(this.bossTimer, 45);
     this.shake = 12;
-    this.pushLog('부활! 필드가 정리되었습니다');
+    this.pushLog(tl('부활! 필드가 정리되었습니다'));
     return true;
   }
 

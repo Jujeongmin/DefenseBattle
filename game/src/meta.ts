@@ -6,6 +6,7 @@ import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS, FEATURE_UNLOCK, STARTER_ATTACKS, 
 import { getPlatform } from './platform';
 import type { MetaData, ResearchKey, QuestStat, AchievementDef } from './types';
 
+import { tl } from './i18n';
 export function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -50,7 +51,7 @@ function freshMeta(): MetaData {
     offerShownAt: {},
     arenaMax: 0,
     stageFailStreak: 0,
-    nick: `용사${Math.floor(1000 + Math.random() * 9000)}`,
+    nick: tl('용사{0}', Math.floor(1000 + Math.random() * 9000)),
     adRemoved: false,
   };
 }

@@ -7,6 +7,7 @@ import { meta, todayStr } from './meta';
 import { act } from './econ';
 import { icon } from './icons';
 
+import { tl } from './i18n';
 export const AD_PLACEMENTS = {
   doubleReward: 'reward_double',
   revive: 'reward_revive',
@@ -39,9 +40,9 @@ function fakeAd(label: string): Promise<boolean> {
     const el = document.createElement('div');
     el.className = 'overlay';
     el.style.zIndex = '95';
-    el.innerHTML = `<div class="dialog" style="text-align:center"><h2>${icon('tv')} 광고 (개발용)</h2>
+    el.innerHTML = `<div class="dialog" style="text-align:center"><h2>${icon('tv')} ${tl('광고 (개발용)')}</h2>
       <div class="fine">${label}</div><div class="spinner"></div>
-      <button class="btn small" data-skip>닫기(보상 없음)</button></div>`;
+      <button class="btn small" data-skip>${tl('닫기(보상 없음)')}</button></div>`;
     document.getElementById('app')!.appendChild(el);
     const done = (ok: boolean) => { el.remove(); resolve(ok); };
     const t = setTimeout(() => done(true), 1500);
