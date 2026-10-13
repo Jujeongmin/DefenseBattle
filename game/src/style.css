@@ -1451,3 +1451,4 @@ table.odds th .pi { width: 12px; height: 12px; }
 .reveal-dialog .rv-grid { padding-top: 4px; }
 /* 뽑기: 가장 높은 등급 색으로 소환 아이콘이 빛난다 */
 .rv-scene .rv-box .pi-summon { filter: drop-shadow(0 0 10px var(--cc)) drop-shadow(0 0 22px var(--cc)); }
+.summon-btn { touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }

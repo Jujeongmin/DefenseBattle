@@ -81,11 +81,36 @@ export class UI {
   }
 
   private bind(): void {
-    $('btn-summon').onclick = () => {
+    // 소환: 탭하면 1번, 꾹 누르고 있으면 골드가 떨어질 때까지 계속 (0.38초 뒤부터 0.14초마다)
+    const summonBtn = $('btn-summon') as HTMLButtonElement;
+    const summonOnce = () => {
       const u = this.game.summon();
       if (u) audio.summon(u.gradeIndex >= GRADE_INDEX['mythic']);
       else if (this.game.gold < ECONOMY.summonCost) this.flashGold();
+      return !!u;
     };
+    let holdTimer: ReturnType<typeof setTimeout> | null = null;
+    let repeatTimer: ReturnType<typeof setInterval> | null = null;
+    let held = false; // 꾹 눌러 연속 소환했으면 손을 뗄 때의 click 은 무시
+    const stopHold = () => {
+      if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+      if (repeatTimer) { clearInterval(repeatTimer); repeatTimer = null; }
+    };
+    summonBtn.onclick = () => { if (held) { held = false; return; } summonOnce(); };
+    summonBtn.addEventListener('pointerdown', () => {
+      held = false;
+      stopHold();
+      holdTimer = setTimeout(() => {
+        held = true;
+        if (!summonOnce()) return;
+        repeatTimer = setInterval(() => {
+          if (this.game.over || this.game.paused || !summonOnce()) stopHold();
+        }, 140);
+      }, 380);
+    });
+    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) summonBtn.addEventListener(ev, stopHold);
+    window.addEventListener('pointerup', stopHold); // 골드가 떨어져 버튼이 꺼진 뒤 손을 떼도 멈추게
+    summonBtn.addEventListener('contextmenu', (e) => e.preventDefault()); // 길게 누를 때 휴대폰 메뉴가 뜨지 않게
     $('btn-pause').onclick = () => {
       audio.button();
       this.game.paused = !this.game.paused;
