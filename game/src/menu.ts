@@ -634,7 +634,9 @@ export class Menu {
       return `<div class="deck-slot filled ${pick ? 'pickable' : ''}" data-act="slot" data-drop-slot="${i}" data-drag="${k}" data-slot="${i}">
         ${mobIc(k)}<div>${ATTACK_BY_KEY[k].kr}</div></div>`;
     }).join('');
-    const cards = ATTACKS.map((a) => {
+    // 해금된 몹 카드를 위로 (넣기 쉽게), 그 안에서는 원래 순서
+    const locked = (k: AttackKey) => (attackUnlocked(k) ? 0 : 1);
+    const cards = [...ATTACKS].sort((a, b) => locked(a.key) - locked(b.key)).map((a) => {
       const open = attackUnlocked(a.key);
       const inDeck = meta.attackDeck.includes(a.key);
       const at = attackUnlockAt(a.key);
