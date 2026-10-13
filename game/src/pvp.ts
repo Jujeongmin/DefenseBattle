@@ -70,7 +70,8 @@ export async function findOnlineMatch(onStatus: (sec: number) => void, signal: {
       const sec = (Date.now() - t0) / 1000;
       onStatus(sec);
       if (sec > maxWait) { await net.callGlobal('pvpCancel'); throw new MatchTimeout(); }
-      await new Promise((r) => setTimeout(r, 2000));
+      // 먼저 기다리던 쪽: 매칭 알림이 늦거나 빠져도 0.5초 안에 알아채게 (예전 2초 - 나중에 들어온 쪽만 늘 먼저 매칭됐다)
+      await new Promise((r) => setTimeout(r, 500));
       if (found) break;
       const p = await net.callGlobal<Q>('pvpPoll');
       if (p.status === 'matched') found = p.match;
@@ -99,13 +100,15 @@ class OnlineSession implements PvpSession {
     this.me = server.account;
     const roomId = this.match.roomId;
     await server.joinRoom(roomId);
-    const start = (startAt: number) => {
+    // 시작 시각: 서버가 정한 startAt 을 서버 시각(now) 기준 남은 시간으로 바꿔 내 기기 시계에 맞춘다
+    // (기기 시계가 몇 초 어긋나 있어도 두 사람이 같은 순간에 시작한다)
+    const start = (startAt: number, serverNow?: number) => {
       if (this.started) return;
       this.started = true;
-      h.onStart(startAt);
+      h.onStart(typeof serverNow === 'number' ? Date.now() + (startAt - serverNow) : startAt);
     };
     this.offs.push(
-      server.onRoomMessage(roomId, 'pvpStart', (m: { startAt: number }) => start(m.startAt)),
+      server.onRoomMessage(roomId, 'pvpStart', (m: { startAt: number; now?: number }) => start(m.startAt, m.now)),
       server.onRoomMessage(roomId, 'pvpSnap', (m: { account: string; snap: BoardSnapshot }) => {
         if (m.account !== this.me) h.onSnapshot(m.snap);
       }),
@@ -123,8 +126,8 @@ class OnlineSession implements PvpSession {
         h.onResult({ won: false, reason: 'cancel', trophyDelta: 0, trophies: meta.pvp.trophies });
       }),
     );
-    const st = await net.callRoom<{ status?: string; startAt?: number }>('pvpReady', { nick: meta.nick, seed: this.match.seed });
-    if (st.status === 'playing' && st.startAt) start(st.startAt);
+    const st = await net.callRoom<{ status?: string; startAt?: number; now?: number }>('pvpReady', { nick: meta.nick, seed: this.match.seed });
+    if (st.status === 'playing' && st.startAt) start(st.startAt, st.now);
   }
 
   sendSnapshot(s: BoardSnapshot): void {

@@ -317,12 +317,13 @@ export class Server {
         update.status = 'playing';
         update.startAt = Date.now() + 3500;
         await $room.updateRoomState(update);
-        $room.broadcastToRoom('pvpStart', { startAt: update.startAt, seed: update.seed ?? room.seed, players });
+        // now: 서버 시각 - 기기 시계가 서로 달라도 (startAt - now) 만큼 남았다고 계산해 둘이 같이 시작한다
+        $room.broadcastToRoom('pvpStart', { startAt: update.startAt, now: Date.now(), seed: update.seed ?? room.seed, players });
       } else {
         if (!room.status) update.status = 'waiting';
         await $room.updateRoomState(update);
       }
-      return { ...room, ...update };
+      return { ...room, ...update, now: Date.now() };
     });
   }
 
