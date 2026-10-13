@@ -418,7 +418,7 @@ export const ATTACK_DECK_SIZE = 4;
 
 export const PVP = {
   hpMult: 3,            // PvP 몹 시작 체력 배율 - pvpHpGrowth 와 함께 한 판 ~4분 (tools/pvpsim.ts)
-  reportInterval: 0.5,   // 상태 보고 주기(초)
+  reportInterval: 0.25,  // 상태 보고 주기(초) - 상대 전장을 거의 실시간으로 (스냅샷 최대 ~2.5KB × 4번/초)
   matchTimeout: 25,      // 매칭 대기 최대(초) → 초과 시 AI 대전 제안
   trophyWin: 30,
   trophyLoss: 20,

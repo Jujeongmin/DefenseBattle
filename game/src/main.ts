@@ -259,6 +259,9 @@ async function doubleReward(): Promise<void> {
   if (await showRewarded('doubleReward')) {
     const amount = await act<number>('adReward', { kind: 'double' }); // 직전 판 보상 한 번 더 (서버가 금액 결정)
     audio.coin();
+    // 결과 보상 칸의 보석 옆에 초록색으로 더 받은 만큼 (+40 → +40 +40)
+    const gemRw = [...document.querySelectorAll<HTMLElement>('#gameover-panel .rw')].find((r) => r.querySelector('.pi-gem'));
+    if (gemRw && amount > 0 && !gemRw.querySelector('.rw-bonus')) gemRw.insertAdjacentHTML('beforeend', ` <span class="rw-bonus">+${amount}</span>`);
     toast(tl('보상 2배! {0} +{1}', icon('gem'), amount));
     if (btn) btn.innerHTML = tl('{0} 2배 보상 받음', icon('check'));
   } else if (btn) {

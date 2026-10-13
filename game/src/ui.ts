@@ -4,7 +4,7 @@
 import {
   JOB_KR, RACE_KR, GRADES, DMG_MULT, WAVE, GRADE_INDEX, MERGE_COUNT, PLAY_SPEED, ATTACKS, JOBS,
 } from './config';
-import { MAP, Game, pathPosNear, type BoardSnapshot } from './engine';
+import { MAP, Game, pathPosNear, pathAt, type BoardSnapshot } from './engine';
 import { mobPortraitSrc, unitIconUrl, mobSprite, preloadUnits } from './assets';
 import { meta, saveMeta } from './meta';
 import { audio } from './audio';
@@ -116,7 +116,7 @@ export class UI {
     // 소환: 탭하면 1번, 꾹 누르고 있으면 골드가 떨어질 때까지 계속 (0.38초 뒤부터 0.14초마다)
     const summonBtn = $('btn-summon') as HTMLButtonElement;
     const summonOnce = () => {
-      if (this.summonLock) return false;
+      if (this.summonLock || this.countingDown()) return false;
       const u = this.game.summon();
       if (u) audio.summon(u.gradeIndex >= GRADE_INDEX['mythic']);
       else if (this.game.gold < this.game.summonCost) this.flashGold();
@@ -216,7 +216,7 @@ export class UI {
       banner.classList.add('hidden');
     }
 
-    ($('btn-summon') as HTMLButtonElement).disabled = g.gold < g.summonCost || g.over || this.summonLock;
+    ($('btn-summon') as HTMLButtonElement).disabled = g.gold < g.summonCost || g.over || this.summonLock || this.countingDown();
     const costEl = document.querySelector('#btn-summon .summon-cost');
     const costHtml = `${icon('coin')}${g.summonCost}`;
     if (costEl && costEl.innerHTML !== costHtml) costEl.innerHTML = costHtml;
@@ -224,7 +224,7 @@ export class UI {
       document.querySelectorAll<HTMLButtonElement>('#attack-row .attack-card').forEach((b) => {
         const t = Number(b.dataset.card);
         const cd = g.attackCooldown(t);
-        b.disabled = g.gold < g.attackCost(t) || cd > 0 || g.over;
+        b.disabled = g.gold < g.attackCost(t) || cd > 0 || g.over || this.countingDown();
         const label = cd > 0 ? String(Math.ceil(cd / PLAY_SPEED)) : '';
         const cdEl = b.querySelector('.cd')!;
         if (cdEl.textContent !== label) cdEl.textContent = label;
@@ -253,6 +253,11 @@ export class UI {
   }
 
   // ---------- PvP 몹 던지기: 카드를 위쪽 상대 전장으로 끌어다 놓는다 ----------
+  /** PvP 시작 카운트다운 중 (판이 멈춰 있는 동안 소환·던지기를 받지 않는다) */
+  private countingDown(): boolean {
+    return this.game.isPvp && this.game.paused && !this.game.over;
+  }
+
   /** 화면이 보인 뒤 긴 이름·버튼 글자를 칸에 맞춘다 (숨겨진 채로는 폭을 잴 수 없다) */
   refit(): void {
     fitAll($('game-frame'));
@@ -305,8 +310,9 @@ export class UI {
         end();
         if (pos !== null) {
           if (this.game.sendAttack(tier, pos)) {
-            this.flyThrow(card, e.clientX, e.clientY, tier);
-            this.opp?.markThrow(pos);
+            const land = this.oppPoint(pos); // 손을 뗀 곳이 아니라 작아진 미니맵 위 실제 착지 지점으로
+            this.flyThrow(card, land.x, land.y, tier);
+            this.opp?.markThrow(pos, tier);
             this.hideThrowHint();
           } else this.flashGold();
         } else if (moved < 12) {
@@ -315,6 +321,21 @@ export class UI {
       };
       card.onpointercancel = end;
     });
+  }
+
+  /**
+   * 상대 전장(미니맵) 위에서 길 위치 pos 의 화면 좌표. 끄는 동안 크게 펼친 창은 손을 떼면 작아지므로
+   * 줄어드는 애니메이션을 건너뛰고 최종 크기로 잰다 (그래야 날아가는 몹이 미니맵 바로 그 자리에 떨어진다).
+   */
+  private oppPoint(pos: number): { x: number; y: number } {
+    const c = $('opp-canvas');
+    const tr = c.style.transition;
+    c.style.transition = 'none';
+    const r = c.getBoundingClientRect();
+    c.style.transition = tr;
+    const b = c.clientLeft;
+    const p = pathAt(pos);
+    return { x: r.left + b + (p.x / MAP.size) * c.clientWidth, y: r.top + b + (p.y / MAP.size) * c.clientHeight };
   }
 
   /** 던진 몹이 카드에서 놓은 자리까지 포물선으로 날아가고, 상대 창이 흔들린다 */
@@ -501,6 +522,13 @@ export class UI {
   // ---------- PvP: 상대 상태 ----------
   private oppDeckKey = '';
   setOpponentInfo(nick: string, trophies: number, bot: boolean): void {
+    // 지난 판 상대 상태가 남지 않게 (카운트다운 동안 이전 판 몹 수가 보였다)
+    $('opp-fill').style.width = '0%';
+    $('opp-fill').classList.remove('warn');
+    $('opp-count').textContent = `0/${WAVE.gameOverMobCount}`;
+    $('opp-sub').textContent = '';
+    $('opp-deck').innerHTML = '';
+    this.oppDeckKey = '';
     $('opp-nick').textContent = nick;
     $('my-nick').textContent = meta.nick;
     void bot; // 봇도 실제 유저처럼 보여 준다
@@ -596,13 +624,14 @@ export class UI {
       <div class="sub">${v.sub}</div>
       <div class="rewards">${v.rewards.map((r) => `<div class="rw">${r}</div>`).join('')}</div>
       ${unlock}${v.extraHtml ?? ''}
-      <div class="btns">${v.buttons.map((b, i) => `<button class="btn ${b.cls}" data-i="${i}" ${b.id ? `id="${b.id}"` : ''}>${b.label}</button>`).join('')}</div>
+      <div class="btns">${v.buttons.map((b, i) => `<button class="btn fit ${b.cls}" data-i="${i}" ${b.id ? `id="${b.id}"` : ''}>${b.label}</button>`).join('')}</div>
     </div>`;
     panel.querySelectorAll<HTMLButtonElement>('[data-i]').forEach((b) => {
       b.onclick = () => { audio.button(); v.buttons[Number(b.dataset.i)].action(); };
     });
     panel.classList.remove('hidden');
     popIn(panel); // 결과 창도 통통 튀며 열리고 보상이 차례로 등장
+    fitAll(panel); // 버튼 글자는 한 줄로 (길면 글자를 줄인다)
   }
 
   hideResult(): void {

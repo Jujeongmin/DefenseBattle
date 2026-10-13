@@ -146,7 +146,7 @@ export class Menu {
             <div class="ic">${icon('map')}</div><div class="t">${tl('캠페인')}</div><div class="d">${allCleared ? tl('{0} 모두 클리어', icon('check')) : tl('스테이지 {0}', nextStage.id)}</div>
           </button>
           ${endlessOn ? `<button class="mode-card endless" data-act="endless">
-            <div class="ic">${icon('infinity')}</div><div class="t">${tl('무한 모드')}</div><div class="d">${icon('flag')} ${meta.bestWave || 0}</div>${tag('endless')}
+            <div class="ic">${icon('infinity')}</div><div class="t">${tl('무한 모드')}</div><div class="d">${tl('최고 {0}웨이브', meta.bestWave || 0)}</div>${tag('endless')}
           </button>` : ''}
         </div>` : `<button class="btn red play-btn tut-start" data-act="tutorial">${icon('play')} ${tl('튜토리얼 시작')}</button>`}
       </div>
@@ -861,7 +861,7 @@ export class Menu {
             <div class="sp-n">${n}</div>${cell(def.premium, n, true, pCls)}${cell(def.free, n, false, fCls)}</div>`;
         }).join('');
         body = `<div class="pass-head"><div class="lvl">${t}</div><div style="flex:1">
-            <div class="fine" style="text-align:left">${tl('시즌')} ${currentSeasonId().slice(1)} ${tl('· 다음 단계까지')} ${SEASON_XP_PER_TIER - inTier} XP</div>
+            <div class="fine fit" style="text-align:left">${tl('시즌')} ${currentSeasonId().slice(1)} ${tl('· 다음 단계까지')} ${SEASON_XP_PER_TIER - inTier} XP</div>
             <div class="pass-bar"><div style="width:${t >= SEASON_TIERS.length ? 100 : (inTier / SEASON_XP_PER_TIER) * 100}%"></div></div></div></div>
           ${meta.season.premium ? '' : `<button class="btn gold close" data-act="buyPass" style="margin:0 0 10px">${icon('trophy')} ${tl('프리미엄 패스 구매')}</button>`}
           <div class="sp-wrap"><button class="sp-arrow l" data-act="spMove" data-d="-1" aria-label="${tl('이전')}">${icon('play')}</button>

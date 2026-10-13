@@ -110,6 +110,8 @@ export interface BoardSnapshot {
   atk?: number[];
   /** 형식 버전 - 2 부터 상대 전장을 스프라이트로 그릴 수 있다 */
   v?: number;
+  /** 보낸 쪽 게임 시간(초) - 받는 쪽이 도착 간격의 흔들림과 상관없이 고르게 보간한다 */
+  t?: number;
 }
 
 /** 상대가 던진 몹이 떨어지는 시간(게임 초) - 착지 지점을 미리 보여 대비할 틈을 준다 */
@@ -436,6 +438,7 @@ export class Game {
       deck: this.opts.deck.map((j) => JOBS.indexOf(j)),
       atk: this.attackCards,
       v: 2,
+      t: Math.round(this.time * 100) / 100,
     };
   }
 

@@ -574,5 +574,6 @@ const d: Record<string, string> = {
   "마리": "數量",
   "체력": "體力",
   "속도": "速度",
+  "최고 {0}웨이브": "最高 {0}波",
 };
 export default d;
