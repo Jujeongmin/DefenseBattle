@@ -8,7 +8,7 @@ import {
   SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, productEfficiency,
   CAMPAIGN, TROPHY_ROAD, PVP_TIERS, ECONOMY, type SeasonReward, UNIT_PRESETS, ATTACK_PRESETS, type DeckPreset,
 } from './config';
-import { meta, saveMeta, researchLevel, currentSeasonId } from './meta';
+import { meta, saveMeta, researchLevel, currentSeasonId, todayStr } from './meta';
 import { getPlatform } from './platform';
 import { audio } from './audio';
 import { unitIconUrl, mobPortraitSrc, mobSprite } from './assets';
@@ -149,7 +149,7 @@ export class Menu {
         </div>` : `<button class="btn red play-btn tut-start" data-act="tutorial">${icon('play')} ${tl('튜토리얼 시작')}</button>`}
       </div>
       <nav class="lobby-nav">
-        <button data-act="shop"><span class="ic">${icon('shop')}${rewardedAvailable() && freeTicketAdsLeft() > 0 ? dot : ''}</span>${tl('상점')}</button>
+        <button data-act="shop"><span class="ic">${icon('shop')}${shopDot() ? dot : ''}</span>${tl('상점')}</button>
         ${featureUnlocked('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}${tag('units') || (UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : '')}</span>${tl('덱')}</button>` : ''}
         ${featureUnlocked('research') ? `<button data-act="research"><span class="ic">${icon('flask')}${tag('research')}</span>${tl('연구')}</button>` : ''}
         ${featureUnlocked('quests') ? `<button data-act="quests"><span class="ic">${icon('scroll')}${tag('quests') || (this.questClaimable() ? dot : '')}</span>${tl('퀘스트')}</button>` : ''}
@@ -722,6 +722,12 @@ export class Menu {
 
   // ======================= 상점 =======================
   openShop(): void {
+    // 오늘 상점을 열어 봤으면 로비 상점 점은 끈다 (광고를 안 봐도). 다음 날 횟수가 다시 차면 다시 뜬다
+    const seen = shopSeenKey();
+    if (!meta.seenFeatures.includes(seen)) {
+      meta.seenFeatures = meta.seenFeatures.filter((k) => !k.startsWith('shop:')).concat(seen);
+      saveMeta();
+    }
     const plat = getPlatform();
     const price = (id: string) => plat.priceOf(id) ?? 0;
     const draw = () => {
@@ -946,6 +952,12 @@ export class Menu {
       this.onLaunch({ kind: 'pvp', session });
     }, 1400);
   }
+}
+
+/** 로비 상점 점: 오늘 받을 광고 소환권이 남았고, 오늘 아직 상점을 열어 보지 않았을 때 */
+function shopSeenKey(): string { return `shop:${todayStr()}`; }
+function shopDot(): boolean {
+  return rewardedAvailable() && freeTicketAdsLeft() > 0 && !meta.seenFeatures.includes(shopSeenKey());
 }
 
 function esc(s: string): string {
