@@ -630,6 +630,10 @@ b, strong { font-weight: 700; }
 @keyframes dimOut { to { background-color: rgba(26, 18, 12, 0); } }
 @keyframes dlgOut { to { transform: scale(0.85); opacity: 0; } }
 .dialog.redraw, .dialog.redraw h2, .dialog.redraw .pop-in { animation: none; } /* 열린 패널을 다시 그릴 때 (dom.ts openOverlay) */
+/* 큰 패널(상점·덱·연구소·랭킹 등 #panel)은 애니메이션 없이 한 번에 연다 - 커지며 나타나는 동안 종이·줄 배경이 늦게 그려져 보였다.
+   작은 팝업(#modal)은 그대로 통통 튀며 열린다 */
+#panel:not(.hidden) { animation: none; }
+#panel > .dialog, #panel > .dialog h2, #panel .pop-in { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .dialog, .dialog h2, .pop-in, .overlay:not(.hidden), .overlay.closing, .overlay.closing .dialog { animation: none !important; }
 }
