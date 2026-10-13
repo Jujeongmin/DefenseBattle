@@ -29,7 +29,7 @@ import { onlineAvailable, findMatch, type PvpSession } from './pvp';
 import { $, toast, openOverlay, closeOverlay, bindActions, spriteIcon, confirmModal } from './dom';
 import { enableDeckDrag } from './dragdeck';
 import { Spotlight } from './tutorial';
-import { act, type Reveal } from './econ';
+import { act, online, type Reveal } from './econ';
 import { showShortage, activeOffers, unitPackAvailable, timeLeft } from './offers';
 import { chestState, chestLeftMs, leftText, clockText, opening, showReveal, flushReveals, pendingReveals } from './chests';
 import type { Job, Race, ResearchKey } from './types';
@@ -341,7 +341,12 @@ export class Menu {
     bindActions(el, {
       save: () => {
         const v = ($('nick-input') as HTMLInputElement).value.trim().slice(0, 12);
-        if (v) { meta.nick = v; saveMeta(); }
+        if (v) {
+          meta.nick = v;
+          saveMeta();
+          // 온라인이면 서버 랭킹 이름도 바로 바꾼다
+          if (online()) void import('./net/server').then((n) => n.callGlobal('setNick', { nick: v })).catch((e) => console.warn('[nick] 랭킹 이름 갱신 실패', e));
+        }
         closeOverlay('panel');
       },
     });

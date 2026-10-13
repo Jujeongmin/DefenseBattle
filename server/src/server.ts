@@ -420,6 +420,19 @@ export class Server {
   }
 
   // ================= 랭킹 =================
+  /** 닉네임 바꾸기 - 랭킹에 이미 있으면 그 이름도 바로 바꾼다 (대전 끝날 때까지 기다리지 않게) */
+  async setNick(opts: { nick?: string } = {}): Promise<{ nick: string }> {
+    const nick = cleanNick(opts.nick);
+    const me = $sender.account;
+    await $global.updateMyState({ nick });
+    const s = await getStats(me);
+    if (s.wins + s.losses > 0) {
+      await $global.addCollectionItem(RANKING, { account: me, nick, trophies: s.trophies, wins: s.wins }, { id: me })
+        .catch(() => $global.updateCollectionItem(RANKING, { __id: me, account: me, nick, trophies: s.trophies, wins: s.wins }));
+    }
+    return { nick };
+  }
+
   async pvpLeaderboard(): Promise<{ top: Array<{ account: string; nick: string; trophies: number; wins: number }>; me: PvpStats }> {
     const items = await $global.getCollectionItems(RANKING, {
       orderBy: [{ field: 'trophies', direction: 'desc' }],

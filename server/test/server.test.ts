@@ -217,3 +217,20 @@ describe('PvP 룸', () => {
     expect(lb.me.wins).toBe(1);
   });
 });
+
+describe('닉네임', () => {
+  test('닉네임을 바꾸면 랭킹에 바로 반영된다', async (server) => {
+    server.connect({ account: 'nicky' });
+    const t = (await server.pvpBotStart()).id;
+    const realNow = Date.now;
+    Date.now = () => realNow() + 120000; // 봇전 최소 시간이 지난 것으로
+    try { await server.pvpBotResult({ id: t, won: true }); } finally { Date.now = realNow; }
+    await server.setNick({ nick: '새이름' });
+    const lb = await server.pvpLeaderboard();
+    const row = lb.top.find((r: any) => r.account === 'nicky');
+    expect(!!row).toBe(true);
+    expect(row.nick).toBe('새이름');
+    const st = await server.setNick({ nick: '   ' });
+    expect(st.nick).toBe('용사');
+  });
+});
