@@ -14,7 +14,7 @@ import { meta, saveMeta, reloadMeta } from './meta';
 import { starsFor, STAGE_BY_ID, STAGES, PVP, PLAY_SPEED, PVP_TIERS, CHESTS } from './config';
 import { afterMatch } from './offers';
 import { pendingReveals } from './chests';
-import { stageOptions, endlessOptions, stageUnlocked, unitLevels, deckMin } from './progress';
+import { stageOptions, endlessOptions, stageUnlocked, unitLevels, deckMin, featureUnlocked } from './progress';
 import { syncPurchases } from './shop';
 import { act, runStart, stageResult, endlessResult, applyEcon, online, pvpRewardLocal, syncEcon } from './econ';
 import { showRewarded, rewardedAvailable } from './ads';
@@ -380,8 +380,12 @@ async function boot(): Promise<void> {
   let tipI = 0;
   const tipTimer = setInterval(() => { tipI = (tipI + 1) % tips.length; $('ld-tip').textContent = tips[tipI]; }, 2600);
   const setPct = (p: number) => { $('ld-fill').style.width = `${p}%`; $('ld-pct').textContent = `${Math.floor(p)}%`; };
+  // 캐시돼 있으면 에셋이 순식간에 끝나 로딩 화면이 깜빡이고 지나간다 → 최소 시간 동안 막대를 채워 보여 준다
+  const t0 = performance.now();
+  const MIN_MS = 2200;
   let assetPct = 0, serverDone = false;
-  const show = () => setPct(assetPct * 0.9 + (serverDone ? 10 : 0));
+  const show = () => setPct(Math.min(assetPct * 0.9 + (serverDone ? 10 : 0), ((performance.now() - t0) / MIN_MS) * 100));
+  const barTimer = setInterval(show, 50);
   const assets = preloadEverything((d, t) => { assetPct = (d / t) * 100; show(); });
   try {
     await getPlatform().init();
@@ -392,10 +396,15 @@ async function boot(): Promise<void> {
   }
   serverDone = true; show();
   await assets;
+  await new Promise((r) => setTimeout(r, Math.max(0, MIN_MS - (performance.now() - t0))));
   clearInterval(tipTimer);
+  clearInterval(barTimer);
   setPct(100);
+  await new Promise((r) => setTimeout(r, 250)); // 100% 를 잠깐 보여 준다
   const granted = await syncPurchases().catch(() => [] as string[]);
-  menu.show();
+  // 처음 온 사람(1-1 을 아직 못 깸): 로비·'튜토리얼 시작' 버튼 없이 로딩 끝나면 바로 1-1 튜토리얼
+  if (!featureUnlocked('pvp')) launch({ kind: 'stage', stageId: '1-1', goldBooster: false });
+  else menu.show();
   if (granted.length) toast(tl('결제한 상품이 지급되었어요'));
   // Verse8 인데 계정을 확인하지 못함 → 진행이 저장되지 않으니 알린다
   if (getPlatform().kind === 'verse8' && !getPlatform().accountId()) toast(tl('서버에 연결하지 못해 진행이 저장되지 않아요 · 새로고침해 주세요'), 6000);
