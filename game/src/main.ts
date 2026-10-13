@@ -371,7 +371,7 @@ async function boot(): Promise<void> {
   // 로딩 화면: 모든 에셋을 받는 동안 진행 막대 (서버 접속도 함께)
   const tips = LOADING_TIPS.slice().sort(() => Math.random() - 0.5);
   $('main-menu').innerHTML = `<div class="loading">
-    <img class="ld-logo" src="ui/logo.png" alt="${tl('디펜스 배틀')}">
+    <img class="ld-logo" src="ui/logo.png" alt="Defense Battle">
     <div class="ld-bottom">
       <div class="ld-tip" id="ld-tip">${tips[0]}</div>
       <div class="ld-bar"><div id="ld-fill"></div></div>

@@ -442,6 +442,7 @@ b, strong { font-weight: 700; }
   padding: 12px 6px calc(8px + env(safe-area-inset-bottom));
 }
 .lobby-nav button {
+  flex: 1 1 0; min-width: 0; white-space: nowrap; letter-spacing: -0.3px; /* 메뉴 6개가 화면 너비를 나눠 쓴다 (긴 언어도 넘치지 않게) */
   position: relative;
   background: none;
   border: none;
@@ -453,7 +454,7 @@ b, strong { font-weight: 700; }
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding: 4px 8px;
+  padding: 4px 1px;
   cursor: pointer;
 }
 .lobby-nav button .ic { font-size: 26px; height: 30px; }
@@ -673,7 +674,7 @@ b, strong { font-weight: 700; }
 }
 .tab-row button.active { border-image-source: url('/ui/frame/btn_blue.png'); }
 .tab-row button { min-height: 38px; }
-.tab-row.chap-tabs button { white-space: nowrap; font-size: 12px; padding-left: 2px; padding-right: 2px; letter-spacing: -0.3px; }
+.tab-row.chap-tabs button { white-space: normal; line-height: 1.15; font-size: 12px; padding-left: 2px; padding-right: 2px; letter-spacing: -0.3px; min-width: 0; } /* 한국어는 한 줄, 영어처럼 긴 이름은 단어 단위로 두 줄 */
 .tier-name { text-shadow: var(--outline-thin); font-weight: 700; }
 .balance { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 16px; font-weight: 700; }
 .dialog .crystal { color: var(--gem-ink); }
@@ -766,7 +767,7 @@ b, strong { font-weight: 700; }
 .mob-card.locked .head .frame-sprite { filter: brightness(0) opacity(0.45); }
 .mob-card .head { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .mob-card .head .frame-sprite { width: 48px; height: 48px; flex: 0 0 auto; }
-.mob-card .nm { font-size: 14px; font-weight: 700; white-space: nowrap; }
+.mob-card .nm { font-size: 13px; font-weight: 700; line-height: 1.1; overflow-wrap: anywhere; } /* 긴 이름(영어 등)은 두 줄까지 */
 .mob-card .cost { font-size: 12px; font-weight: 700; color: var(--gold-ink); display: flex; align-items: center; gap: 2px; }
 .mob-card .cost .pi { width: 12px; height: 12px; }
 .mob-card .ds { font-size: 12px; color: var(--ink); min-height: 16px; }
@@ -791,7 +792,9 @@ b, strong { font-weight: 700; }
 .mob-card .acts .btn { flex: 1; padding: 6px 10px 10px; font-size: 12px; }
 .mob-card .lock, .mob-card .in { font-size: 12px; font-weight: 700; color: var(--ink-2); display: flex; align-items: center; gap: 2px; }
 .mob-card .in { color: var(--gold-ink); }
-.unit-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.unit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } /* 긴 이름이 칸을 넓히지 않게 */
+.unit-card, .mob-card { min-width: 0; }
+.unit-card .head > div, .mob-card .head > div { min-width: 0; }
 .unit-card {
   background: rgba(255, 255, 255, 0.3);
   border: 2px solid var(--line);
@@ -803,7 +806,7 @@ b, strong { font-weight: 700; }
 .unit-card.locked .frame-sprite { filter: brightness(0) opacity(0.45); }
 .unit-card .head { display: flex; align-items: center; gap: 6px; }
 .unit-card .frame-sprite { width: 48px; height: 48px; flex: 0 0 auto; }
-.unit-card .nm { font-size: 15px; font-weight: 700; }
+.unit-card .nm { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .unit-card .lv { font-size: 12px; color: var(--gold-ink); font-weight: 700; }
 .unit-card .role { font-size: 11px; color: var(--ink-2); }
 .unit-card .sk { font-size: 11px; color: var(--ink); min-height: 28px; }
@@ -1270,6 +1273,7 @@ b, strong { font-weight: 700; }
 }
 .stack {
   flex: 1 1 0;
+  min-width: 0; /* 긴 버튼 글자(영어 등)가 칸을 넓혀 줄이 넘치지 않게 */
   max-width: 100px;
   background: #f1e2c2;
   border: 3px solid #8a6f55;
@@ -1298,7 +1302,7 @@ b, strong { font-weight: 700; }
   margin-top: 3px; width: 100%;
   border: 0; background: none; cursor: pointer;
   border-image: url('/ui/frame/btn_green.png') 44 fill / 11px;
-  padding: 4px 2px 7px; font-size: 11px; font-weight: 700; white-space: nowrap;
+  padding: 4px 2px 7px; font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden;
   color: var(--cream); text-shadow: var(--outline-thin);
 }
 .stack .up-btn:active:not(:disabled) { border-image-source: url('/ui/frame/btn_green_down.png'); padding: 6px 2px 5px; }
