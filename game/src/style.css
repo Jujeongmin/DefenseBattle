@@ -643,6 +643,8 @@ b, strong { font-weight: 700; }
   gap: 8px;
 }
 .row .ic { font-size: 26px; width: 36px; text-align: center; flex: 0 0 auto; }
+.free-row .ic { position: relative; }
+.free-row .ic .dot { top: -4px; right: -2px; }
 .row .info { flex: 1; min-width: 0; }
 .row .info .t { font-size: 15px; font-weight: 700; }
 .row .info .d { font-size: 12px; color: var(--ink-2); }

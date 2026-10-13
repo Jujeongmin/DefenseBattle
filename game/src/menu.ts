@@ -149,7 +149,7 @@ export class Menu {
         </div>` : `<button class="btn red play-btn tut-start" data-act="tutorial">${icon('play')} ${tl('튜토리얼 시작')}</button>`}
       </div>
       <nav class="lobby-nav">
-        <button data-act="shop"><span class="ic">${icon('shop')}${!productOwned('starter_pack') ? dot : ''}</span>${tl('상점')}</button>
+        <button data-act="shop"><span class="ic">${icon('shop')}${rewardedAvailable() && freeTicketAdsLeft() > 0 ? dot : ''}</span>${tl('상점')}</button>
         ${featureUnlocked('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}${tag('units') || (UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : '')}</span>${tl('덱')}</button>` : ''}
         ${featureUnlocked('research') ? `<button data-act="research"><span class="ic">${icon('flask')}${tag('research')}</span>${tl('연구')}</button>` : ''}
         ${featureUnlocked('quests') ? `<button data-act="quests"><span class="ic">${icon('scroll')}${tag('quests') || (this.questClaimable() ? dot : '')}</span>${tl('퀘스트')}</button>` : ''}
@@ -669,15 +669,11 @@ export class Menu {
           <div class="chap-bar" style="margin-top:4px"><div style="width:${(prog / q.goal) * 100}%"></div></div><div class="d">${prog}/${q.goal}</div></div>
           <button class="btn small ${done && !claimed ? 'gold' : ''}" data-act="daily" data-key="${q.key}" ${!done || claimed ? 'disabled' : ''}>${claimed ? tl('완료') : `${icon('gem')} ${q.reward}`}</button></div>`;
       }).join('');
-      const adLeft = freeTicketAdsLeft();
-      const adRow = rewardedAvailable()
-        ? `<div class="row"><div class="ic">${icon('tv')}</div><div class="info"><div class="t">${tl('광고 보고 소환권 {0}장', FREE_TICKET_AMOUNT)}</div><div class="d">${tl('오늘 {0}회 남음', adLeft)}</div></div>
-            <button class="btn small blue" data-act="adTicket" ${adLeft ? '' : 'disabled'}>${tl('받기')}</button></div>` : '';
       const ach = ACHIEVEMENTS.map((a) => `<div class="row"><div class="info"><div class="t">${a.kr}</div><div class="d">${tl('보상')} ${icon('gem')} ${a.reward}</div></div>
         <span class="${meta.achievements[a.key] ? 'trophy' : 'fine'}">${meta.achievements[a.key] ? tl('달성 {0}', icon('check')) : tl('미달성')}</span></div>`).join('');
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>${tl('퀘스트')}</h2>
-        <div class="section-title">${tl('일일 퀘스트')} <span class="fine">${tl('매일 0시(UTC) 초기화')}</span></div>${daily}${adRow}
+        <div class="section-title">${tl('일일 퀘스트')} <span class="fine">${tl('매일 0시(UTC) 초기화')}</span></div>${daily}
         <div class="section-title">${tl('업적')}</div>${ach}</div>`, () => this.render());
       bindActions(el, {
         daily: async (b) => {
@@ -689,10 +685,6 @@ export class Menu {
             if (await act<number>('claimQuest', { key })) audio.coin();
             draw();
           }
-        },
-        adTicket: async () => {
-          if (await watchForTickets()) { audio.coin(); toast(tl('소환권 +{0} {1}', FREE_TICKET_AMOUNT, icon('ticket'))); }
-          draw();
         },
       });
     };
@@ -751,11 +743,18 @@ export class Menu {
         ${eff > 100 ? `<span class="eff">${tl('효율')}<b>${eff}%</b></span>` : ''}<img class="shop-img" src="/ui/shop/${p.id}.png" alt=""><div>${p.kr}</div>
         <button class="btn small gold" data-act="buy" data-id="${p.id}">VX ${price(p.id)}</button></div>`;
       }).join('');
+      // 무료: 광고 보고 소환권 (오늘 남은 횟수가 있으면 빨간 점 - 로비 상점 아이콘 점과 같은 조건)
+      const adLeft = freeTicketAdsLeft();
+      const free = rewardedAvailable()
+        ? `<div class="section-title">${tl('무료')} <span class="fine">${tl('캠페인·무한 모드 전용')}</span></div>
+          <div class="row free-row"><div class="ic">${icon('tv')}${adLeft ? '<span class="dot"></span>' : ''}</div><div class="info"><div class="t">${tl('광고 보고 소환권 {0}장', FREE_TICKET_AMOUNT)}</div><div class="d">${tl('오늘 {0}회 남음', adLeft)}</div></div>
+            <button class="btn small blue" data-act="adTicket" ${adLeft ? '' : 'disabled'}>${tl('받기')}</button></div>` : '';
       const items = Object.entries(meta.items).map(([k, n]) => `<span class="tip-item" data-tip-item="${k}">${icon(ITEM_KR[k as keyof typeof ITEM_KR].icon)}${n}</span>`).join(' · ');
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>${tl('상점')}</h2>
         <div class="balance"><span class="crystal">${icon('gem')} ${meta.crystals.toLocaleString()}</span>${vx !== null ? `<span class="vx-badge">VX ${vx.toLocaleString()}</span>` : ''}</div>
         <div class="fine" style="margin:-4px 0 6px">${tl('보유: {0}', items)}</div>
+        ${free}
         ${activeOffers().length ? `<div class="section-title hot-title">${icon('timer')} ${tl('한정 특가')}</div>${activeOffers().map((o) => card(o.id, true)).join('')}` : ''}
         <div class="section-title">${tl('유닛 뽑기')} <span class="fine">${tl('카드로 해금·레벨업')}</span><button class="btn small odds-btn" data-act="odds">${tl('확률 정보')}</button></div>
         <div class="gacha-row">
@@ -777,6 +776,10 @@ export class Menu {
         <div class="fine">${vx !== null ? tl('* 로컬 개발 환경: 데모 VX 로 결제를 흉내냅니다.') : tl('* 결제는 Verse8 VX 로 진행되며, 결제 완료 후 자동 지급됩니다.')}</div></div>`, () => this.render());
       bindActions(el, {
         odds: () => { audio.button(); this.openOdds(); },
+        adTicket: async () => {
+          if (await watchForTickets()) { audio.coin(); toast(tl('소환권 +{0} {1}', FREE_TICKET_AMOUNT, icon('ticket'))); }
+          draw();
+        },
         buy: async (b) => {
           const id = b.dataset.id!;
           (b as HTMLButtonElement).disabled = true;
