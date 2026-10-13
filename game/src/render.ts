@@ -366,7 +366,8 @@ export class Renderer {
       this.drawMobAura(m);
       const spr = mobSprite(m.race, m.variant);
       if (spr.ready) {
-        const period = m.kind === 'fast' ? 0.1 : m.kind === 'tank' ? 0.22 : 0.16;
+        const basePeriod = m.kind === 'fast' ? 0.1 : m.kind === 'tank' ? 0.22 : 0.16;
+        const period = m.slow > 0 ? basePeriod / Math.max(0.3, 1 - m.slowPct) : basePeriod; // 둔화: 걸음도 느리게
         const col = m.pause > 0 ? 1 : this.walkCol(m.id * 0.07, period); // 코너 정지 시 대기 프레임
         ctx.save();
         if (m.hitFlash > 0) ctx.globalAlpha = 0.65;
@@ -391,8 +392,13 @@ export class Renderer {
           ctx.beginPath(); ctx.arc(m.x, m.y, s * 0.38, 0, Math.PI * 2); ctx.fill();
         }
         if (m.slow > 0) {
-          ctx.fillStyle = 'rgba(120,200,255,0.28)';
+          // 둔화(전사·빙결술사): 얼음빛 덧칠 + 발밑 얼음 고리 (끝나갈 때 옅어진다)
+          const k = Math.min(1, m.slow / 0.4);
+          ctx.fillStyle = `rgba(120,200,255,${0.34 * k})`;
           ctx.beginPath(); ctx.arc(m.x, m.y, s * 0.36, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = `rgba(150,220,255,${0.9 * k})`;
+          ctx.lineWidth = 5;
+          ctx.beginPath(); ctx.ellipse(m.x, m.y + s * 0.38, s * 0.42, s * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
         }
         if (m.hitFlash > 0.06) {
           // 피격 순간 흰 번쩍임
@@ -413,6 +419,17 @@ export class Renderer {
       ctx.fillRect(m.x - w / 2 - 1, by - 1, w + 2, h + 2);
       ctx.fillStyle = m.boss ? '#ff5252' : m.kind === 'card' ? '#ff8a3d' : ratio > 0.5 ? '#7ee87e' : ratio > 0.25 ? '#ffd54f' : '#ff7b7b';
       ctx.fillRect(m.x - w / 2, by, w * ratio, h);
+      if (m.slow > 0) {
+        // 체력 막대 오른쪽 파란 아래 화살표 두 개 = 느려짐
+        const ax = m.x + w / 2 + 10, ay = by - 6;
+        ctx.fillStyle = '#8fd8ff';
+        ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+        ctx.lineWidth = 3;
+        for (const dy of [0, 8]) {
+          ctx.beginPath(); ctx.moveTo(ax - 8, ay + dy); ctx.lineTo(ax + 8, ay + dy); ctx.lineTo(ax, ay + dy + 8); ctx.closePath();
+          ctx.stroke(); ctx.fill();
+        }
+      }
       const big = m.card !== undefined && ATTACKS[m.card].hpMult >= 5 && m.gold === undefined; // 거인·킹·마왕은 이름표
       if (m.boss || big) {
         ctx.fillStyle = m.boss ? '#ffd54f' : '#ff8a3d';

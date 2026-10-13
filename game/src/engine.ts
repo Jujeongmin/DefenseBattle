@@ -1090,6 +1090,7 @@ export class Game {
         const pct = Math.min(0.7, (high ? SKILLS.warrior.slowPctHigh : SKILLS.warrior.slowPct) * (1 + (perk - 1) * 0.5));
         this.slowMob(target, pct, SKILLS.warrior.dur);
         this.addEffect({ type: 'slash', x: target.x, y: target.y, ttl: 0.25, seed: Math.random() * Math.PI });
+        this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.35, r: 28, color: '#8fd8ff' }); // 둔화 충격 (파랑)
         break;
       }
       case 'assassin': {
