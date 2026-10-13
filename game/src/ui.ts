@@ -6,7 +6,7 @@ import {
 } from './config';
 import { MAP, Game, pathPosNear, type BoardSnapshot } from './engine';
 import { mobPortraitSrc, unitIconUrl, mobSprite, preloadUnits } from './assets';
-import { meta } from './meta';
+import { meta, saveMeta } from './meta';
 import { act } from './econ';
 import { audio } from './audio';
 import { $, toast, spriteIcon, popIn } from './dom';
@@ -542,6 +542,29 @@ export class UI {
       setTimeout(tick, 100);
     };
     tick();
+  }
+
+  // ---------- 판 안 한 번씩 나오는 안내 (빈틈 · 상대 전장 크게 보기 · 후반엔 몹 보내기) ----------
+  private tipShowing = false;
+  /** 매 프레임 호출. 다른 안내가 떠 있지 않을 때 조건에 맞는 것을 하나 6초 동안 보여 주고, 다시는 안 띄운다 */
+  maybeTip(gapCount: number): void {
+    const g = this.game;
+    if (g.over || g.paused || this.tipShowing || this.hintTimer || !$('coach').classList.contains('hidden')) return;
+    const seen = (k: string) => meta.seenFeatures.includes(`tip:${k}`);
+    let tip: { key: string; text: string; target?: string } | null = null;
+    if (gapCount > 0 && g.units.length >= 3 && g.time > 6 && !seen('gap')) {
+      tip = { key: 'gap', text: `${icon('warning')} 길의 <b>빨간 곳</b>은 유닛 공격이 닿지 않는 빈틈이에요.<br>유닛을 끌어 옮겨서 빈틈을 막아요` };
+    } else if (g.isPvp && g.time > 25 && !seen('peek')) {
+      tip = { key: 'peek', target: 'opp-canvas', text: `상대 전장을 <b>누르고 있으면</b>(PC는 마우스를 올리면)<br>크게 볼 수 있어요` };
+    } else if (g.isPvp && g.wave >= 8 && !seen('late')) {
+      tip = { key: 'late', target: 'attack-row', text: `웨이브가 지날수록 몹 체력이 크게 늘어요.<br>후반엔 소환보다 <b>몹 카드로 상대를 압박</b>하는 게 효율적이에요` };
+    }
+    if (!tip) return;
+    meta.seenFeatures.push(`tip:${tip.key}`);
+    saveMeta();
+    this.tipShowing = true;
+    this.coach(tip.text, tip.target);
+    setTimeout(() => { if (this.game === g) this.coach(null); this.tipShowing = false; }, 6500);
   }
 
   // ---------- 튜토리얼 코치 ----------

@@ -348,6 +348,7 @@ function loop(now: number): void {
   if (game && renderer && ui) {
     renderer.draw();
     ui.update();
+    ui.maybeTip(renderer.gapCount);
   }
   requestAnimationFrame(loop);
 }

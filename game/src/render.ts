@@ -234,6 +234,8 @@ export class Renderer {
   /** 어떤 유닛도 닿지 않는 길 구간을 빨갛게 - 어디가 뚫렸는지 보고 구역을 바꾼다 (0.4초마다 다시 계산) */
   private gaps: { x: number; y: number }[] = [];
   private gapAt = -1;
+  /** 지금 빨갛게 보이는 빈틈 수 (판 안 안내용) */
+  get gapCount(): number { return this.gaps.length; }
   private drawGaps(): void {
     const g = this.game;
     if (!g.units.length) return;
