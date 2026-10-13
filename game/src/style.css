@@ -457,7 +457,10 @@ b, strong { font-weight: 700; }
   padding: 4px 1px;
   cursor: pointer;
 }
-.lobby-nav button .ic { font-size: 26px; height: 30px; }
+.lobby-nav button .ic { font-size: 26px; height: 30px; position: relative; }
+/* 알림 점·NEW 는 버튼 끝이 아니라 아이콘 오른쪽 위에 붙인다 (메뉴 수에 따라 버튼 폭이 달라도 같은 자리) */
+.lobby-nav button .ic .dot { top: -3px; right: -7px; }
+.lobby-nav button .ic .new-tag { top: -6px; right: auto; left: calc(100% - 10px); }
 .lobby-nav button:active { transform: translateY(2px); }
 /* ---------- 튜토리얼 스포트라이트 (tutorial.ts) ---------- */
 #tut { position: absolute; inset: 0; z-index: 95; }

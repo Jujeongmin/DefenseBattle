@@ -149,10 +149,10 @@ export class Menu {
         </div>` : `<button class="btn red play-btn tut-start" data-act="tutorial">${icon('play')} ${tl('튜토리얼 시작')}</button>`}
       </div>
       <nav class="lobby-nav">
-        <button data-act="shop"><span class="ic">${icon('shop')}</span>${tl('상점')}${!productOwned('starter_pack') ? dot : ''}</button>
-        ${featureUnlocked('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}</span>${tl('덱')}${tag('units') || (UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : '')}</button>` : ''}
-        ${featureUnlocked('research') ? `<button data-act="research"><span class="ic">${icon('flask')}</span>${tl('연구')}${tag('research')}</button>` : ''}
-        ${featureUnlocked('quests') ? `<button data-act="quests"><span class="ic">${icon('scroll')}</span>${tl('퀘스트')}${tag('quests') || (this.questClaimable() ? dot : '')}</button>` : ''}
+        <button data-act="shop"><span class="ic">${icon('shop')}${!productOwned('starter_pack') ? dot : ''}</span>${tl('상점')}</button>
+        ${featureUnlocked('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}${tag('units') || (UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : '')}</span>${tl('덱')}</button>` : ''}
+        ${featureUnlocked('research') ? `<button data-act="research"><span class="ic">${icon('flask')}${tag('research')}</span>${tl('연구')}</button>` : ''}
+        ${featureUnlocked('quests') ? `<button data-act="quests"><span class="ic">${icon('scroll')}${tag('quests') || (this.questClaimable() ? dot : '')}</span>${tl('퀘스트')}</button>` : ''}
         ${pvpOn ? `<button data-act="road"><span class="ic">${icon('trophy')}</span>${tl('로드')}</button>` : ''}
         ${pvpOn ? `<button data-act="rank"><span class="ic">${icon('medal')}</span>${tl('랭킹')}</button>` : ''}
       </nav>`;
