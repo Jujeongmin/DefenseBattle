@@ -16,6 +16,8 @@ import type { Job, Race, GradeKey } from './types';
 
 
 import { tl } from './i18n';
+const SPEED_KEY = 'randomdefense.speed.v1'; // 기기 설정 (계정 진행이 아님)
+
 export interface UIContext {
   kind: 'stage' | 'endless' | 'pvp';
   stageId?: string;
@@ -95,7 +97,12 @@ export class UI {
     $('btn-menu').style.visibility = ctx.tutorial ? 'hidden' : ''; // 자리는 남겨 소환 버튼 배치가 그대로
     $('btn-speed').classList.toggle('hidden', pvp);
     $('btn-pause').classList.toggle('hidden', pvp);
-    $('btn-speed').textContent = '1x';
+    // 배속은 판이 바뀌어도 마지막으로 고른 값 유지 (일반 모드만, 쓸 수 없는 배속이면 1배속)
+    let saved = 1;
+    try { saved = Number(localStorage.getItem(SPEED_KEY)) || 1; } catch { /* 기본 1배속 */ }
+    this.speedIdx = Math.max(0, this.speeds.indexOf(saved));
+    game.speed = this.speeds[this.speedIdx];
+    $('btn-speed').textContent = `${game.speed}x`;
     $('btn-pause').innerHTML = icon('pause');
     $('stage-label').textContent = ctx.kind === 'stage' ? ctx.stageId ?? '' : ctx.kind === 'endless' ? tl('무한') : 'PvP';
     if (pvp) this.buildAttackCards();
@@ -148,6 +155,7 @@ export class UI {
       this.speedIdx = (this.speedIdx + 1) % this.speeds.length;
       this.game.speed = this.speeds[this.speedIdx];
       $('btn-speed').textContent = this.game.speed + 'x';
+      try { localStorage.setItem(SPEED_KEY, String(this.game.speed)); } catch { /* 저장 못 해도 이번 판은 그대로 */ }
     };
     $('btn-sell-panel').onclick = () => { audio.button(); this.openHeroes(); };
     $('btn-menu').onclick = () => { audio.button(); this.ctx.onExit(); };
