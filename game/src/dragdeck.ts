@@ -11,6 +11,8 @@ export function enableDeckDrag(root: HTMLElement, onDrop: DeckDrop): void {
   root.querySelectorAll<HTMLElement>('[data-drag]').forEach((el) => {
     el.onpointerdown = (e) => {
       if (e.button > 0) return;
+      // 스킬 ?·막는 유닛 아이콘을 누른 것은 말풍선용 - 손가락이 조금 밀려도 끌기로 바뀌어 탭이 먹히지 않게
+      if ((e.target as HTMLElement).closest('[data-tip-skill],[data-tip-unit]')) return;
       const key = el.dataset.drag!;
       const fromSlot = el.dataset.slot !== undefined ? Number(el.dataset.slot) : null;
       const x0 = e.clientX, y0 = e.clientY;

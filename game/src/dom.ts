@@ -50,6 +50,7 @@ export function openOverlay(id: string, html: string, onClose?: () => void): HTM
   const scroll = redraw ? (el.querySelector('.dialog')?.scrollTop ?? 0) : 0;
   el.innerHTML = html;
   el.classList.remove('hidden');
+  fitAll(el); // 긴 언어 이름·버튼 글자를 칸에 맞춤
   if (redraw) {
     const dlg = el.querySelector<HTMLElement>('.dialog');
     if (dlg) { dlg.classList.add('redraw'); dlg.scrollTop = scroll; }
@@ -98,6 +99,25 @@ export function confirmModal(title: string, body: string, ok = tl('확인'), can
       no: () => closeOverlay('modal'),
     });
   });
+}
+
+/**
+ * 칸보다 긴 한 줄 글자(.fit)는 들어갈 때까지 글자 크기를 조금씩 줄인다 (말줄임·줄바꿈·찌그러짐 대신).
+ * 언어마다 이름 길이가 달라서 쓴다. 요소는 화면에 붙어 있어야 한다 (.fit = nowrap + overflow hidden).
+ */
+export function fitText(el: HTMLElement, min = 8): void {
+  el.style.fontSize = '';
+  if (!el.clientWidth) return;
+  let fs = parseFloat(getComputedStyle(el).fontSize);
+  while (el.scrollWidth > el.clientWidth + 0.5 && fs > min) {
+    fs -= 0.5;
+    el.style.fontSize = `${fs}px`;
+  }
+}
+/** 맞춤 대상: .fit + 원래 말줄임(…)으로 자르던 이름 칸들 (끝까지 줄여도 넘치면 그때만 …) */
+const FIT_SEL = '.fit, .unit-card .nm, .chest-slot .cn, .rv-name, .deck-slot > div:last-child, .pr-card span, .u-stats span, .attack-card b, .stack .name, .stack .skill';
+export function fitAll(root: ParentNode): void {
+  root.querySelectorAll<HTMLElement>(FIT_SEL).forEach((f) => fitText(f));
 }
 
 /** 스프라이트 시트 1프레임 아이콘 HTML */

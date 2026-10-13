@@ -7,6 +7,7 @@ import {
   DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, UNIT_PACK, CHESTS, RARITY_KR, RARITY_COLOR, GACHA, chestOpenCost, type RoadStep, type AttackKey,
   SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, productEfficiency,
   CAMPAIGN, TROPHY_ROAD, PVP_TIERS, ECONOMY, type SeasonReward, UNIT_PRESETS, ATTACK_PRESETS, type DeckPreset,
+  GRADES, UNIT_LEVEL_ATK,
 } from './config';
 import { meta, saveMeta, researchLevel, currentSeasonId, todayStr } from './meta';
 import { getPlatform } from './platform';
@@ -26,7 +27,7 @@ import {
 } from './shop';
 import { freeTicketAdsLeft, watchForTickets, rewardedAvailable, FREE_TICKET_AMOUNT } from './ads';
 import { onlineAvailable, findMatch, createBotSession, type PvpSession } from './pvp';
-import { $, toast, openOverlay, closeOverlay, bindActions, spriteIcon, confirmModal } from './dom';
+import { $, toast, openOverlay, closeOverlay, bindActions, spriteIcon, confirmModal, fitAll } from './dom';
 import { enableDeckDrag } from './dragdeck';
 import { Spotlight } from './tutorial';
 import { act, online, type Reveal } from './econ';
@@ -174,6 +175,8 @@ export class Menu {
       monthly: async () => { const n = await claimMonthly(); if (n) { audio.coin(); toast(tl('월정액 보석 +{0} {1}', n, icon('gem'))); this.render(); } },
     });
     root.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => audio.button(), { capture: true }));
+    fitAll(root); // 상자 이름 등 긴 언어 글자를 칸에 맞춤
+    this.fitLobby();
     this.maybeGuide();
     // 트로피 로드·결제로 받은 상자 공개 (쌓여 있으면 차례로)
     if (pendingReveals.length && $('modal').classList.contains('hidden')) flushReveals(() => this.render());
@@ -194,6 +197,26 @@ export class Menu {
    * 순서: 대전 → 덱 → 캠페인 → 연구 → 퀘스트 → 무한 모드 (스테이지 1-1 튜토리얼을 마친 뒤부터)
    * 덱은 캠페인보다 먼저 - 캠페인을 시작한 뒤에야 덱 안내가 나오면 늦다
    */
+  /**
+   * 로비가 화면 높이에 다 들어가게 (스크롤 없이): 넘치면 c1 → c2 → c3 단계로 여백·그림을 줄인다.
+   * 화면 크기·언어마다 높이가 달라 그린 뒤에 잰다. (c3 까지 해도 넘치는 아주 작은 화면만 스크롤)
+   */
+  private fitLobby(): void {
+    const body = document.querySelector<HTMLElement>('#main-menu .lobby-body');
+    if (!body || !body.clientHeight) return;
+    const steps = ['c1', 'c2', 'c3'];
+    body.classList.remove(...steps);
+    for (const c of steps) {
+      if (body.scrollHeight <= body.clientHeight + 1) break;
+      body.classList.add(c);
+    }
+    if (!this.fitBound) {
+      this.fitBound = true;
+      window.addEventListener('resize', () => { if (!$('main-menu').classList.contains('hidden')) this.fitLobby(); });
+    }
+  }
+  private fitBound = false;
+
   private guideRetry: ReturnType<typeof setTimeout> | null = null;
   private maybeGuide(): void {
     if (this.guiding || !featureUnlocked('pvp') || meta.tutorial < 2 || $('main-menu').classList.contains('hidden')) return;
@@ -582,7 +605,7 @@ export class Menu {
       } else {
         const maxed = lv >= UNIT_MAX_LEVEL;
         acts = `<button class="btn small ${inDeck ? 'red' : 'blue'}" data-act="toggle" data-job="${u.id}">${inDeck ? tl('빼기') : tl('넣기')}</button>
-          <button class="btn small ${ready ? 'green' : 'gray-btn'} ${ready && meta.crystals < unitUpgradeCost(lv) ? 'short' : ''}" data-act="up" data-job="${u.id}" ${maxed ? 'disabled' : ''}>${maxed ? 'MAX' : `${icon('gem')}${unitUpgradeCost(lv)}`}</button>`;
+          <button class="btn small ${ready ? 'green' : 'gray-btn'} ${ready && meta.crystals < unitUpgradeCost(lv) ? 'short' : ''}" data-act="up" data-job="${u.id}" ${maxed ? 'disabled' : ''}>${maxed ? 'MAX' : `${tl('강화')} ${icon('gem')}${unitUpgradeCost(lv)}`}</button>`;
       }
       return `<div class="unit-card ${inDeck ? 'in-deck' : ''} ${unlocked ? '' : 'locked'} ${ready ? 'can-level' : ''}" ${unlocked ? `data-drag="${u.id}"` : ''} style="--rc:${RARITY_COLOR[u.rarity]}">
         <span class="rarity-tag">${RARITY_KR[u.rarity]}</span>
@@ -590,6 +613,7 @@ export class Menu {
           <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : `${icon('lock')} ${[roadUnlockAt(u.id) ? `${icon('trophy')}${roadUnlockAt(u.id)}` : '', u.unlockStage ?? ''].filter(Boolean).join(' / ') || icon('chest')}`}</div></div></div>
         ${bar}
         <div class="sk" data-tip-skill="${u.id}"><b>${SKILL_KR[u.id]}</b> <span class="info-dot">?</span></div>
+        ${unitStatsHtml(u.id, Math.max(1, lv))}
         <div class="acts">${acts}</div></div>`;
     }).join('');
     const gap = deckMin() - meta.deck.length;
@@ -761,7 +785,7 @@ export class Menu {
         <div class="section-title">${tl('유닛 뽑기')} <span class="fine">${tl('카드로 해금·레벨업')}</span><button class="btn small odds-btn" data-act="odds">${tl('확률 정보')}</button></div>
         <div class="gacha-row">
           <button class="btn blue gacha-btn" data-act="gacha" data-n="1"${tix >= 1 ? ' data-ticket="1"' : ''}>${tl('1회')}<small>${tix >= 1 ? `${icon('ticket')}1 ${tl('(보유 {0})', tix)}` : `${icon('gem')}${GACHA.one}`}</small></button>
-          <button class="btn gold gacha-btn" data-act="gacha" data-n="10"${tix >= 10 ? ' data-ticket="1"' : ''}>${tl('10회')}<small>${tix >= 10 ? `${icon('ticket')}10` : `${icon('gem')}${GACHA.ten}`} ${tl('· 영웅+ 보장')}</small></button>
+          <button class="btn gold gacha-btn" data-act="gacha" data-n="10"${tix >= 10 ? ' data-ticket="1"' : ''}>${tl('10회')}<small>${tix >= 10 ? `${icon('ticket')}10` : `${icon('gem')}${GACHA.ten}`}</small><small class="g-note">${tl('영웅+ 보장')}</small></button>
         </div>
         <div class="fine" style="margin:-4px 0 8px">${(['common', 'rare', 'epic', 'legendary'] as const).map((r) => `<span style="color:${RARITY_COLOR[r]}">${RARITY_KR[r]} ${Math.round(GACHA.rates[r] * 100)}%</span>`).join(' · ')}</div>
         ${card('summon_ticket_pack')}
@@ -971,6 +995,18 @@ function markDotSeen(m: DotMenu): void {
   if (!k || meta.seenFeatures.includes(k)) return;
   meta.seenFeatures = meta.seenFeatures.filter((s) => !s.startsWith(`${m}:`)).concat(k);
   saveMeta();
+}
+
+/**
+ * 덱 유닛 카드 능력치 3칸: 공격력(일반 등급 기준, 지금 레벨) · 초당 공격 · 사거리.
+ * 판 안에서는 등급이 오를수록 공격력이 3배씩 오른다 (GRADES.atk).
+ */
+function unitStatsHtml(job: Job, lv: number): string {
+  const u = UNIT_BY_ID[job];
+  const base = (GRADES[0].atk[0] + GRADES[0].atk[1]) / 2;
+  const atk = Math.round(base * u.atkMult * (1 + (lv - 1) * UNIT_LEVEL_ATK));
+  const cell = (label: string, v: string) => `<div><span>${label}</span><b>${v}</b></div>`;
+  return `<div class="u-stats">${cell(tl('공격력'), String(atk))}${cell(tl('공격 속도'), tl('{0}/초', (1 / u.cooldown).toFixed(1)))}${cell(tl('사거리'), `${Math.round(u.rangeMult * 100)}%`)}</div>`;
 }
 
 function esc(s: string): string {

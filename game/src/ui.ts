@@ -8,7 +8,7 @@ import { MAP, Game, pathPosNear, type BoardSnapshot } from './engine';
 import { mobPortraitSrc, unitIconUrl, mobSprite, preloadUnits } from './assets';
 import { meta, saveMeta } from './meta';
 import { audio } from './audio';
-import { $, toast, spriteIcon, popIn } from './dom';
+import { $, toast, spriteIcon, popIn, fitAll } from './dom';
 import { icon } from './icons';
 import { OppRenderer } from './oppRender';
 import type { Job, Race, GradeKey } from './types';
@@ -245,6 +245,11 @@ export class UI {
   }
 
   // ---------- PvP 몹 던지기: 카드를 위쪽 상대 전장으로 끌어다 놓는다 ----------
+  /** 화면이 보인 뒤 긴 이름·버튼 글자를 칸에 맞춘다 (숨겨진 채로는 폭을 잴 수 없다) */
+  refit(): void {
+    fitAll($('game-frame'));
+  }
+
   private buildAttackCards(): void {
     const row = $('attack-row');
     // 내 공격 덱 4장 (로비 '덱' 에서 편성)
@@ -387,13 +392,15 @@ export class UI {
         <div class="dmg-pct">${icon(strong ? 'up' : 'down')}</div>
         ${spriteIcon(unitIconUrl(job, top))}
         <div class="name">${JOB_KR[job]} Lv.${level}</div>
-        <button class="up-btn" data-job="${job}">${tl('강화')} ${icon('coin')}${cost}</button>`;
+        <button class="up-btn fit" data-job="${job}">${tl('강화')} ${icon('coin')}${cost}</button>`;
       const btn = div.querySelector('.up-btn') as HTMLButtonElement;
       btn.disabled = count === 0 || this.game.gold < cost;
       btn.onclick = () => { if (this.game.upgrade(job)) audio.button(); };
       div.onclick = (e) => { if (e.target !== btn && merges.has(job)) this.openHeroes(job, 'merge'); };
       el.appendChild(div);
     }
+    // 'Lv Up 20'·긴 유닛 이름도 칸 안에 (카드가 다 붙어 폭이 정해진 뒤에 잰다)
+    fitAll(el);
   }
 
   // ---------- 영웅 관리 (합성 / 판매) ----------
@@ -417,7 +424,7 @@ export class UI {
           const can = g.canMerge(job, gr.key);
           const isTop = gi === GRADES.length - 1;
           return `<div class="grade-card${can ? ' ready' : ''}${cnt === 0 ? ' empty' : ''}" data-grade="${gr.key}">
-            <div class="gc-name" style="color:${gr.color}">${gr.kr}</div>
+            <div class="gc-name fit" style="color:${gr.color}">${gr.kr}</div>
             ${spriteIcon(unitIconUrl(job, gi))}
             <div class="gc-count">${cnt}/${MERGE_COUNT}</div>
             <div class="gc-gold" style="color:${isTop ? '#888' : GRADES[gi + 1].color}">${isTop ? tl('최고') : `→${GRADES[gi + 1].kr}`}</div>
@@ -425,7 +432,7 @@ export class UI {
         }
         const sellQty = qty === Infinity ? cnt : Math.min(qty, cnt);
         return `<div class="grade-card${cnt === 0 ? ' empty' : ''}" data-grade="${gr.key}">
-          <div class="gc-name" style="color:${gr.color}">${gr.kr}</div>
+          <div class="gc-name fit" style="color:${gr.color}">${gr.kr}</div>
           ${spriteIcon(unitIconUrl(job, gi))}
           <div class="gc-count">${cnt}</div>
           <div class="gc-gold">+${sellQty * gr.sellGold}</div>
@@ -436,22 +443,23 @@ export class UI {
           <button class="close-x">${icon('close')}</button>
           <div class="sell-head">
             <h2>${tl('영웅 관리')}</h2>
-            ${mode === 'sell' ? `<div class="qty-row">
+          </div>
+          <div class="job-tabs">
+            ${jobs().map((j) => `<button data-job="${j}" class="${j === job ? 'active' : ''}">${JOB_KR[j]}${mergeJobs.has(j) ? '<span class="dot"></span>' : ''}</button>`).join('')}
+          </div>
+          <div class="sell-hint">${mode === 'merge' ? tl('같은 카드 {0}장 → 한 등급 위로', MERGE_COUNT) : `<span>${tl('팔아서 골드 얻기')}</span>
+            <span class="qty-row">
               <button data-qty="1" class="${qty === 1 ? 'active' : ''}">1</button>
               <button data-qty="10" class="${qty === 10 ? 'active' : ''}">10</button>
-              <button data-qty="all" class="${qty === Infinity ? 'active' : ''}">ALL</button></div>` : ''}
-          </div>
+              <button data-qty="all" class="${qty === Infinity ? 'active' : ''}">ALL</button></span>`}</div>
+          <div class="grade-row">${cards}</div>
           <div class="mode-tabs">
             <button data-mode="merge" class="merge ${mode === 'merge' ? 'active' : ''}">${icon('hammer')} ${tl('합성')}${mergeJobs.size ? ' •' : ''}</button>
             <button data-mode="sell" class="sell ${mode === 'sell' ? 'active' : ''}">${icon('coin')} ${tl('판매')}</button>
           </div>
-          <div class="sell-hint">${mode === 'merge' ? tl('같은 카드 {0}장 → 한 등급 위로', MERGE_COUNT) : tl('팔아서 골드 얻기')}</div>
-          <div class="grade-row">${cards}</div>
-          <div class="job-tabs">
-            ${jobs().map((j) => `<button data-job="${j}" class="${j === job ? 'active' : ''}">${JOB_KR[j]}${mergeJobs.has(j) ? '<span class="dot"></span>' : ''}</button>`).join('')}
-          </div>
         </div>`;
       firstOpen = false;
+      fitAll(panel); // 등급 이름이 칸보다 길면(영어 Legendary 등) 글자를 줄여 맞춘다
       panel.querySelectorAll<HTMLButtonElement>('[data-qty]').forEach((b) => {
         b.onclick = () => { const v = b.dataset.qty; qty = v === 'all' ? Infinity : Number(v); render(); };
       });
@@ -479,6 +487,7 @@ export class UI {
     render();
     panel.onclick = (e) => { if (e.target === panel) close(); };
     panel.classList.remove('hidden');
+    fitAll(panel); // 처음 열 때는 보인 뒤에야 폭을 잴 수 있다
   }
 
   // ---------- PvP: 상대 상태 ----------

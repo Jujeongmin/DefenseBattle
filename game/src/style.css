@@ -53,11 +53,18 @@ html, body {
   color: var(--text);
   font-family: var(--font);
   overflow: hidden;
+  /* iOS: 두 번 탭·길게 눌러도 글자 선택 돋보기·복사 메뉴가 뜨지 않게 */
+  -webkit-user-select: none;
   user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
   word-break: keep-all;      /* 한글을 단어 중간에서 끊지 않는다 ('패키
 지' 방지) */
   overflow-wrap: break-word; /* 단어가 칸보다 길 때만 끊는다 */
 }
+/* 두 번 탭 확대 끄기 (iOS 는 viewport user-scalable=no 를 무시한다). 끌기용 touch-action: none 은 클래스 규칙이 이긴다 */
+* { touch-action: manipulation; }
+input, textarea { -webkit-user-select: text; user-select: text; }
 button { font-family: inherit; }
 b, strong { font-weight: 700; }
 #app {
@@ -393,8 +400,9 @@ b, strong { font-weight: 700; }
 @keyframes rvFill { from { width: var(--from); } }
 @keyframes rvFade { from { opacity: 0; transform: translateY(6px); } }
 .gacha-row { display: flex; gap: 8px; margin-bottom: 6px; }
-.gacha-btn { flex: 1; display: flex; flex-direction: column; align-items: center; font-size: 16px; }
+.gacha-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 16px; } /* 옆 버튼이 더 높아도 가운데 */
 .gacha-btn small { font-size: 11px; display: flex; align-items: center; gap: 2px; }
+.gacha-btn small.g-note { font-size: 10px; opacity: 0.9; } /* 보장 문구는 가격 아래 따로 (가격 아이콘과 한 줄에서 꺾이면 가운데가 틀어졌다) */
 .arena-sub { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .arena-sub .pass-btn { position: relative; font-size: 12px; }
 .arena-sub .pass-btn .dot { top: -4px; right: -4px; }
@@ -504,6 +512,25 @@ b, strong { font-weight: 700; }
 .camp-btn { align-self: center; }
 /* 세로 가운데: justify-content:center 는 화면이 낮으면 위쪽이 스크롤로도 못 보는 곳으로 넘친다 → 위아래 auto 여백 */
 .lobby-body.v1 { padding-bottom: 40px; }
+/* 로비 화면 맞춤 (menu.ts fitLobby): 넘칠 때만 단계별로 촘촘하게 */
+.lobby-body.v1.c1 { gap: 8px; padding-bottom: 8px; }
+.lobby-body.c1 .game-title { font-size: 28px; margin-top: 2px; }
+.lobby-body.c1 .parade { height: 62px; }
+.lobby-body.c1 .parade .frame-sprite { width: 58px; height: 58px; }
+.lobby-body.c1 .arena-card { padding: 14px 12px 12px; gap: 6px; }
+.lobby-body.c1 .mode-card { padding: 8px 8px 12px; }
+.lobby-body.c1 .mode-card .ic { font-size: 24px; height: 28px; }
+.lobby-body.c2 .arena-card .chest-slot { height: 64px; gap: 0; }
+.lobby-body.c2 .chest-slot .chest-ic { padding: 1px 4px; } /* 상자 그림을 줄여 이름 줄이 눌리지 않게 */
+.lobby-body.c2 .chest-slot .chest-ic .pi { width: 16px; height: 16px; }
+.arena-card .chest-slot > * { flex-shrink: 0; }
+.lobby-body.c2 .arena-card .play-btn { padding: 8px 14px 12px; font-size: 19px; }
+.lobby-body.c2 .arena-card .road-bar { height: 16px; }
+.lobby-body.c2 .arena-sub .pass-btn { min-height: 30px; padding-top: 5px; padding-bottom: 9px; }
+.lobby-body.c2 .mode-card .ic { font-size: 20px; height: 22px; }
+.lobby-body.c2 .mode-card .t { font-size: 15px; }
+.lobby-body.c3 .parade { display: none; }
+.lobby-body.c3 .game-title { font-size: 24px; }
 .lobby-body.v1 > :first-child { margin-top: auto; }
 .lobby-body.v1 > :last-child { margin-bottom: auto; }
 .road-row {
@@ -745,7 +772,7 @@ b, strong { font-weight: 700; }
 }
 .deck-hint { text-align: center; font-size: 12px; color: var(--ink-2); margin: -4px 0 8px; display: flex; align-items: center; justify-content: center; gap: 4px; }
 .deck-hint .pi { width: 14px; height: 14px; }
-.deck-hint .rec-btn { margin-left: 6px; padding: 2px 8px; font-size: 11px; }
+.deck-hint .rec-btn { margin-left: 6px; padding: 5px 13px 8px; min-height: 30px; font-size: 11px; white-space: nowrap; } /* 글자가 금테두리에 닿지 않게 */
 .preset-dialog { width: min(420px, 100%); }
 .preset-list { display: flex; flex-direction: column; gap: 8px; max-height: 62vh; overflow-y: auto; }
 .preset { padding: 7px 8px; background: rgba(255, 255, 255, 0.3); border: 2px solid var(--edge); }
@@ -816,8 +843,14 @@ b, strong { font-weight: 700; }
 .unit-card .lv { font-size: 12px; color: var(--gold-ink); font-weight: 700; }
 .unit-card .role { font-size: 11px; color: var(--ink-2); }
 .unit-card .sk { font-size: 11px; color: var(--ink); min-height: 28px; }
-.unit-card .acts { display: flex; gap: 4px; }
-.unit-card .acts .btn { flex: 1; padding: 6px 4px 10px; font-size: 12px; }
+/* 넣기/빼기 · 강화 버튼은 위아래로 (옆으로 두면 긴 언어에서 글자가 테두리를 넘었다) */
+.unit-card .acts { display: flex; flex-direction: column; gap: 4px; }
+.unit-card .acts .btn { width: 100%; padding: 6px 8px 10px; font-size: 12px; white-space: nowrap; }
+/* 능력치 3칸: 이름(작게) 위, 값 아래 */
+.u-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; margin: 2px 0 6px; }
+.u-stats > div { display: flex; flex-direction: column; align-items: center; background: rgba(42, 29, 22, 0.08); border: 1px solid var(--line); padding: 2px 1px 3px; min-width: 0; }
+.u-stats span { font-size: 9px; color: var(--ink-2); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.u-stats b { font-size: 12px; color: var(--ink); line-height: 1.1; }
 .lv-pips { display: flex; gap: 2px; }
 .lv-pips i { flex: 1; height: 6px; background: rgba(42, 29, 22, 0.18); }
 .lv-pips i.on { background: var(--gold); box-shadow: inset 0 -2px 0 var(--gold-ink); }
@@ -1192,14 +1225,14 @@ b, strong { font-weight: 700; }
   flex: 1; position: relative; min-width: 0;
   border: 0; background: none; cursor: grab; touch-action: none;
   border-image: url('/ui/frame/btn_red.png') 44 fill / 13px;
-  padding: 4px 6px 9px;
+  padding: 6px 6px 9px;
   display: flex; flex-direction: column; align-items: center; gap: 0;
   color: var(--cream); text-shadow: var(--outline-thin); font-weight: 700;
 }
 .attack-card.c1 { border-image-source: url('/ui/frame/btn_blue.png'); }
 .attack-card.c2 { border-image-source: url('/ui/frame/btn_green.png'); }
 .attack-card.c3 { border-image-source: url('/ui/frame/btn_purple.png'); }
-.attack-card > .frame-sprite { width: 36px; height: 36px; margin: -2px 0 -3px; }
+.attack-card > .frame-sprite { width: 34px; height: 34px; margin: 0 0 -3px; } /* 몹 머리가 카드 위 테두리를 덮지 않게 */
 .attack-card b { font-size: 11px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .attack-card span { font-size: 11px; display: flex; align-items: center; gap: 2px; line-height: 1; }
 .attack-card span .pi { width: 12px; height: 12px; }
@@ -1299,9 +1332,11 @@ b, strong { font-weight: 700; }
   margin-top: 3px; width: 100%;
   border: 0; background: none; cursor: pointer;
   border-image: url('/ui/frame/btn_green.png') 44 fill / 11px;
-  padding: 4px 2px 7px; font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden;
+  padding: 4px 5px 7px; font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden;
   color: var(--cream); text-shadow: var(--outline-thin);
 }
+/* 칸보다 긴 한 줄 글자는 dom.ts fitText 가 글자 크기를 줄여 맞춘다 */
+.fit { white-space: nowrap; overflow: hidden; text-overflow: clip; }
 .stack .up-btn:active:not(:disabled) { border-image-source: url('/ui/frame/btn_green_down.png'); padding: 6px 2px 5px; }
 .stack .up-btn:disabled { border-image-source: url('/ui/frame/btn_gray.png'); opacity: 0.75; }
 .stack .dmg-pct { position: absolute; top: 4px; left: 4px; font-size: 16px; line-height: 0; z-index: 1; } /* 상성 ▲/▼ */
@@ -1322,9 +1357,9 @@ b, strong { font-weight: 700; }
   border-image: url('/ui/frame/btn_gray.png') 44 fill / 12px;
   color: var(--cream); text-shadow: var(--outline-thin); font-weight: 700;
 }
-.qty-row button { min-width: 44px; padding: 7px 11px 10px; font-size: 13px; }
+.qty-row button { min-width: 40px; padding: 5px 9px 8px; font-size: 13px; }
 .qty-row button.active { border-image-source: url('/ui/frame/btn_gold.png'); }
-.mode-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.mode-tabs { display: flex; gap: 6px; margin-top: 8px; } /* 합성/판매는 아래, 직업 탭은 위 */
 .mode-tabs button { flex: 1; padding: 8px 8px 11px; font-size: 14px; }
 .mode-tabs button.active.sell { border-image-source: url('/ui/frame/btn_red.png'); }
 .mode-tabs button.active.merge { border-image-source: url('/ui/frame/btn_green.png'); }
@@ -1339,14 +1374,15 @@ b, strong { font-weight: 700; }
 .grade-card.ready { border-color: var(--green); background: rgba(76, 175, 80, 0.2); }
 .grade-card:active { transform: translateY(2px); }
 .grade-card .frame-sprite { width: 36px; height: 36px; margin: 2px auto; }
-.gc-name { font-size: 11px; font-weight: 700; text-shadow: var(--outline-thin); }
+.gc-name { font-size: 11px; font-weight: 700; text-shadow: var(--outline-thin); } /* 긴 이름(Legendary 등)은 .fit 으로 글자 크기를 줄인다 */
 .gc-count { font-size: 14px; font-weight: 700; }
 .gc-gold { font-size: 11px; font-weight: 700; color: var(--gold-ink); }
-.job-tabs { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.job-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 .job-tabs button { flex: 1; padding: 9px 10px 12px; font-size: 13px; position: relative; }
 .job-tabs button.active { border-image-source: url('/ui/frame/btn_gold.png'); }
 .job-tabs button .dot { top: -3px; right: -3px; }
-.sell-hint { text-align: center; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+/* 안내 줄: 판매일 땐 1/10/ALL 도 이 줄에 (제목 옆에 두면 제목이 두 줄로 꺾였다). 두 모드 높이를 같게 */
+.sell-hint { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 30px; text-align: center; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
 
 /* ---------- 결과 화면 ---------- */
 .result { text-align: center; }
@@ -1392,7 +1428,7 @@ b, strong { font-weight: 700; }
 @media (max-height: 700px) {
   .stack .skill { display: none; }
   .stack .frame-sprite { width: 32px; height: 32px; }
-  .summon-btn { height: 58px; padding-bottom: 9px; }
+  .summon-btn { height: 58px; padding: 3px 0 8px; } /* '소환' 글자가 위 테두리에 붙지 않게 */
   .summon-title { font-size: 18px; }
   .side-btn { height: 56px; padding: 0 0 7px; gap: 1px; line-height: 1; }
   .side-btn .pi { width: 20px; height: 20px; }
@@ -1424,7 +1460,7 @@ input.vol::-moz-range-track { background: transparent; }
 .odds-dialog { width: min(440px, 100%); }
 table.odds { width: 100%; border-collapse: collapse; font-size: 10px; letter-spacing: -0.3px; margin: 4px 0 6px; text-align: center; }
 table.odds th { background: rgba(42, 29, 22, 0.18); font-weight: 700; padding: 4px 2px; }
-table.odds td, table.odds th { white-space: nowrap; }
+table.odds td, table.odds th { white-space: normal; overflow-wrap: anywhere; line-height: 1.25; } /* 긴 언어(영어 등)는 칸 안에서 줄바꿈 - 표가 창보다 넓어져 좌우로 밀리던 문제 */
 table.odds td { padding: 4px 1px; border-bottom: 1px solid rgba(42, 29, 22, 0.15); font-weight: 700; }
 table.odds th .pi { width: 12px; height: 12px; }
 .odds-dialog .fine { text-align: left; line-height: 1.5; }
@@ -1486,7 +1522,7 @@ table.odds th .pi { width: 12px; height: 12px; }
 .sp-tier:first-child::before { display: none; }
 .sp-tier.reached .sp-n { color: #fff; background: var(--gold-ink, #c98a14); border-color: var(--edge); text-shadow: var(--outline-thin); }
 .sp-tier.current .sp-n { box-shadow: 0 0 0 3px var(--gold), 0 0 12px var(--gold); }
-.sp-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 6px 8px; min-height: 128px; border: 0; cursor: pointer;
+.sp-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 6px 9px; min-height: 128px; border: 0; cursor: pointer;
   font-family: inherit; color: var(--cream); text-shadow: var(--outline-thin); border-image: url('/ui/frame/btn_gray.png') 44 fill / 12px; }
 .sp-cell.prem { border-image-source: url('/ui/frame/btn_purple.png'); }
 .sp-cell.free { border-image-source: url('/ui/frame/btn_blue.png'); }
@@ -1494,7 +1530,7 @@ table.odds th .pi { width: 12px; height: 12px; }
 .sp-cell.ready { animation: spReady 1s ease-in-out infinite; }
 .sp-cell.done { filter: grayscale(0.4); opacity: 0.75; }
 @keyframes spReady { 50% { transform: translateY(-3px); filter: brightness(1.15); } }
-.sp-tag { position: absolute; top: 4px; left: 0; right: 0; text-align: center; font-size: 10px; font-weight: 700; opacity: 0.9; }
+.sp-tag { position: absolute; top: 7px; left: 0; right: 0; text-align: center; font-size: 10px; font-weight: 700; opacity: 0.9; } /* 위 테두리에 붙지 않게 */
 .sp-ic .pi { width: 44px; height: 44px; }
 .sp-amt { font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 2px; line-height: 1.2; }
 .sp-amt .pi { width: 13px; height: 13px; }
@@ -1503,8 +1539,8 @@ table.odds th .pi { width: 12px; height: 12px; }
 .sp-arrow { position: absolute; top: 50%; z-index: 2; width: 28px; height: 44px; transform: translateY(-50%); border: 0; cursor: pointer;
   border-image: url('/ui/frame/btn_gold.png') 44 fill / 10px; display: flex; align-items: center; justify-content: center; }
 .sp-arrow .pi { width: 14px; height: 14px; }
-.sp-arrow.l { left: -6px; } .sp-arrow.l .pi { transform: scaleX(-1); }
-.sp-arrow.r { right: -6px; }
+.sp-arrow.l { left: 0; } .sp-arrow.l .pi { transform: scaleX(-1); }
+.sp-arrow.r { right: 0; } /* 창 밖으로 나가면 창이 좌우로 밀렸다 */
 .lang-row .info { display: flex; flex-direction: column; gap: 6px; }
 .lang-list { display: flex; flex-wrap: wrap; gap: 4px; }
 .lang-list .btn { padding: 4px 8px; font-size: 12px; }

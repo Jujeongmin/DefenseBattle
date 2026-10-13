@@ -84,6 +84,7 @@ function launch(l: Launch): void {
   menu.hide();
   u.hideResult();
   gameFrame.classList.remove('hidden');
+  u.refit();
 
   if (l.kind === 'pvp') {
     startPvp(g, u, l.session);
@@ -164,7 +165,7 @@ function showPvpResult(g: Game, u: UI, s: PvpSession, r: PvpResult): void {
     rewards,
     unlocked: roadUnit,
     buttons: [
-      ...(crystals && rewardedAvailable() ? [{ label: tl('{0} 광고 보고 {1} +{2} 더 받기', icon('tv'), icon('gem'), crystals), cls: 'blue', id: 'btn-double', action: () => void doubleReward() }] : []),
+      ...(crystals && rewardedAvailable() ? [{ label: tl('{0} 광고 보고 보상 2배 ({1}+{2})', icon('tv'), icon('gem'), crystals), cls: 'blue', id: 'btn-double', action: () => void doubleReward() }] : []),
       { label: tl('{0} 다시 대전', icon('sword')), cls: 'red', action: () => { void exitGame(true).then(() => menu.quickMatch()); } },
       { label: tl('로비로'), cls: '', action: () => void exitGame(true) },
     ],
@@ -226,7 +227,7 @@ async function finishSolo(u: UI, d: GameOverData): Promise<void> {
       extraHtml: '',
       buttons: [],
     };
-    if (crystals > 0 && rewardedAvailable()) view.buttons.push({ label: tl('{0} 광고 보고 {1} +{2} 더 받기', icon('tv'), icon('gem'), crystals), cls: 'blue', id: 'btn-double', action: () => void doubleReward() });
+    if (crystals > 0 && rewardedAvailable()) view.buttons.push({ label: tl('{0} 광고 보고 보상 2배 ({1}+{2})', icon('tv'), icon('gem'), crystals), cls: 'blue', id: 'btn-double', action: () => void doubleReward() });
     if (canNext) view.buttons.push({ label: tl('{0} 다음 스테이지 {1}', icon('play'), next.id), cls: 'red', action: () => void exitGame(true).then(() => menu.openStage(next.id)) });
     // 다시 하기는 실패했을 때만 (클리어면 다음 스테이지 / 로비로 - 버튼을 줄인다)
     // 튜토리얼 판에서 지면: 로비로 없이 '다시 하기' 하나 → 스테이지 정보 창 없이 바로 1-1
@@ -244,7 +245,7 @@ async function finishSolo(u: UI, d: GameOverData): Promise<void> {
       sub: tl('{0} · 최고 기록 {1}웨이브', d.reason, meta.bestWave),
       rewards: [`Wave ${d.wave}`, `${icon('gem')} +${reward}`],
       buttons: [
-        ...(reward > 0 && rewardedAvailable() ? [{ label: tl('{0} 광고 보고 {1} +{2} 더 받기', icon('tv'), icon('gem'), reward), cls: 'blue', id: 'btn-double', action: () => void doubleReward() }] : []),
+        ...(reward > 0 && rewardedAvailable() ? [{ label: tl('{0} 광고 보고 보상 2배 ({1}+{2})', icon('tv'), icon('gem'), reward), cls: 'blue', id: 'btn-double', action: () => void doubleReward() }] : []),
         { label: tl('다시 하기'), cls: 'red', action: () => void exitGame(true).then(() => launch({ kind: 'endless', goldBooster: false })) },
         { label: tl('로비로'), cls: '', action: () => void exitGame(true) },
       ],
@@ -368,6 +369,9 @@ setInterval(() => {
 //  부팅
 // ---------------------------------------------------------------
 async function boot(): Promise<void> {
+  // iOS Safari 는 viewport 의 user-scalable=no 를 무시한다: 두 손가락 확대·두 번 탭 확대를 막는다
+  document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
   translateStatic(); // index.html 고정 문구를 지금 언어로
   initUnitTips(); // 유닛 아이콘 말풍선 (몹 카드의 '막는 유닛' 등)
   $('main-menu').classList.remove('hidden');

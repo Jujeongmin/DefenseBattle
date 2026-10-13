@@ -12,10 +12,17 @@ import { tl } from './i18n';
 let tip: HTMLDivElement | null = null;
 let anchor: HTMLElement | null = null;
 let lastPointer = 'mouse';
+let anchorTop = 0; // 띄울 때 아이콘 위치 (스크롤로 실제로 움직였을 때만 닫는다)
+let lastWidth = 0;
 
 function hide(): void {
   tip?.classList.remove('show');
   anchor = null;
+}
+/** 모바일은 터치 순간 아주 작은 스크롤·주소창 크기 이벤트가 생겨 뜨자마자 닫혀 버렸다 → 아이콘이 실제로 움직였을 때만 */
+function hideIfMoved(): void {
+  if (!anchor) return;
+  if (Math.abs(anchor.getBoundingClientRect().top - anchorTop) > 8) hide();
 }
 
 function content(el: HTMLElement): string | null {
@@ -45,6 +52,8 @@ function show(el: HTMLElement): void {
   anchor = el;
   // 아이콘 바로 위 가운데 (화면 밖으로 나가지 않게)
   const r = el.getBoundingClientRect();
+  anchorTop = r.top;
+  lastWidth = window.innerWidth;
   tip.classList.add('show');
   const w = tip.offsetWidth, h = tip.offsetHeight;
   const x = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + r.width / 2 - w / 2));
@@ -75,6 +84,6 @@ export function initUnitTips(): void {
     else if (el === anchor && lastPointer !== 'mouse') hide();
     else show(el);
   }, true);
-  window.addEventListener('scroll', hide, true);
-  window.addEventListener('resize', hide);
+  window.addEventListener('scroll', hideIfMoved, true);
+  window.addEventListener('resize', () => { if (window.innerWidth !== lastWidth) hide(); else hideIfMoved(); });
 }
