@@ -1010,11 +1010,14 @@ b, strong { font-weight: 700; }
   box-shadow: 0 0 0 2px #8a6f55, 0 4px 0 rgba(0, 0, 0, 0.35);
   transition: width 0.15s, height 0.15s, right 0.15s, top 0.15s;
 }
-#game-frame.aiming #opp-canvas {
+#game-frame.aiming #opp-canvas, #game-frame.peek #opp-canvas {
   width: min(330px, calc(100% - 24px)); height: auto; aspect-ratio: 1; /* 높이는 너비와 같게 (부모 VS 줄 높이를 따르지 않게) */
   right: calc((100% - min(330px, calc(100% - 24px))) / 2);
   box-shadow: 0 0 0 3px var(--red), 0 0 0 9999px rgba(10, 6, 4, 0.45);
 }
+/* 크게 보기(.peek): 조준이 아니라 구경 - 금색 테두리 */
+#game-frame.peek:not(.aiming) #opp-canvas { box-shadow: 0 0 0 3px var(--gold), 0 0 0 9999px rgba(10, 6, 4, 0.45); }
+#opp-canvas { touch-action: none; -webkit-touch-callout: none; cursor: zoom-in; }
 #opp-deck { display: flex; gap: 6px; min-width: 0; }
 #opp-deck .od-row { display: flex; gap: 1px; }
 #opp-deck .od-row .frame-sprite { width: 22px; height: 22px; background-color: rgba(26, 18, 12, 0.55); }

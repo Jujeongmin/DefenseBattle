@@ -33,6 +33,29 @@ export interface ResultView {
   buttons: { label: string; cls: string; action: () => void; id?: string }[];
 }
 
+/**
+ * 상대 전장 크게 보기: 마우스를 올리고 있거나(PC) 누르고 있으면(휴대폰) 펼친다.
+ * 판마다 UI 를 새로 만들므로 같은 요소에 핸들러를 덮어써서 겹치지 않게 한다.
+ */
+let peekReleaseBound = false;
+function bindOppPeek(): void {
+  const frame = $('game-frame');
+  const oc = $('opp-canvas');
+  let hold: ReturnType<typeof setTimeout> | null = null;
+  const on = () => frame.classList.add('peek');
+  const off = () => { if (hold) { clearTimeout(hold); hold = null; } frame.classList.remove('peek'); };
+  oc.onpointerenter = (e) => { if (e.pointerType === 'mouse') on(); };
+  oc.onpointerleave = (e) => { if (e.pointerType === 'mouse') off(); };
+  oc.onpointerdown = (e) => { if (e.pointerType !== 'mouse') { if (hold) clearTimeout(hold); hold = setTimeout(on, 150); } };
+  oc.oncontextmenu = (e) => e.preventDefault();
+  if (!peekReleaseBound) {
+    peekReleaseBound = true;
+    const release = (e: PointerEvent) => { if (e.pointerType !== 'mouse') off(); };
+    window.addEventListener('pointerup', release);
+    window.addEventListener('pointercancel', release);
+  }
+}
+
 export class UI {
   private game: Game;
   private ctx: UIContext;
@@ -66,6 +89,7 @@ export class UI {
     $('pvp-hud').classList.toggle('hidden', !pvp);
     $('game-frame').classList.toggle('pvp', pvp);
     this.opp = pvp ? new OppRenderer($<HTMLCanvasElement>('opp-canvas')) : null;
+    if (pvp) bindOppPeek();
     $('attack-row').classList.toggle('hidden', !pvp);
     $('btn-speed').classList.toggle('hidden', pvp);
     $('btn-pause').classList.toggle('hidden', pvp);
