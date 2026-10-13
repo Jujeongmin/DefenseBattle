@@ -568,11 +568,11 @@ export const PRODUCTS: ProductDef[] = [
     desc: '암살자 즉시 해금 + Lv5', grant: { units: { assassin: 5 } } },
   // 상자 (사면 바로 열림)
   { id: 'chest_gold', kr: '금 상자', icon: 'chest', category: 'chest', vx: 300,
-    desc: '바로 열림 · 카드 40장+ · 영웅 1장', grant: { chest: 'gold' } },
+    desc: '카드 40장+ · 영웅 1장', grant: { chest: 'gold' } },
   { id: 'chest_magic', kr: '마법 상자', icon: 'chest', category: 'chest', vx: 700,
-    desc: '바로 열림 · 카드 90장+ · 영웅 4장', grant: { chest: 'magic' } },
+    desc: '카드 90장+ · 영웅 4장', grant: { chest: 'magic' } },
   { id: 'chest_legend', kr: '전설 상자', icon: 'crown', category: 'chest', vx: 1000,
-    desc: '바로 열림 · 전설 카드 1장 보장', grant: { chest: 'legend' } },
+    desc: '전설 카드 1장 보장', grant: { chest: 'legend' } },
   // 보석
   { id: 'crystal_100', kr: '보석 100', icon: 'gem', category: 'crystal', vx: 100, desc: '', grant: { crystals: 100 } },
   { id: 'crystal_550', kr: '보석 550', icon: 'gem', category: 'crystal', vx: 500, desc: '', grant: { crystals: 550 } },

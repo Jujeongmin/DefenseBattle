@@ -1443,3 +1443,6 @@ table.odds th .pi { width: 12px; height: 12px; }
 .arena-card .chest-slot.opening { border-color: var(--gold); background: rgba(255, 207, 63, 0.14); box-shadow: none; }
 .chest-slot.empty .pi { width: 26px; height: 26px; opacity: 0.4; filter: grayscale(1); }
 .chest-slot.empty .es { font-size: 9px; line-height: 1.25; color: var(--cream-2); opacity: 0.8; }
+
+/* 첫 화면 튜토리얼 시작 버튼: 패널 없이 버튼만 크게 */
+.tut-start { width: 100%; max-width: 340px; font-size: 22px; padding: 16px 14px 20px; }

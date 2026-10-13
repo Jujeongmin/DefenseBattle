@@ -145,9 +145,7 @@ export class Menu {
           ${endlessOn ? `<button class="mode-card endless" data-act="endless">
             <div class="ic">${icon('infinity')}</div><div class="t">무한 모드</div><div class="d">${icon('flag')} ${meta.bestWave || 0}</div>${tag('endless')}
           </button>` : ''}
-        </div>` : `<div class="play-card">
-          <button class="btn red play-btn" data-act="tutorial">${icon('play')} 튜토리얼 시작</button>
-        </div>`}
+        </div>` : `<button class="btn red play-btn tut-start" data-act="tutorial">${icon('play')} 튜토리얼 시작</button>`}
       </div>
       <nav class="lobby-nav">
         <button data-act="shop"><span class="ic">${icon('shop')}</span>상점${!productOwned('starter_pack') ? dot : ''}</button>
@@ -735,7 +733,7 @@ export class Menu {
           <button class="btn gold gacha-btn" data-act="gacha" data-n="10">10회<small>${icon('gem')}${GACHA.ten} · 영웅+ 보장</small></button>
         </div>
         <div class="fine" style="margin:-4px 0 8px">${(['common', 'rare', 'epic', 'legendary'] as const).map((r) => `<span style="color:${RARITY_COLOR[r]}">${RARITY_KR[r]} ${Math.round(GACHA.rates[r] * 100)}%</span>`).join(' · ')}</div>
-        <div class="section-title">상자 <span class="fine">사면 바로 열림</span><button class="btn small odds-btn" data-act="odds">확률 정보</button></div>
+        <div class="section-title">상자 <button class="btn small odds-btn" data-act="odds">확률 정보</button></div>
         ${card('chest_gold')}${card('chest_magic')}${card('chest_legend', true)}
         <div class="section-title">추천 패키지</div>
         ${!productOwned('starter_pack') ? card('starter_pack', true) : ''}
