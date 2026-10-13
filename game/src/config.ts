@@ -204,7 +204,7 @@ export const WAVE = {
   // 50웨이브 클리어가 수학적으로 불가능. 하드코어(연구 필수) 곡선을 위해 완화.
   // 합성/직업 스킬 추가로 유닛 파워가 오른 만큼 +11% → +11.5% 로 재조정 (tools/simulate.ts).
   // 무한 모드/PvP 웨이브당 HP 성장. 합성 공격력 3배 이후 연구 0 평균 ~38웨이브, 연구 MAX ~50웨이브.
-  hpGrowthPerWave: 0.17,
+  hpGrowthPerWave: 0.175,
   // 캠페인 스테이지 웨이브당 HP 성장 (스테이지 난이도는 STAGE_HP_BASE/STEP 으로 맞춘다)
   stageHpGrowth: 0.115,
   // PvP 웨이브당 HP 성장 - 빠르게 올려 한 판을 4분 안팎으로 (tools/pvpsim.ts)
@@ -233,10 +233,22 @@ export const MOB_KINDS = {
   tank: { hpMult: 2.6, speedMult: 0.72, sizeMult: 1.25, fromWave: 11, every: 9 },
 } as const;
 
-// ---------- 직업 스킬 (정예 등급 이상에서 발동) ----------
-export const SKILL_FROM_INDEX = 2; // 정예(index 2) 이상
+// ---------- 직업 스킬 (일반 등급부터 발동, 등급이 오르면 강해진다) ----------
+// 1단계 일반·고급 = 아래 기본값, 2단계 정예 = ...High 값, 3단계 전설 이상 = High 에서 같은 폭만큼 한 번 더
+export const SKILL_FROM_INDEX = 0;
+export function skillTier(gradeIndex: number): 1 | 2 | 3 {
+  return gradeIndex >= 3 ? 3 : gradeIndex >= 2 ? 2 : 1;
+}
+/** 등급별 스킬 수치 (예: 궁수 추가 대상 1 → 2 → 3명). 둘 다 정수면 정수로, cap 이 있으면 넘지 않게 */
+export function skillVal(gradeIndex: number, base: number, high: number, cap = Infinity): number {
+  const t = skillTier(gradeIndex);
+  if (t === 1) return base;
+  if (t === 2) return high;
+  const v = high + (high - base);
+  return Math.min(cap, Number.isInteger(base) && Number.isInteger(high) ? Math.round(v) : v);
+}
 export const SKILLS = {
-  // 궁수: 다중 사격 - 추가 대상 n명에게 비율 피해 (전설 이상 +1명)
+  // 궁수: 다중 사격 - 추가 대상 n명에게 비율 피해
   archer: { extraTargets: 1, extraTargetsHigh: 2, ratio: 0.5 },
   // 마법사: 폭발 - 대상 주변 반경 피해
   wizard: { radius: 62, radiusHigh: 86, ratio: 0.35 },
@@ -251,8 +263,8 @@ export const SKILLS = {
   // 폭격수: 대형 폭발
   bomber: { radius: 95, radiusHigh: 125, ratio: 0.6 },
   // 암살자: 처형 - 체력 비율 이하면 즉사 (보스 제외)
-  assassin: { execute: 0.12, executeHigh: 0.2 },
-  // ---- 새 유닛 (정예+ 발동, 전설+ 강화) ----
+  assassin: { execute: 0.12, executeHigh: 0.2, cap: 0.35 },
+  // ---- 새 유닛 ----
   spearman: { pierce: 1, pierceHigh: 2, ratio: 0.6 },          // 대상 뒤 일직선 n명 관통
   slinger: { push: 26, pushHigh: 40 },                          // 길 뒤로 밀어냄(px)
   monk: { hits: 2, hitsHigh: 3, ratio: 0.45 },                  // 연타 추가 타수
@@ -291,38 +303,38 @@ export const SKILL_KR: Record<Job, string> = {
   dragoon: tl('화염 숨결'), archmage: tl('운석'), shadow: tl('분신'), angel: tl('축복'), stormking: tl('폭풍'), alchemist: tl('연성'),
 };
 export const SKILL_DESC: Record<Job, string> = {
-  archer: tl('정예부터: 주변 적 1명(전설부터 2명)에게 50% 추가 피해'),
-  wizard: tl('정예부터: 대상 주변 범위에 35% 폭발 피해'),
-  warrior: tl('정예부터: 대상 이동속도 25%(전설부터 38%) 감소'),
-  ranger: tl('긴 사거리. 정예부터: 치명타 확률 30%(전설부터 45%)'),
-  frost: tl('공격력 낮음. 정예부터: 주변 적 모두 30%(전설부터 45%) 둔화'),
-  paladin: tl('정예부터: 보스·정예 몹에게 1.6배(전설부터 2배) 피해'),
-  bomber: tl('느린 공격. 정예부터: 넓은 범위에 60% 폭발 피해'),
-  assassin: tl('빠른 공격. 정예부터: 체력 12%(전설부터 20%) 이하 적 즉시 처치'),
-  spearman: tl('정예부터: 대상 뒤 일직선 1명(전설부터 2명) 관통 60%'),
-  slinger: tl('정예부터: 맞은 적을 길 뒤로 밀어냄'),
-  monk: tl('아주 빠른 약공. 정예부터: 2연타(전설부터 3연타)'),
-  hunter: tl('정예부터: 표식 - 그 적이 받는 모든 피해 +20%'),
-  acolyte: tl('언데드에 강함. 정예부터: 주변 언데드에 성광 피해'),
-  poisoner: tl('정예부터: 중독 - 4초간 지속 피해, 3번까지 겹침'),
-  storm: tl('정예부터: 번개가 주변 적 2명(전설부터 3명)에게 튐'),
-  crossbow: tl('정예부터: 화살이 일직선의 적을 모두 관통'),
-  knight: tl('정예부터: 방패병·거인·킹·마왕·탱커에게 1.6배(전설부터 2배)'),
-  berserker: tl('정예부터: 필드 몹이 많을수록 강해짐 (최대 +80%)'),
-  merchant: tl('공격력 낮음. 정예부터: 막타마다 골드 +1(전설부터 +2)'),
-  drummer: tl('공격력 낮음. 정예부터: 주변 아군 공격 속도 +15%(전설부터 +22%)'),
-  houndmaster: tl('정예부터: 빠른 몹(질주 엘프 등)에게 1.7배(전설부터 2.1배)'),
-  pyro: tl('정예부터: 맞은 자리에 불 장판 - 지나가는 적에게 지속 피해'),
-  reaper: tl('정예부터: 처치하면 영혼 - 다음 공격 2배, 망령 부활 막음'),
-  cleric: tl('언데드에 강함. 정예부터: 정화 - 신관 회복·망령 부활 막음'),
-  cannoneer: tl('느린 강타. 정예부터: 기절 + 작은 폭발'),
-  chrono: tl('정예부터: 주변 적의 시간을 잠깐 멈춤'),
-  dragoon: tl('정예부터: 일직선 화염 숨결로 줄지어 오는 적을 태움'),
-  archmage: tl('느린 공격. 정예부터: 넓은 운석 폭발 80%'),
-  shadow: tl('정예부터: 분신이 다른 적을 한 번 더 공격'),
-  angel: tl('정예부터: 모든 아군 공격력 +8%(전설부터 +12%), 여럿이면 합산'),
-  stormking: tl('정예부터: 공격마다 맵 어디든 번개 3개(전설부터 5개)'),
-  alchemist: tl('정예부터: 합성할 때 6%(전설부터 10%) 확률로 한 등급 더'),
+  archer: tl('주변 적 1명(정예 2명·전설 3명)에게 50% 추가 피해'),
+  wizard: tl('대상 주변 범위에 35% 폭발 피해'),
+  warrior: tl('대상 이동속도 25%(정예 38%·전설 51%) 감소'),
+  ranger: tl('긴 사거리. 치명타 확률 30%(정예 45%·전설 60%)'),
+  frost: tl('공격력 낮음. 주변 적 모두 30%(정예 45%·전설 60%) 둔화'),
+  paladin: tl('보스·정예 몹에게 1.6배(정예 2배·전설 2.4배) 피해'),
+  bomber: tl('느린 공격. 넓은 범위에 60% 폭발 피해'),
+  assassin: tl('빠른 공격. 체력 12%(정예 20%·전설 28%) 이하 적 즉시 처치'),
+  spearman: tl('대상 뒤 일직선 1명(정예 2명·전설 3명) 관통 60%'),
+  slinger: tl('맞은 적을 길 뒤로 밀어냄'),
+  monk: tl('아주 빠른 약공. 2연타(정예 3연타·전설 4연타)'),
+  hunter: tl('표식 - 그 적이 받는 모든 피해 +20%'),
+  acolyte: tl('언데드에 강함. 주변 언데드에 성광 피해'),
+  poisoner: tl('중독 - 4초간 지속 피해, 3번까지 겹침'),
+  storm: tl('번개가 주변 적 2명(정예 3명·전설 4명)에게 튐'),
+  crossbow: tl('화살이 일직선의 적을 모두 관통'),
+  knight: tl('방패병·거인·킹·마왕·탱커에게 1.6배(정예 2배·전설 2.4배)'),
+  berserker: tl('필드 몹이 많을수록 강해짐 (최대 +80%)'),
+  merchant: tl('공격력 낮음. 막타마다 골드 +1(정예 +2·전설 +3)'),
+  drummer: tl('공격력 낮음. 주변 아군 공격 속도 +15%(정예 +22%·전설 +29%)'),
+  houndmaster: tl('빠른 몹(질주 엘프 등)에게 1.7배(정예 2.1배·전설 2.5배)'),
+  pyro: tl('맞은 자리에 불 장판 - 지나가는 적에게 지속 피해'),
+  reaper: tl('처치하면 영혼 - 다음 공격 2배, 망령 부활 막음'),
+  cleric: tl('언데드에 강함. 정화 - 신관 회복·망령 부활 막음'),
+  cannoneer: tl('느린 강타. 기절 + 작은 폭발'),
+  chrono: tl('주변 적의 시간을 잠깐 멈춤'),
+  dragoon: tl('일직선 화염 숨결로 줄지어 오는 적을 태움'),
+  archmage: tl('느린 공격. 넓은 운석 폭발 80%'),
+  shadow: tl('분신이 다른 적을 한 번 더 공격'),
+  angel: tl('모든 아군 공격력 +8%(정예 +12%·전설 +16%), 여럿이면 합산'),
+  stormking: tl('공격마다 맵 어디든 번개 3개(정예 5개·전설 7개)'),
+  alchemist: tl('합성할 때 6%(정예 10%·전설 14%) 확률로 한 등급 더'),
 };
 
 // ---------- 합성 (같은 직업·등급 3개 → 상위 등급 1개) ----------

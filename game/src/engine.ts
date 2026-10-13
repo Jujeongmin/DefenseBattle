@@ -4,8 +4,8 @@
 // ============================================================
 import {
   ECONOMY, WAVE, GRADES, GRADE_BY_KEY, GRADE_INDEX, GRADE_RANGE,
-  DMG_MULT, RACES, JOB_KR, FULL_RANGE_FROM_INDEX, GLOBAL_RANGE_FROM_INDEX, RESEARCH_PER,
-  MOB_KINDS, SKILLS, SKILL_FROM_INDEX, MERGE_COUNT, PVP, UNIT_BY_ID, STARTER_UNITS,
+  DMG_MULT, RACES, JOB_KR, GLOBAL_RANGE_FROM_INDEX, RESEARCH_PER,
+  MOB_KINDS, SKILLS, SKILL_FROM_INDEX, skillVal, MERGE_COUNT, PVP, UNIT_BY_ID, STARTER_UNITS,
   UNIT_LEVEL_ATK, RARITY_ATK, perkMult,
   rollGrade, rollJob, makeRng, JOBS, MOB_VARIANTS, ATTACKS, STARTER_ATTACKS, RESIST_MULT,
 } from './config';
@@ -502,7 +502,7 @@ export class Game {
     let next = GRADES[GRADE_INDEX[gradeKey] + 1];
     // 연금술사: 확률로 한 등급 더 (여럿이면 합산)
     let alch = 0;
-    for (const a of this.units) if (a.job === 'alchemist' && a.gradeIndex >= SKILL_FROM_INDEX) alch += a.gradeIndex >= FULL_RANGE_FROM_INDEX ? SKILLS.alchemist.chanceHigh : SKILLS.alchemist.chance;
+    for (const a of this.units) if (a.job === 'alchemist' && a.gradeIndex >= SKILL_FROM_INDEX) alch += skillVal(a.gradeIndex, SKILLS.alchemist.chance, SKILLS.alchemist.chanceHigh);
     const skip = GRADES[GRADE_INDEX[next.key] + 1];
     if (skip && Math.random() < Math.min(SKILLS.alchemist.cap, alch)) { next = skip; this.pushLog(tl('연금술! {0} 등급', GRADE_BY_KEY[skip.key].kr)); }
     const unit = this.createUnit(job, next.key, 'merge');
@@ -705,11 +705,10 @@ export class Game {
     if (def?.resist?.includes(u.job)) dmg *= RESIST_MULT; // 유령(물리)·방패병(화살)
     if (mob.markUntil && mob.markUntil > this.time) dmg *= SKILLS.hunter.markMult;
     if (u.gradeIndex >= SKILL_FROM_INDEX) {
-      const high = u.gradeIndex >= FULL_RANGE_FROM_INDEX;
       if (u.job === 'knight' && (mob.kind === 'tank' || (def && ['shield', 'giant', 'king', 'demon', 'golem'].includes(def.key)))) {
-        dmg *= high ? SKILLS.knight.armoredMultHigh : SKILLS.knight.armoredMult;
+        dmg *= skillVal(u.gradeIndex, SKILLS.knight.armoredMult, SKILLS.knight.armoredMultHigh);
       } else if (u.job === 'houndmaster' && (mob.speedMult ?? 1) > 1.2) {
-        dmg *= high ? SKILLS.houndmaster.fastMultHigh : SKILLS.houndmaster.fastMult;
+        dmg *= skillVal(u.gradeIndex, SKILLS.houndmaster.fastMult, SKILLS.houndmaster.fastMultHigh);
       } else if (u.job === 'berserker') {
         dmg *= 1 + Math.min(SKILLS.berserker.cap, this.mobs.length * SKILLS.berserker.perMob);
       }
@@ -717,7 +716,7 @@ export class Game {
     dmg *= this.angelMult;
     // 성기사: 보스와 큰 몹 카드(거인·킹·마왕) 특화
     if (u.job === 'paladin' && u.gradeIndex >= SKILL_FROM_INDEX && (mob.boss || (def && def.hpMult >= 5))) {
-      const m = u.gradeIndex >= FULL_RANGE_FROM_INDEX ? SKILLS.paladin.bossMultHigh : SKILLS.paladin.bossMult;
+      const m = skillVal(u.gradeIndex, SKILLS.paladin.bossMult, SKILLS.paladin.bossMultHigh);
       dmg *= 1 + (m - 1) * perkMult(this.collectionLevel(u.job));
     }
     dmg *= 1 + this.res('atk') * RESEARCH_PER.atk;
@@ -866,7 +865,7 @@ export class Game {
     let best = 0;
     for (const d of this.drummers) {
       if (d === u || Math.hypot(d.x - u.x, d.y - u.y) > SKILLS.drummer.radius) continue;
-      best = Math.max(best, d.gradeIndex >= FULL_RANGE_FROM_INDEX ? SKILLS.drummer.hasteHigh : SKILLS.drummer.haste);
+      best = Math.max(best, skillVal(d.gradeIndex, SKILLS.drummer.haste, SKILLS.drummer.hasteHigh));
     }
     return 1 - best;
   }
@@ -945,13 +944,12 @@ export class Game {
   }
 
   updateCombat(dt: number): void {
-    // 오라: 천사(공격력)·북치기(공속) - 스킬은 정예 등급부터
+    // 오라: 천사(공격력)·북치기(공속)
     let angel = 0;
     this.drummers = [];
     for (const u of this.units) {
       if (u.gradeIndex < SKILL_FROM_INDEX) continue;
-      const high = u.gradeIndex >= FULL_RANGE_FROM_INDEX;
-      if (u.job === 'angel') angel += high ? SKILLS.angel.auraHigh : SKILLS.angel.aura;
+      if (u.job === 'angel') angel += skillVal(u.gradeIndex, SKILLS.angel.aura, SKILLS.angel.auraHigh);
       else if (u.job === 'drummer') this.drummers.push(u);
     }
     this.angelMult = 1 + Math.min(SKILLS.angel.cap, angel);
@@ -987,7 +985,7 @@ export class Game {
       });
       this.hit(best, dmg, crit);
 
-      // 직업 스킬 (정예 이상)
+      // 직업 스킬 (일반 등급부터, 등급별 3단계)
       if (u.gradeIndex >= SKILL_FROM_INDEX) this.applySkill(u, best, range);
       this.hitter = null;
 
@@ -1027,7 +1025,7 @@ export class Game {
 
   private critChance(u: Unit): number {
     if (u.job === 'ranger' && u.gradeIndex >= SKILL_FROM_INDEX) {
-      const c = u.gradeIndex >= FULL_RANGE_FROM_INDEX ? SKILLS.ranger.critChanceHigh : SKILLS.ranger.critChance;
+      const c = skillVal(u.gradeIndex, SKILLS.ranger.critChance, SKILLS.ranger.critChanceHigh);
       return Math.min(0.8, c * perkMult(this.collectionLevel(u.job)));
     }
     return SKILLS.critChance;
@@ -1048,11 +1046,10 @@ export class Game {
   }
 
   private applySkill(u: Unit, target: Mob, range: number): void {
-    const high = u.gradeIndex >= FULL_RANGE_FROM_INDEX; // 전설 이상 강화
     const perk = perkMult(this.collectionLevel(u.job));  // 컬렉션 Lv5/10 퍽
     switch (u.job) {
       case 'archer': {
-        const n = (high ? SKILLS.archer.extraTargetsHigh : SKILLS.archer.extraTargets) + (perk > 1.5 ? 1 : 0);
+        const n = (skillVal(u.gradeIndex, SKILLS.archer.extraTargets, SKILLS.archer.extraTargetsHigh)) + (perk > 1.5 ? 1 : 0);
         const others = this.mobs
           .filter((m) => m !== target && !m.dead && !m.hidden && Math.hypot(m.x - u.x, m.y - u.y) <= range)
           .sort((a, b) => Math.hypot(a.x - target.x, a.y - target.y) - Math.hypot(b.x - target.x, b.y - target.y))
@@ -1065,21 +1062,21 @@ export class Game {
         break;
       }
       case 'wizard': {
-        const r = high ? SKILLS.wizard.radiusHigh : SKILLS.wizard.radius;
+        const r = skillVal(u.gradeIndex, SKILLS.wizard.radius, SKILLS.wizard.radiusHigh);
         this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.35, r, color: '#b48cff' });
         this.splashAround(u, target, r, SKILLS.wizard.ratio * perk);
         break;
       }
       case 'bomber': {
-        const r = high ? SKILLS.bomber.radiusHigh : SKILLS.bomber.radius;
+        const r = skillVal(u.gradeIndex, SKILLS.bomber.radius, SKILLS.bomber.radiusHigh);
         this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.45, r, color: '#ff7a3d' });
         this.splashAround(u, target, r, SKILLS.bomber.ratio * perk);
         this.shake = Math.max(this.shake, 1.5);
         break;
       }
       case 'frost': {
-        const r = high ? SKILLS.frost.radiusHigh : SKILLS.frost.radius;
-        const pct = Math.min(0.7, (high ? SKILLS.frost.slowPctHigh : SKILLS.frost.slowPct) * (1 + (perk - 1) * 0.5));
+        const r = skillVal(u.gradeIndex, SKILLS.frost.radius, SKILLS.frost.radiusHigh);
+        const pct = Math.min(0.7, (skillVal(u.gradeIndex, SKILLS.frost.slowPct, SKILLS.frost.slowPctHigh)) * (1 + (perk - 1) * 0.5));
         this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.4, r, color: '#7fe0ff' });
         for (const m of this.mobs) {
           if (Math.hypot(m.x - target.x, m.y - target.y) <= r) this.slowMob(m, pct, SKILLS.frost.dur);
@@ -1087,14 +1084,14 @@ export class Game {
         break;
       }
       case 'warrior': {
-        const pct = Math.min(0.7, (high ? SKILLS.warrior.slowPctHigh : SKILLS.warrior.slowPct) * (1 + (perk - 1) * 0.5));
+        const pct = Math.min(0.7, (skillVal(u.gradeIndex, SKILLS.warrior.slowPct, SKILLS.warrior.slowPctHigh)) * (1 + (perk - 1) * 0.5));
         this.slowMob(target, pct, SKILLS.warrior.dur);
         this.addEffect({ type: 'slash', x: target.x, y: target.y, ttl: 0.25, seed: Math.random() * Math.PI });
         this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.35, r: 28, color: '#8fd8ff' }); // 둔화 충격 (파랑)
         break;
       }
       case 'assassin': {
-        const th = (high ? SKILLS.assassin.executeHigh : SKILLS.assassin.execute) * perk;
+        const th = Math.min(SKILLS.assassin.cap, skillVal(u.gradeIndex, SKILLS.assassin.execute, SKILLS.assassin.executeHigh) * perk);
         if (!target.dead && !target.boss && target.hp / target.maxHp <= th) {
           this.addEffect({ type: 'slash', x: target.x, y: target.y, ttl: 0.3, seed: Math.random() * Math.PI });
           this.hit(target, target.hp + 1, true);
@@ -1102,7 +1099,7 @@ export class Game {
         break;
       }
       case 'spearman': {
-        const n = high ? SKILLS.spearman.pierceHigh : SKILLS.spearman.pierce;
+        const n = skillVal(u.gradeIndex, SKILLS.spearman.pierce, SKILLS.spearman.pierceHigh);
         const hits = this.lineTargets(u, target, 140, 26).slice(0, n);
         this.addEffect({ type: 'beam', x1: u.x, y1: u.y, x2: target.x + (target.x - u.x) * 0.3, y2: target.y + (target.y - u.y) * 0.3, ttl: 0.15, dur: 0.15, color: '#e8d0a0', w: 5 });
         for (const m of hits) this.hit(m, this.unitDamage(u, m) * SKILLS.spearman.ratio * perk, false);
@@ -1111,7 +1108,7 @@ export class Game {
       case 'crossbow':
       case 'dragoon': {
         const sk = u.job === 'crossbow' ? SKILLS.crossbow : SKILLS.dragoon;
-        const ratio = (high ? sk.ratioHigh : sk.ratio) * perk;
+        const ratio = (skillVal(u.gradeIndex, sk.ratio, sk.ratioHigh)) * perk;
         const hits = this.lineTargets(u, target, sk.length, sk.width);
         const d = Math.hypot(target.x - u.x, target.y - u.y) || 1;
         const ex = u.x + ((target.x - u.x) / d) * (d + sk.length), ey = u.y + ((target.y - u.y) / d) * (d + sk.length);
@@ -1120,22 +1117,22 @@ export class Game {
         break;
       }
       case 'slinger':
-        this.pushBack(target, (high ? SKILLS.slinger.pushHigh : SKILLS.slinger.push) * perk);
+        this.pushBack(target, (skillVal(u.gradeIndex, SKILLS.slinger.push, SKILLS.slinger.pushHigh)) * perk);
         break;
       case 'monk': {
-        const n = (high ? SKILLS.monk.hitsHigh : SKILLS.monk.hits) - 1;
+        const n = (skillVal(u.gradeIndex, SKILLS.monk.hits, SKILLS.monk.hitsHigh)) - 1;
         for (let i = 0; i < n && !target.dead; i++) this.hit(target, this.unitDamage(u, target) * SKILLS.monk.ratio * perk, false);
         this.addEffect({ type: 'slash', x: target.x, y: target.y, ttl: 0.2, seed: Math.random() * Math.PI });
         break;
       }
       case 'hunter':
-        target.markUntil = this.time + (high ? SKILLS.hunter.markDurHigh : SKILLS.hunter.markDur) * perk;
+        target.markUntil = this.time + (skillVal(u.gradeIndex, SKILLS.hunter.markDur, SKILLS.hunter.markDurHigh)) * perk;
         break;
       case 'acolyte':
       case 'cleric': {
-        if (u.job === 'cleric') target.purifyUntil = this.time + (high ? SKILLS.cleric.purifyDurHigh : SKILLS.cleric.purifyDur) * perk;
+        if (u.job === 'cleric') target.purifyUntil = this.time + (skillVal(u.gradeIndex, SKILLS.cleric.purifyDur, SKILLS.cleric.purifyDurHigh)) * perk;
         if (u.job === 'acolyte') {
-          const r = high ? SKILLS.acolyte.radiusHigh : SKILLS.acolyte.radius;
+          const r = skillVal(u.gradeIndex, SKILLS.acolyte.radius, SKILLS.acolyte.radiusHigh);
           this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.35, r, color: '#fff2a8' });
           for (const m of this.mobs) {
             if (m === target || m.dead || m.race !== 'undead' || Math.hypot(m.x - target.x, m.y - target.y) > r) continue;
@@ -1145,7 +1142,7 @@ export class Game {
         break;
       }
       case 'poisoner': {
-        const dps = this.unitDamage(u, target) * (high ? SKILLS.poisoner.dpsHigh : SKILLS.poisoner.dps) * perk;
+        const dps = this.unitDamage(u, target) * (skillVal(u.gradeIndex, SKILLS.poisoner.dps, SKILLS.poisoner.dpsHigh)) * perk;
         const p = target.poison;
         const stacks = Math.min(SKILLS.poisoner.maxStack, (p && p.until > this.time ? p.stacks : 0) + 1);
         target.poison = { dps: Math.max(dps, p && p.until > this.time ? p.dps : 0), until: this.time + SKILLS.poisoner.dur, stacks };
@@ -1155,7 +1152,7 @@ export class Game {
       case 'storm': {
         let from = target;
         const done = new Set<Mob>([target]);
-        const n = high ? SKILLS.storm.bouncesHigh : SKILLS.storm.bounces;
+        const n = skillVal(u.gradeIndex, SKILLS.storm.bounces, SKILLS.storm.bouncesHigh);
         for (let i = 0; i < n; i++) {
           let next: Mob | null = null, nd: number = SKILLS.storm.range;
           for (const m of this.mobs) {
@@ -1172,26 +1169,26 @@ export class Game {
         break;
       }
       case 'pyro': {
-        const r = high ? SKILLS.pyro.radiusHigh : SKILLS.pyro.radius;
+        const r = skillVal(u.gradeIndex, SKILLS.pyro.radius, SKILLS.pyro.radiusHigh);
         if (this.burns.length < 24) this.burns.push({ x: target.x, y: target.y, r, dps: this.unitDamage(u, target) * SKILLS.pyro.dps * perk, until: this.time + SKILLS.pyro.dur });
         break;
       }
       case 'cannoneer': {
-        target.pause = Math.max(target.pause, (high ? SKILLS.cannoneer.stunHigh : SKILLS.cannoneer.stun) * perk);
+        target.pause = Math.max(target.pause, (skillVal(u.gradeIndex, SKILLS.cannoneer.stun, SKILLS.cannoneer.stunHigh)) * perk);
         this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.4, r: SKILLS.cannoneer.radius, color: '#c8c8c8' });
         this.splashAround(u, target, SKILLS.cannoneer.radius, SKILLS.cannoneer.ratio * perk);
         this.shake = Math.max(this.shake, 2);
         break;
       }
       case 'chrono': {
-        const r = high ? SKILLS.chrono.radiusHigh : SKILLS.chrono.radius;
-        const stop = (high ? SKILLS.chrono.stopHigh : SKILLS.chrono.stop) * perk;
+        const r = skillVal(u.gradeIndex, SKILLS.chrono.radius, SKILLS.chrono.radiusHigh);
+        const stop = (skillVal(u.gradeIndex, SKILLS.chrono.stop, SKILLS.chrono.stopHigh)) * perk;
         this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.5, r, color: '#c0a0ff' });
         for (const m of this.mobs) if (!m.boss && Math.hypot(m.x - target.x, m.y - target.y) <= r) m.pause = Math.max(m.pause, stop);
         break;
       }
       case 'archmage': {
-        const r = high ? SKILLS.archmage.radiusHigh : SKILLS.archmage.radius;
+        const r = skillVal(u.gradeIndex, SKILLS.archmage.radius, SKILLS.archmage.radiusHigh);
         this.addEffect({ type: 'splash', x: target.x, y: target.y, ttl: 0.5, r, color: '#ff7ad8' });
         this.splashAround(u, target, r, SKILLS.archmage.ratio * perk);
         this.shake = Math.max(this.shake, 2.5);
@@ -1201,12 +1198,12 @@ export class Game {
         const other = this.mobs.find((m) => m !== target && !m.dead && Math.hypot(m.x - u.x, m.y - u.y) <= range) ?? (target.dead ? null : target);
         if (other) {
           this.addEffect({ type: 'slash', x: other.x, y: other.y, ttl: 0.25, seed: Math.random() * Math.PI });
-          this.hit(other, this.unitDamage(u, other) * (high ? SKILLS.shadow.cloneRatioHigh : SKILLS.shadow.cloneRatio) * perk, false);
+          this.hit(other, this.unitDamage(u, other) * (skillVal(u.gradeIndex, SKILLS.shadow.cloneRatio, SKILLS.shadow.cloneRatioHigh)) * perk, false);
         }
         break;
       }
       case 'stormking': {
-        const n = high ? SKILLS.stormking.strikesHigh : SKILLS.stormking.strikes;
+        const n = skillVal(u.gradeIndex, SKILLS.stormking.strikes, SKILLS.stormking.strikesHigh);
         const alive = this.mobs.filter((m) => !m.dead);
         for (let i = 0; i < n && alive.length; i++) {
           const m = alive[Math.floor(Math.random() * alive.length)];
@@ -1247,7 +1244,7 @@ export class Game {
     }
     const goldMult = 1 + this.res('goldGain') * RESEARCH_PER.goldGain;
     let base = m.boss ? ECONOMY.bossGold : m.gold ?? def?.gold ?? ECONOMY.killGold;
-    if (bySkill && by!.job === 'merchant') base += by!.gradeIndex >= FULL_RANGE_FROM_INDEX ? SKILLS.merchant.goldHigh : SKILLS.merchant.gold;
+    if (bySkill && by!.job === 'merchant') base += skillVal(by!.gradeIndex, SKILLS.merchant.gold, SKILLS.merchant.goldHigh);
     const gained = Math.round(base * goldMult);
     this.gold += gained;
     this.kills += 1;
