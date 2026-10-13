@@ -21,7 +21,7 @@ function hide(): void {
 }
 /** 모바일은 터치 순간 아주 작은 스크롤·주소창 크기 이벤트가 생겨 뜨자마자 닫혀 버렸다 → 아이콘이 실제로 움직였을 때만 */
 function hideIfMoved(): void {
-  if (!anchor) return;
+  if (!anchor || performance.now() - shownAt < 400) return; // 탭 직후 관성 스크롤·주소창 변화는 무시
   if (Math.abs(anchor.getBoundingClientRect().top - anchorTop) > 8) hide();
 }
 
@@ -66,14 +66,21 @@ function show(el: HTMLElement): void {
 
 const target = (e: Event) => (e.target as HTMLElement | null)?.closest?.<HTMLElement>('[data-tip-unit],[data-tip-skill],[data-tip-item]') ?? null;
 
+/**
+ * 진짜 마우스 올리기만 hover 로 친다. 휴대폰·웹뷰는 터치 뒤에 pointerType 'mouse' 인 over/out 을 흉내 내 보내기도 해서,
+ * 그걸 받으면 over 로 열린 말풍선을 바로 뒤 click 이 '같은 아이콘 다시 누름'으로 보고 닫아 버렸다.
+ */
+const realHover = (e: PointerEvent) => e.pointerType === 'mouse' && matchMedia('(hover: hover)').matches;
+let shownAt = 0;
+
 export function initUnitTips(): void {
   document.addEventListener('pointerover', (e) => {
-    if (e.pointerType !== 'mouse') return;
+    if (!realHover(e)) return;
     const el = target(e);
-    if (el && el !== anchor) show(el);
+    if (el && el !== anchor) { show(el); shownAt = performance.now(); }
   });
   document.addEventListener('pointerout', (e) => {
-    if (e.pointerType !== 'mouse' || !anchor) return;
+    if (!realHover(e) || !anchor) return;
     if (target(e) === anchor && !anchor.contains(e.relatedTarget as Node | null)) hide();
   });
   // 탭: 아이콘이면 띄우고(터치로 같은 아이콘을 다시 누르면 닫기), 다른 곳이면 닫기
@@ -81,8 +88,10 @@ export function initUnitTips(): void {
   document.addEventListener('click', (e) => {
     const el = target(e);
     if (!el) hide();
-    else if (el === anchor && lastPointer !== 'mouse') hide();
-    else show(el);
+    else if (el === anchor) {
+      // 같은 아이콘을 다시 누르면 닫기 - 단, 방금(같은 탭에서) 열린 것이면 그대로 둔다
+      if (lastPointer !== 'mouse' && performance.now() - shownAt > 400) hide();
+    } else { show(el); shownAt = performance.now(); }
   }, true);
   window.addEventListener('scroll', hideIfMoved, true);
   window.addEventListener('resize', () => { if (window.innerWidth !== lastWidth) hide(); else hideIfMoved(); });

@@ -587,7 +587,9 @@ export class Menu {
         ? `<div class="deck-slot filled" data-drop-slot="${i}" data-drag="${j}" data-slot="${i}">${spriteIcon(unitIconUrl(j))}<div>${UNIT_BY_ID[j].kr}</div></div>`
         : `<div class="deck-slot" data-drop-slot="${i}">${icon('plus')}</div>`;
     }).join('');
-    const cards = UNITS.map((u) => {
+    // 가진 유닛을 위로 (넣기 쉽게), 그 안에서는 원래 순서
+    const owned = (id: Job) => (unitLevel(id) > 0 ? 0 : 1);
+    const cards = [...UNITS].sort((a, b) => owned(a.id) - owned(b.id)).map((u) => {
       const lv = unitLevel(u.id);
       const unlocked = lv > 0;
       const inDeck = meta.deck.includes(u.id);
