@@ -105,6 +105,8 @@ export interface BoardSnapshot {
   units: number[];
   /** 유닛마다 방향 | 공격 중 4 (units 와 같은 순서) */
   uc?: number[];
+  /** 몹마다 남은 체력 % 0~100 (mobs 와 같은 순서) */
+  mh?: number[];
   /** 지난 스냅샷 뒤 생긴 공격 이펙트 (engine logFx 형식) */
   fx?: number[][];
   bossHp: number; // 보스 체력 비율 (없으면 -1)
@@ -423,9 +425,11 @@ export class Game {
   snapshot(): BoardSnapshot {
     const q = (v: number) => Math.max(0, Math.min(255, Math.round((v / MAP.size) * 255)));
     const mobs: number[] = [];
+    const mh: number[] = []; // 몹마다 남은 체력 % (상대 화면 체력 막대)
     for (const m of this.mobs.slice(0, 120)) {
       const kind = m.boss ? SNAP_KIND.boss : m.kind === 'card' ? SNAP_KIND.sent : SNAP_KIND.normal;
       mobs.push(m.id, q(m.x), q(m.y), RACES.indexOf(m.race) | (kind << 2) | (m.dir << 4) | (m.variant << 6), Math.round(m.size));
+      mh.push(Math.max(0, Math.min(100, Math.ceil((m.hp / m.maxHp) * 100))));
     }
     const units: number[] = [];
     const uc: number[] = []; // 유닛마다 방향 | 이번 구간에 공격했으면 4 - 상대 화면에서 몹 쪽을 보고 휘두르게 (units 와 같은 순서)
@@ -451,6 +455,7 @@ export class Game {
       v: 2, // 형식은 그대로 (방향·공격·이펙트는 추가 필드라 예전 클라이언트도 읽는다)
       t: Math.round(this.time * 100) / 100,
       uc,
+      mh,
       fx,
     };
   }

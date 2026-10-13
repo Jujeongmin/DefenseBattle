@@ -417,7 +417,7 @@ export class Renderer {
       const by = m.y - s / 2 - 8;
       ctx.fillStyle = 'rgba(0,0,0,0.65)';
       ctx.fillRect(m.x - w / 2 - 1, by - 1, w + 2, h + 2);
-      ctx.fillStyle = m.boss ? '#ff5252' : m.kind === 'card' ? '#ff8a3d' : ratio > 0.5 ? '#7ee87e' : ratio > 0.25 ? '#ffd54f' : '#ff7b7b';
+      ctx.fillStyle = m.kind === 'card' && !m.boss ? '#ff8a3d' : '#ff5252'; // 체력 막대는 빨강 고정 (상대가 보낸 몹만 주황)
       ctx.fillRect(m.x - w / 2, by, w * ratio, h);
       if (m.slow > 0) {
         // 체력 막대 오른쪽 파란 아래 화살표 두 개 = 느려짐

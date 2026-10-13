@@ -9,7 +9,7 @@ import { GRADES, JOBS, RACES, PLAY_SPEED, PVP, ATTACKS, UNIT_BY_ID } from './con
 import { fieldBackground, FRAME, WALK_SEQ, ATTACK_SEQ, JOB_TINT, UNIT_DRAW } from './render';
 import type { Job, Race } from './types';
 
-interface SnapMob { x: number; y: number; race: Race; kind: number; dir: number; size: number; variant: number }
+interface SnapMob { x: number; y: number; race: Race; kind: number; dir: number; size: number; variant: number; hp: number }
 interface SnapUnit { job: Job; grade: number; x: number; y: number; face: number; atk: boolean }
 interface SnapFrame { at: number; t: number; mobs: Map<number, SnapMob>; units: SnapUnit[]; fx: number[][]; played: boolean }
 /** 다시 그리는 공격 이펙트 (상대 화면 전용, 실제 시간 ms 기준) */
@@ -22,7 +22,7 @@ const deq = (v: number) => (v / 255) * MAP.size;
 
 function parse(s: BoardSnapshot, at: number, t: number): SnapFrame {
   const mobs = new Map<number, SnapMob>();
-  for (let i = 0; i + 4 < s.mobs.length; i += 5) {
+  for (let i = 0, k = 0; i + 4 < s.mobs.length; i += 5, k++) {
     const code = s.mobs[i + 3];
     mobs.set(s.mobs[i], {
       x: deq(s.mobs[i + 1]),
@@ -32,6 +32,7 @@ function parse(s: BoardSnapshot, at: number, t: number): SnapFrame {
       dir: (code >> 4) & 3,
       variant: (code >> 6) & 7,
       size: s.mobs[i + 4],
+      hp: (s.mh?.[k] ?? 100) / 100, // 예전 클라이언트는 체력이 없다 → 가득 찬 막대
     });
   }
   const units: SnapUnit[] = [];
@@ -157,6 +158,17 @@ export class OppRenderer {
         ctx.lineWidth = 4;
         ctx.beginPath(); ctx.arc(x, y, s * 0.42, 0, Math.PI * 2); ctx.stroke();
       }
+    }
+    // 체력 막대 (내 전장과 같은 빨강, 보낸 몹은 주황) - 미니맵이 작아도 화면에서 2px 이상 보이게 두께를 맞춘다
+    const kc = c.clientWidth / MAP.size || 0.1;
+    const bh = Math.min(10, Math.max(4, 2 / kc));
+    for (const [, m, x, y] of mobs) {
+      const s = m.size;
+      const w = Math.max(28, s * 0.8), by = y - s / 2 - bh - 2;
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
+      ctx.fillRect(x - w / 2 - 1, by - 1, w + 2, bh + 2);
+      ctx.fillStyle = m.kind === SNAP_KIND.sent ? '#ff8a3d' : '#ff5252';
+      ctx.fillRect(x - w / 2, by, w * m.hp, bh);
     }
 
     for (const [n, u] of cur.units.entries()) {
