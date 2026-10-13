@@ -1,9 +1,7 @@
 // ============================================================
 //  캔버스 렌더러
 // ============================================================
-import { MAP, Game, pathAt } from './engine';
-
-const GAP_SAMPLES = 160; // 길 한 바퀴를 몇 점으로 나눠 사거리 구멍을 볼지
+import { MAP, Game, pathAt, GAP_SAMPLES } from './engine';
 import { unitSprite, mobSprite, tileSprite, uiSprite } from './assets';
 import { GRADES, UNIT_BY_ID, PLAY_SPEED, ATTACKS, UNITS } from './config';
 import type { Job, Mob, Effect } from './types';
@@ -241,12 +239,7 @@ export class Renderer {
     if (!g.units.length) return;
     if (this.t - this.gapAt > 0.4 || this.gapAt < 0) {
       this.gapAt = this.t;
-      this.gaps = [];
-      const ranges = g.units.map((u) => ({ x: u.x, y: u.y, r: g.unitRange(u) }));
-      for (let i = 0; i < GAP_SAMPLES; i++) {
-        const p = pathAt(i / GAP_SAMPLES);
-        if (!ranges.some((u) => (u.x - p.x) ** 2 + (u.y - p.y) ** 2 <= u.r * u.r)) this.gaps.push(p);
-      }
+      this.gaps = g.pathGaps().map((i) => pathAt(i / GAP_SAMPLES));
     }
     if (!this.gaps.length) return;
     const ctx = this.ctx;

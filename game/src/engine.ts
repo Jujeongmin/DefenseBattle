@@ -107,6 +107,10 @@ export interface BoardSnapshot {
   uc?: number[];
   /** 몹마다 남은 체력 % 0~100 (mobs 와 같은 순서) */
   mh?: number[];
+  /** 몹마다 상태 비트 SNAP_STATUS (mobs 와 같은 순서) */
+  ms?: number[];
+  /** 사거리 빈틈: GAP_SAMPLES 개 길 표본을 GAP_BITS 개씩 비트로 (1 = 어떤 유닛도 안 닿음) */
+  gp?: number[];
   /** 지난 스냅샷 뒤 생긴 공격 이펙트 (engine logFx 형식) */
   fx?: number[][];
   bossHp: number; // 보스 체력 비율 (없으면 -1)
@@ -125,6 +129,12 @@ export const DROP_WARN = 1.6;
 
 /** 스냅샷 몹 code 의 종류 값 */
 export const SNAP_KIND = { normal: 0, sent: 1, boss: 2 } as const;
+/** 스냅샷 몹 상태 비트 (ms) */
+export const SNAP_STATUS = { slow: 1, stop: 2, poison: 4, mark: 8, enraged: 16, ghost: 32, hidden: 64 } as const;
+/** 길 한 바퀴를 몇 점으로 나눠 사거리 빈틈(빨간 곳)을 볼지 */
+export const GAP_SAMPLES = 160;
+/** 빈틈 비트마스크: 숫자 하나에 담는 표본 수 */
+export const GAP_BITS = 20;
 
 // 이벤트 페이로드 타입
 interface EventMap {
@@ -426,11 +436,17 @@ export class Game {
     const q = (v: number) => Math.max(0, Math.min(255, Math.round((v / MAP.size) * 255)));
     const mobs: number[] = [];
     const mh: number[] = []; // 몹마다 남은 체력 % (상대 화면 체력 막대)
+    const ms: number[] = []; // 몹마다 상태 (둔화·정지·중독·표식·광폭·유령·숨음)
     for (const m of this.mobs.slice(0, 120)) {
       const kind = m.boss ? SNAP_KIND.boss : m.kind === 'card' ? SNAP_KIND.sent : SNAP_KIND.normal;
       mobs.push(m.id, q(m.x), q(m.y), RACES.indexOf(m.race) | (kind << 2) | (m.dir << 4) | (m.variant << 6), Math.round(m.size));
       mh.push(Math.max(0, Math.min(100, Math.ceil((m.hp / m.maxHp) * 100))));
+      const S = SNAP_STATUS;
+      ms.push((m.slow > 0 ? S.slow : 0) | (m.pause > 0 ? S.stop : 0) | (m.poison && m.poison.until > this.time ? S.poison : 0)
+        | (m.markUntil && m.markUntil > this.time ? S.mark : 0) | (m.enraged ? S.enraged : 0) | (m.ghost ? S.ghost : 0) | (m.hidden ? S.hidden : 0));
     }
+    const gp: number[] = new Array(Math.ceil(GAP_SAMPLES / GAP_BITS)).fill(0);
+    for (const i of this.pathGaps()) gp[Math.floor(i / GAP_BITS)] |= 1 << (i % GAP_BITS);
     const units: number[] = [];
     const uc: number[] = []; // 유닛마다 방향 | 이번 구간에 공격했으면 4 - 상대 화면에서 몹 쪽을 보고 휘두르게 (units 와 같은 순서)
     for (const u of this.units.slice(0, 80)) {
@@ -456,8 +472,22 @@ export class Game {
       t: Math.round(this.time * 100) / 100,
       uc,
       mh,
+      ms,
+      gp,
       fx,
     };
+  }
+
+  /** 어떤 유닛 사거리에도 들지 않는 길 표본 번호 (길 한 바퀴 = GAP_SAMPLES 점). 유닛이 없으면 빈 목록 */
+  pathGaps(): number[] {
+    if (!this.units.length) return [];
+    const ranges = this.units.map((u) => ({ x: u.x, y: u.y, r: this.unitRange(u) }));
+    const out: number[] = [];
+    for (let i = 0; i < GAP_SAMPLES; i++) {
+      const p = pathAt(i / GAP_SAMPLES);
+      if (!ranges.some((u) => (u.x - p.x) ** 2 + (u.y - p.y) ** 2 <= u.r * u.r)) out.push(i);
+    }
+    return out;
   }
 
   // ---------------- 소환 / 강화 / 판매 ----------------
@@ -512,7 +542,9 @@ export class Game {
     if (skip && Math.random() < Math.min(SKILLS.alchemist.cap, alch)) { next = skip; this.pushLog(tl('연금술! {0} 등급', GRADE_BY_KEY[skip.key].kr)); }
     const unit = this.createUnit(job, next.key, 'merge');
     const z = this.zones[zoneId];
-    this.effects.push({ type: 'merge', x: unit.x, y: unit.y, ttl: 0.7, color: next.color });
+    const fx: Effect = { type: 'merge', x: unit.x, y: unit.y, ttl: 0.7, color: next.color };
+    this.effects.push(fx); // 합성 연출은 이펙트 수 제한 없이
+    if (this.isPvp) this.logFx(fx);
     if (z && !this.units.some((u) => u.zoneId === z.id)) z.job = null;
     this.emit('merge', unit);
     return unit;
@@ -738,16 +770,26 @@ export class Game {
   // ---------------- PvP: 상대 화면에 보여 줄 공격 이펙트·공격 중인 유닛 (스냅샷마다 비운다) ----------------
   private fxLog: number[][] = [];
   private shotUnits = new Set<number>();
-  /** 투사체·폭발·처치만 (양자화 좌표). [0 투사체, x1,y1,x2,y2, 직업, 등급] [1 폭발, x,y, 반지름, 색] [2 처치, x,y, 보스] */
+  /**
+   * 상대 화면에 다시 그릴 이펙트 (양자화 좌표).
+   * [0 투사체, x1,y1,x2,y2, 직업, 등급] [1 폭발, x,y, 반지름, 색] [2 처치, x,y, 보스] [3 베기, x,y, 각도 0~255]
+   * [4 직선, x1,y1,x2,y2, 굵기, 색] [5 합성, x,y, 색] [6 소환, x,y, 색, 큼] [7 태초 타격, x,y]
+   */
   private logFx(e: Effect): void {
     const q = (v: number) => Math.max(0, Math.min(255, Math.round((v / MAP.size) * 255)));
+    const col = (c: string) => parseInt(c.slice(1), 16) || 0xffffff;
     let f: number[] | null = null;
     if (e.type === 'proj') f = [0, q(e.x1), q(e.y1), q(e.x2), q(e.y2), JOBS.indexOf(e.job), e.grade];
-    else if (e.type === 'splash') f = [1, q(e.x), q(e.y), Math.round(e.r), parseInt(e.color.slice(1), 16) || 0xffffff];
+    else if (e.type === 'splash') f = [1, q(e.x), q(e.y), Math.round(e.r), col(e.color)];
     else if (e.type === 'pop') f = [2, q(e.x), q(e.y), e.boss ? 1 : 0];
+    else if (e.type === 'slash') f = [3, q(e.x), q(e.y), Math.round(((e.seed % Math.PI) / Math.PI) * 255)];
+    else if (e.type === 'beam') f = [4, q(e.x1), q(e.y1), q(e.x2), q(e.y2), Math.round(e.w), col(e.color)];
+    else if (e.type === 'merge') f = [5, q(e.x), q(e.y), col(e.color)];
+    else if (e.type === 'summon') f = [6, q(e.x), q(e.y), col(e.color), e.big ? 1 : 0];
+    else if (e.type === 'burst') f = [7, q(e.x), q(e.y)];
     if (!f) return;
     this.fxLog.push(f);
-    if (this.fxLog.length > 40) this.fxLog.shift(); // 오래된 것부터 버린다 (스냅샷 크기 제한)
+    if (this.fxLog.length > 60) this.fxLog.shift(); // 오래된 것부터 버린다 (스냅샷 크기 제한)
   }
 
   // ---------------- 메인 업데이트 ----------------
