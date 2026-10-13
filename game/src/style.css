@@ -852,11 +852,13 @@ b, strong { font-weight: 700; }
 /* 넣기/빼기 · 강화 버튼은 위아래로 (옆으로 두면 긴 언어에서 글자가 테두리를 넘었다) */
 .unit-card .acts { display: flex; flex-direction: column; gap: 4px; }
 .unit-card .acts .btn { width: 100%; padding: 6px 8px 10px; font-size: 12px; white-space: nowrap; }
+/* 스킬 특징 한 줄 (범위·전체·버프 등 - 숫자에 안 드러나는 강점) */
+.u-role { font-size: 10px; color: var(--ink-2); margin: -2px 0 3px; line-height: 1.25; min-height: 12.5px; } /* 스킬 이름과 같으면 비워 두되 카드 높이는 맞춘다 */
 /* 능력치 3칸: 이름(작게) 위, 값 아래 */
 .u-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; margin: 2px 0 6px; }
 .u-stats > div { display: flex; flex-direction: column; align-items: center; background: rgba(42, 29, 22, 0.08); border: 1px solid var(--line); padding: 2px 1px 3px; min-width: 0; }
 .u-stats span { font-size: 9px; color: var(--ink-2); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.u-stats b { font-size: 12px; color: var(--ink); line-height: 1.1; }
+.u-stats b { font-size: 12px; color: var(--ink); line-height: 1.1; white-space: nowrap; overflow: hidden; max-width: 100%; }
 .lv-pips { display: flex; gap: 2px; }
 .lv-pips i { flex: 1; height: 6px; background: rgba(42, 29, 22, 0.18); }
 .lv-pips i.on { background: var(--gold); box-shadow: inset 0 -2px 0 var(--gold-ink); }

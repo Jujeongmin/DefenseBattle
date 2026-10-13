@@ -82,6 +82,8 @@ export const JOB_SPRITE: Record<Job, string> = Object.fromEntries(UNITS.map((u) 
 // 유닛 영구 레벨 (컬렉션): 레벨당 공격력 +8%, Lv5/Lv10 에 스킬 강화(퍽)
 export const UNIT_MAX_LEVEL = 10;
 export const UNIT_LEVEL_ATK = 0.08;
+/** 유닛 희귀도별 기본 공격력 배수 - 얻기 어려운 유닛이 숫자로도 세게 (스킬 차이와 별개). tools/unitsim.ts 로 확인 */
+export const RARITY_ATK: Record<Rarity, number> = { common: 1, rare: 1.1, epic: 1.25, legendary: 1.4 };
 export const UNIT_PERK_LEVELS = [5, 10];
 export function unitUpgradeCost(level: number): number {
   return 40 + (level - 1) * 40; // Lv1→2: 40, ... Lv9→10: 360

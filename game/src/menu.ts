@@ -7,7 +7,7 @@ import {
   DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, UNIT_PACK, CHESTS, RARITY_KR, RARITY_COLOR, GACHA, chestOpenCost, type RoadStep, type AttackKey,
   SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, productEfficiency,
   CAMPAIGN, TROPHY_ROAD, PVP_TIERS, ECONOMY, type SeasonReward, UNIT_PRESETS, ATTACK_PRESETS, type DeckPreset,
-  GRADES, UNIT_LEVEL_ATK,
+  GRADES, UNIT_LEVEL_ATK, RARITY_ATK,
 } from './config';
 import { meta, saveMeta, researchLevel, currentSeasonId, todayStr } from './meta';
 import { getPlatform } from './platform';
@@ -613,6 +613,7 @@ export class Menu {
           <div><div class="nm">${u.kr}</div><div class="lv">${unlocked ? `Lv.${lv}` : `${icon('lock')} ${[roadUnlockAt(u.id) ? `${icon('trophy')}${roadUnlockAt(u.id)}` : '', u.unlockStage ?? ''].filter(Boolean).join(' / ') || icon('chest')}`}</div></div></div>
         ${bar}
         <div class="sk" data-tip-skill="${u.id}"><b>${SKILL_KR[u.id]}</b> <span class="info-dot">?</span></div>
+        <div class="u-role">${u.role !== SKILL_KR[u.id] ? u.role : ''}</div>
         ${unitStatsHtml(u.id, Math.max(1, lv))}
         <div class="acts">${acts}</div></div>`;
     }).join('');
@@ -1004,9 +1005,9 @@ function markDotSeen(m: DotMenu): void {
 function unitStatsHtml(job: Job, lv: number): string {
   const u = UNIT_BY_ID[job];
   const base = (GRADES[0].atk[0] + GRADES[0].atk[1]) / 2;
-  const atk = Math.round(base * u.atkMult * (1 + (lv - 1) * UNIT_LEVEL_ATK));
+  const atk = Math.round(base * u.atkMult * RARITY_ATK[u.rarity] * (1 + (lv - 1) * UNIT_LEVEL_ATK)); // 희귀도 보너스 포함 (engine unitDamage 와 같은 식)
   const cell = (label: string, v: string) => `<div><span>${label}</span><b>${v}</b></div>`;
-  return `<div class="u-stats">${cell(tl('공격력'), String(atk))}${cell(tl('공격 속도'), tl('{0}/초', (1 / u.cooldown).toFixed(1)))}${cell(tl('사거리'), `${Math.round(u.rangeMult * 100)}%`)}</div>`;
+  return `<div class="u-stats">${cell(tl('공격력'), String(atk))}${cell(tl('공속'), tl('{0}/초', (1 / u.cooldown).toFixed(1)))}${cell(tl('사거리'), `${Math.round(u.rangeMult * 100)}%`)}</div>`;
 }
 
 function esc(s: string): string {

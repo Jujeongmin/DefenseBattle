@@ -115,7 +115,7 @@ export function fitText(el: HTMLElement, min = 8): void {
   }
 }
 /** 맞춤 대상: .fit + 원래 말줄임(…)으로 자르던 이름 칸들 (끝까지 줄여도 넘치면 그때만 …) */
-const FIT_SEL = '.fit, .unit-card .nm, .chest-slot .cn, .rv-name, .deck-slot > div:last-child, .pr-card span, .u-stats span, .attack-card b, .stack .name, .stack .skill';
+const FIT_SEL = '.fit, .unit-card .nm, .chest-slot .cn, .rv-name, .deck-slot > div:last-child, .pr-card span, .u-stats span, .u-stats b, .attack-card b, .stack .name, .stack .skill';
 export function fitAll(root: ParentNode): void {
   root.querySelectorAll<HTMLElement>(FIT_SEL).forEach((f) => fitText(f));
 }

@@ -6,7 +6,7 @@ import {
   ECONOMY, WAVE, GRADES, GRADE_BY_KEY, GRADE_INDEX, GRADE_RANGE,
   DMG_MULT, RACES, JOB_KR, FULL_RANGE_FROM_INDEX, GLOBAL_RANGE_FROM_INDEX, RESEARCH_PER,
   MOB_KINDS, SKILLS, SKILL_FROM_INDEX, MERGE_COUNT, PVP, UNIT_BY_ID, STARTER_UNITS,
-  UNIT_LEVEL_ATK, perkMult,
+  UNIT_LEVEL_ATK, RARITY_ATK, perkMult,
   rollGrade, rollJob, makeRng, JOBS, MOB_VARIANTS, ATTACKS, STARTER_ATTACKS, RESIST_MULT,
 } from './config';
 import {
@@ -682,7 +682,8 @@ export class Game {
   unitDamage(u: Unit, mob: { race: Race; boss: boolean; kind?: MobKind; card?: number; markUntil?: number; speedMult?: number }): number {
     const level = this.unitLevel(u);
     let dmg = u.baseAtk * (1 + (level - 1) * ECONOMY.upgradePerLevel);
-    dmg *= UNIT_BY_ID[u.job].atkMult * (1 + (this.collectionLevel(u.job) - 1) * UNIT_LEVEL_ATK);
+    const ud = UNIT_BY_ID[u.job];
+    dmg *= ud.atkMult * RARITY_ATK[ud.rarity] * (1 + (this.collectionLevel(u.job) - 1) * UNIT_LEVEL_ATK); // 희귀도 보너스
     dmg *= DMG_MULT[u.job][mob.race];
     const def = mob.card !== undefined ? ATTACKS[mob.card] : null;
     if (def?.resist?.includes(u.job)) dmg *= RESIST_MULT; // 유령(물리)·방패병(화살)

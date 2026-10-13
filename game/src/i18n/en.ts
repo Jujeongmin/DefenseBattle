@@ -568,7 +568,7 @@ const d: Record<string, string> = {
   "유닛 뽑기 3회": "3 unit draws",
   "유닛 뽑기 6회": "6 unit draws",
   "{0}/초": "{0}/s",
-  "공격 속도": "Speed",
+  "공속": "Speed",
   "공격력": "Attack",
   "사거리": "Range",
 };
