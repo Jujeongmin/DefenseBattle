@@ -205,6 +205,7 @@ async function finishSolo(u: UI, d: GameOverData): Promise<void> {
   if (l.kind === 'stage') {
     const st = STAGE_BY_ID[l.stageId];
     const stars = d.cleared ? starsFor(d.peakMobs) : 0;
+    const tutorialRun = l.stageId === '1-1' && !featureUnlocked('pvp'); // 첫 튜토리얼 판 (결과 반영 전에 판단)
     // 보상은 서버가 (시작 기록·진행 시간 확인). 거부되면 보상 없이 결과만
     const res = (await stageResult(l.stageId, d.cleared, stars, d.wave)) ?? { stars, firstClear: false, newBest: false, crystals: 0 };
     const crystals = res.crystals;
@@ -228,8 +229,10 @@ async function finishSolo(u: UI, d: GameOverData): Promise<void> {
     if (crystals > 0 && rewardedAvailable()) view.buttons.push({ label: tl('{0} 광고 보고 {1} +{2} 더 받기', icon('tv'), icon('gem'), crystals), cls: 'blue', id: 'btn-double', action: () => void doubleReward() });
     if (canNext) view.buttons.push({ label: tl('{0} 다음 스테이지 {1}', icon('play'), next.id), cls: 'red', action: () => void exitGame(true).then(() => menu.openStage(next.id)) });
     // 다시 하기는 실패했을 때만 (클리어면 다음 스테이지 / 로비로 - 버튼을 줄인다)
-    if (!d.cleared) view.buttons.push({ label: tl('다시 하기'), cls: 'red', action: () => void exitGame(true).then(() => menu.openStage(l.stageId)) });
-    view.buttons.push({ label: tl('로비로'), cls: '', action: () => void exitGame(true) });
+    // 튜토리얼 판에서 지면: 로비로 없이 '다시 하기' 하나 → 스테이지 정보 창 없이 바로 1-1
+    if (!d.cleared && tutorialRun) view.buttons.push({ label: tl('다시 하기'), cls: 'red', action: () => void exitGame(true).then(() => launch({ kind: 'stage', stageId: '1-1', goldBooster: false })) });
+    else if (!d.cleared) view.buttons.push({ label: tl('다시 하기'), cls: 'red', action: () => void exitGame(true).then(() => menu.openStage(l.stageId)) });
+    if (!(tutorialRun && !d.cleared)) view.buttons.push({ label: tl('로비로'), cls: '', action: () => void exitGame(true) });
     u.showResult(view);
     // 결제 팝업 조건: 새 챕터 도달 / 2연속 실패 (튜토리얼 직후는 제외)
     if (l.stageId !== '1-1') afterMatch({ chapterUp: res.firstClear && !!next && next.chapter > st.chapter, losing: meta.stageFailStreak >= 2 });
