@@ -60,6 +60,7 @@ export interface Unit {
   cooldown: number;
   flash: number;
   dir: number;                                  // 스프라이트 방향 행 (이동 중일 때만 사용)
+  face: number;                                 // 서 있을 때 방향 행: 공격한 몹 쪽 (0=하 1=좌 2=우 3=상), 노릴 몹이 없으면 정면
   moveFrom: { x: number; y: number } | null;     // 걷기 트윈 시작점 (null 이면 정지 상태)
   moveTo: { x: number; y: number } | null;       // 걷기 트윈 목표점
   moveElapsed: number;

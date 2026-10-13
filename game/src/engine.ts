@@ -534,7 +534,7 @@ export class Game {
       id: nextId++, job, grade: gradeKey, gradeIndex: gIdx,
       baseAtk: Math.round(baseAtk), zoneId: zone.id,
       x: zone.cx, y: zone.cy, cooldown: 0, flash: 0,
-      dir: 0, moveFrom: null, moveTo: null, moveElapsed: 0, moveDur: 0,
+      dir: 0, face: 0, moveFrom: null, moveTo: null, moveElapsed: 0, moveDur: 0,
     };
     this.units.push(unit);
     this.placeInZone(unit, zone); // 구역 안 랜덤 배치 (겹침 허용)
@@ -944,7 +944,10 @@ export class Game {
         const d = Math.hypot(m.x - u.x, m.y - u.y);
         if (d <= range && d < bestD) { bestD = d; best = m; }
       }
-      if (!best) continue;
+      if (!best) { u.face = 0; continue; } // 노릴 몹이 없으면 정면
+      // 공격하는 몹 쪽을 바라본다 (스프라이트 행: 0=하 1=좌 2=우 3=상)
+      const fx = best.x - u.x, fy = best.y - u.y;
+      u.face = Math.abs(fx) > Math.abs(fy) ? (fx > 0 ? 2 : 1) : (fy > 0 ? 0 : 3);
       const crit = Math.random() < this.critChance(u);
       let dmg = this.unitDamage(u, best) * (crit ? SKILLS.critMult : 1);
       if (u.job === 'reaper' && u.souls) { dmg *= SKILLS.reaper.soulMult; u.souls -= 1; } // 영혼 소모
