@@ -60,6 +60,18 @@ function bindOppPeek(): void {
   }
 }
 
+/** 지금 판의 소환 꾹 누르기 멈춤 (window pointerup 하나가 이걸 부른다) */
+let stopSummonHold: (() => void) | null = null;
+let summonReleaseBound = false;
+
+/** 값이 바뀔 때만 DOM 에 쓴다 (매 프레임 같은 값을 써서 레이아웃을 다시 계산하지 않게) */
+const domCache = new WeakMap<HTMLElement, string>();
+function setText(el: HTMLElement, v: string): void { if (domCache.get(el) !== v) { domCache.set(el, v); el.textContent = v; } }
+function setHtml(el: HTMLElement, v: string): void { if (domCache.get(el) !== v) { domCache.set(el, v); el.innerHTML = v; } }
+const widthCache = new WeakMap<HTMLElement, string>();
+function setWidth(el: HTMLElement, pct: number): void { const v = pct.toFixed(1) + '%'; if (widthCache.get(el) !== v) { widthCache.set(el, v); el.style.width = v; } }
+function setDisabled(b: HTMLButtonElement, v: boolean): void { if (b.disabled !== v) b.disabled = v; }
+
 export class UI {
   private game: Game;
   private ctx: UIContext;
@@ -129,8 +141,9 @@ export class UI {
       if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
       if (repeatTimer) { clearInterval(repeatTimer); repeatTimer = null; }
     };
+    // 판마다 UI 를 새로 만들므로 addEventListener 대신 on* 로 덮어쓴다 (지난 판 핸들러·게임이 쌓이지 않게)
     summonBtn.onclick = () => { if (held) { held = false; return; } summonOnce(); };
-    summonBtn.addEventListener('pointerdown', () => {
+    summonBtn.onpointerdown = () => {
       held = false;
       stopHold();
       holdTimer = setTimeout(() => {
@@ -140,10 +153,11 @@ export class UI {
           if (this.game.over || this.game.paused || !summonOnce()) stopHold();
         }, 140);
       }, 380);
-    });
-    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) summonBtn.addEventListener(ev, stopHold);
-    window.addEventListener('pointerup', stopHold); // 골드가 떨어져 버튼이 꺼진 뒤 손을 떼도 멈추게
-    summonBtn.addEventListener('contextmenu', (e) => e.preventDefault()); // 길게 누를 때 휴대폰 메뉴가 뜨지 않게
+    };
+    summonBtn.onpointerup = summonBtn.onpointerleave = summonBtn.onpointercancel = stopHold;
+    stopSummonHold = stopHold; // 골드가 떨어져 버튼이 꺼진 뒤 손을 떼도 멈추게 (window 리스너는 한 번만)
+    if (!summonReleaseBound) { summonReleaseBound = true; window.addEventListener('pointerup', () => stopSummonHold?.()); }
+    summonBtn.oncontextmenu = (e) => e.preventDefault(); // 길게 누를 때 휴대폰 메뉴가 뜨지 않게
     $('btn-pause').onclick = () => {
       audio.button();
       this.game.paused = !this.game.paused;
@@ -172,8 +186,8 @@ export class UI {
     const g = this.game;
     this.opp?.draw();
     const total = g.totalWaves;
-    $('wave-label').textContent = total === Infinity ? `Wave ${Math.max(1, g.wave)}` : `Wave ${Math.max(1, Math.min(g.wave, total))}/${total}`;
-    $('mob-race').textContent = RACE_KR[g.currentRace];
+    setText($('wave-label'), total === Infinity ? `Wave ${Math.max(1, g.wave)}` : `Wave ${Math.max(1, Math.min(g.wave, total))}/${total}`);
+    setText($('mob-race'), RACE_KR[g.currentRace]);
     const portrait = $('mob-portrait');
     if (portrait.dataset.race !== g.currentRace) {
       portrait.dataset.race = g.currentRace;
@@ -184,18 +198,18 @@ export class UI {
       this.renderStacks();
     }
 
-    $('gold-amount').textContent = String(Math.floor(g.gold));
+    setText($('gold-amount'), String(Math.floor(g.gold)));
 
     const pct = Math.min(100, (g.mobs.length / WAVE.gameOverMobCount) * 100);
     const fill = $('mob-progress-fill');
-    fill.style.width = pct + '%';
+    setWidth(fill, pct);
     fill.classList.toggle('warn', pct >= 70);
-    $('mob-count-label').textContent = `${g.mobs.length} / ${WAVE.gameOverMobCount}`;
+    setText($('mob-count-label'), `${g.mobs.length} / ${WAVE.gameOverMobCount}`);
     if (g.isPvp) {
       const my = $('my-fill');
-      my.style.width = pct + '%';
+      setWidth(my, pct);
       my.classList.toggle('warn', pct >= 70);
-      $('my-count').textContent = `${g.mobs.length}/${WAVE.gameOverMobCount}`;
+      setText($('my-count'), `${g.mobs.length}/${WAVE.gameOverMobCount}`);
     }
 
     // 대전 경과 시간: 서버가 정한 시작 시각부터 (두 사람 화면이 같게), 판이 끝나면 멈춤
@@ -211,22 +225,22 @@ export class UI {
     const bt = $('boss-timer');
     if (g.waveState === 'waiting_boss' || (g.isBossWave && g.waveState === 'spawning')) {
       bt.classList.remove('hidden');
-      bt.innerHTML = `${icon('timer')} ${(g.bossTimer / PLAY_SPEED).toFixed(1)}s`;
+      setHtml(bt, `${icon('timer')} ${(g.bossTimer / PLAY_SPEED).toFixed(1)}s`);
     } else {
       bt.classList.add('hidden');
     }
 
-    $('summon-log').innerHTML = g.log.map((l) => `<div>${l.text}</div>`).join('');
+    setHtml($('summon-log'), g.log.map((l) => `<div>${l.text}</div>`).join(''));
 
     const banner = $('mythic-banner');
     if (g.mythicBanner) {
       banner.classList.remove('hidden');
-      banner.innerHTML = g.mythicBanner.text;
+      setHtml(banner, g.mythicBanner.text);
     } else {
       banner.classList.add('hidden');
     }
 
-    ($('btn-summon') as HTMLButtonElement).disabled = g.gold < g.summonCost || g.over || this.summonLock || this.countingDown();
+    setDisabled($('btn-summon') as HTMLButtonElement, g.gold < g.summonCost || g.over || this.summonLock || this.countingDown());
     const costEl = document.querySelector('#btn-summon .summon-cost');
     const costHtml = `${icon('coin')}${g.summonCost}`;
     if (costEl && costEl.innerHTML !== costHtml) costEl.innerHTML = costHtml;
@@ -234,7 +248,7 @@ export class UI {
       document.querySelectorAll<HTMLButtonElement>('#attack-row .attack-card').forEach((b) => {
         const t = Number(b.dataset.card);
         const cd = g.attackCooldown(t);
-        b.disabled = g.gold < g.attackCost(t) || cd > 0 || g.over || this.countingDown();
+        setDisabled(b, g.gold < g.attackCost(t) || cd > 0 || g.over || this.countingDown());
         const label = cd > 0 ? String(Math.ceil(cd / PLAY_SPEED)) : '';
         const cdEl = b.querySelector('.cd')!;
         if (cdEl.textContent !== label) cdEl.textContent = label;
@@ -250,7 +264,7 @@ export class UI {
     // 강화 버튼 활성 상태는 골드에 따라 변하므로 가볍게 갱신
     document.querySelectorAll<HTMLButtonElement>('#unit-stacks .up-btn').forEach((b) => {
       const job = b.dataset.job as Job;
-      b.disabled = !g.units.some((u) => u.job === job) || g.gold < g.upgradeCost(job);
+      setDisabled(b, !g.units.some((u) => u.job === job) || g.gold < g.upgradeCost(job));
     });
   }
 
