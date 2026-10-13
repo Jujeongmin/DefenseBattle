@@ -149,17 +149,17 @@ export class Menu {
         </div>` : `<button class="btn red play-btn tut-start" data-act="tutorial">${icon('play')} ${tl('튜토리얼 시작')}</button>`}
       </div>
       <nav class="lobby-nav">
-        <button data-act="shop"><span class="ic">${icon('shop')}${shopDot() ? dot : ''}</span>${tl('상점')}</button>
-        ${featureUnlocked('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}${tag('units') || (UNITS.some((u) => canUpgradeUnit(u.id)) ? dot : '')}</span>${tl('덱')}</button>` : ''}
+        <button data-act="shop"><span class="ic">${icon('shop')}${menuDot('shop') ? dot : ''}</span>${tl('상점')}</button>
+        ${featureUnlocked('units') ? `<button data-act="units"><span class="ic">${icon('helmet')}${tag('units') || (menuDot('units') ? dot : '')}</span>${tl('덱')}</button>` : ''}
         ${featureUnlocked('research') ? `<button data-act="research"><span class="ic">${icon('flask')}${tag('research')}</span>${tl('연구')}</button>` : ''}
-        ${featureUnlocked('quests') ? `<button data-act="quests"><span class="ic">${icon('scroll')}${tag('quests') || (this.questClaimable() ? dot : '')}</span>${tl('퀘스트')}</button>` : ''}
+        ${featureUnlocked('quests') ? `<button data-act="quests"><span class="ic">${icon('scroll')}${tag('quests') || (menuDot('quests') ? dot : '')}</span>${tl('퀘스트')}</button>` : ''}
         ${pvpOn ? `<button data-act="road"><span class="ic">${icon('trophy')}</span>${tl('로드')}</button>` : ''}
         ${pvpOn ? `<button data-act="rank"><span class="ic">${icon('medal')}</span>${tl('랭킹')}</button>` : ''}
       </nav>`;
     bindActions(root, {
       profile: () => this.openProfile(),
       settings: () => this.openSettings(),
-      units: () => { markFeatureSeen('units'); this.openUnits(); },
+      units: () => { markFeatureSeen('units'); markDotSeen('units'); this.openUnits(); },
       stages: () => this.openStages(),
       tutorial: () => this.openStageInfo('1-1'),
       battle: () => { markFeatureSeen('pvp'); this.startMatchmaking(); },
@@ -167,7 +167,7 @@ export class Menu {
       rank: () => this.openPvp('rank'),
       pass: () => this.openPvp('pass'),
       research: () => { markFeatureSeen('research'); this.openResearch(); },
-      quests: () => { markFeatureSeen('quests'); this.openQuests(); },
+      quests: () => { markFeatureSeen('quests'); markDotSeen('quests'); this.openQuests(); },
       endless: () => { markFeatureSeen('endless'); this.openEndless(); },
       shop: () => this.openShop(),
       chest: (b) => this.tapChest(Number(b.dataset.i)),
@@ -333,9 +333,6 @@ export class Menu {
     draw();
   }
 
-  private questClaimable(): boolean {
-    return DAILY_QUESTS.some((q) => (meta.daily.progress[q.key] || 0) >= q.goal && !meta.daily.claimed[q.key]);
-  }
   private seasonClaimable(): boolean {
     const t = seasonTier();
     for (let i = 1; i <= t; i++) {
@@ -722,12 +719,7 @@ export class Menu {
 
   // ======================= 상점 =======================
   openShop(): void {
-    // 오늘 상점을 열어 봤으면 로비 상점 점은 끈다 (광고를 안 봐도). 다음 날 횟수가 다시 차면 다시 뜬다
-    const seen = shopSeenKey();
-    if (!meta.seenFeatures.includes(seen)) {
-      meta.seenFeatures = meta.seenFeatures.filter((k) => !k.startsWith('shop:')).concat(seen);
-      saveMeta();
-    }
+    markDotSeen('shop'); // 열어 봤으면 로비 점은 끈다 (광고를 안 봐도)
     const plat = getPlatform();
     const price = (id: string) => plat.priceOf(id) ?? 0;
     const draw = () => {
@@ -955,9 +947,28 @@ export class Menu {
 }
 
 /** 로비 상점 점: 오늘 받을 광고 소환권이 남았고, 오늘 아직 상점을 열어 보지 않았을 때 */
-function shopSeenKey(): string { return `shop:${todayStr()}`; }
-function shopDot(): boolean {
-  return rewardedAvailable() && freeTicketAdsLeft() > 0 && !meta.seenFeatures.includes(shopSeenKey());
+// ---------- 로비 메뉴 빨간 점 ----------
+// 알릴 게 있으면 지금 상태를 나타내는 키를 만든다. 그 메뉴를 열면 키를 seenFeatures 에 남겨 점을 끄고,
+// 상태가 바뀌어 키가 달라지면(새 날, 새로 강화 가능한 유닛, 새로 완료한 퀘스트) 다시 뜬다.
+type DotMenu = 'shop' | 'units' | 'quests';
+function dotKey(m: DotMenu): string | null {
+  if (m === 'shop') return rewardedAvailable() && freeTicketAdsLeft() > 0 ? `shop:${todayStr()}` : null; // 오늘 받을 광고 소환권
+  if (m === 'units') {
+    const ready = UNITS.filter((u) => canUpgradeUnit(u.id)).map((u) => `${u.id}${unitLevel(u.id)}`);
+    return ready.length ? `units:${ready.join(',')}` : null; // 레벨업할 수 있는 유닛 (레벨까지 - 올린 뒤 또 가능해지면 다시)
+  }
+  const done = DAILY_QUESTS.filter((q) => (meta.daily.progress[q.key] || 0) >= q.goal && !meta.daily.claimed[q.key]).map((q) => q.key);
+  return done.length ? `quests:${todayStr()}:${done.join(',')}` : null; // 보상 받을 일일 퀘스트
+}
+function menuDot(m: DotMenu): boolean {
+  const k = dotKey(m);
+  return !!k && !meta.seenFeatures.includes(k);
+}
+function markDotSeen(m: DotMenu): void {
+  const k = dotKey(m);
+  if (!k || meta.seenFeatures.includes(k)) return;
+  meta.seenFeatures = meta.seenFeatures.filter((s) => !s.startsWith(`${m}:`)).concat(k);
+  saveMeta();
 }
 
 function esc(s: string): string {
