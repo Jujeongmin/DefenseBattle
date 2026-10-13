@@ -180,8 +180,10 @@ export interface GameOptions {
   mode: GameMode;
   /** 웨이브 구성(종족/몹 종류) 시드. PvP 에서는 두 플레이어가 같은 시드를 쓴다 */
   seed: number;
-  /** 연구소 효과 적용 여부 (PvP 는 공정성을 위해 false) */
+  /** 연구소 효과 적용 여부 */
   useResearch: boolean;
+  /** 연구 레벨을 직접 지정 (봇전의 봇). 없으면 내 저장본의 연구 레벨 */
+  research?: Partial<Record<ResearchKey, number>>;
   /** 시작 골드 배수 (골드 부스터) */
   startGoldMult: number;
   /** 퀘스트/업적/최고기록 반영 여부 (AI 상대의 헤드리스 게임은 false) */

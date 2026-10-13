@@ -203,7 +203,7 @@ export class Menu {
       { key: 'units', sel: '.lobby-nav [data-act="units"]', on: featureUnlocked('units'),
         text: '<b>덱</b>에서 유닛과 몹 카드를 고르고<br>모은 카드로 강화해요' },
       { key: 'research', sel: '.lobby-nav [data-act="research"]', on: featureUnlocked('research'),
-        text: '<b>연구소</b>가 열렸어요!<br>보석으로 캠페인·무한 모드 능력을 올려요' },
+        text: '<b>연구소</b>가 열렸어요!<br>보석으로 대전과 모든 판의 능력을 올려요' },
       { key: 'quests', sel: '.lobby-nav [data-act="quests"]', on: featureUnlocked('quests'),
         text: '<b>퀘스트</b>가 열렸어요!<br>매일 목표를 채우면 보석을 받아요' },
       { key: 'endless', sel: '[data-act="endless"]', on: featureUnlocked('endless'),
@@ -619,7 +619,7 @@ export class Menu {
       }).join('');
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>연구소 <span class="crystal" style="font-size:16px">${icon('gem')} ${meta.crystals}</span></h2>
-        <div class="fine" style="margin:-4px 0 8px">보석으로 올리면 계속 적용돼요 · 캠페인·무한 모드 전용 (대전 제외)</div>
+        <div class="fine" style="margin:-4px 0 8px">보석으로 올리면 대전·캠페인·무한 모드 모든 판에 계속 적용돼요</div>
         ${rows}</div>`, () => this.render());
       bindActions(el, {
         res: async (b) => {

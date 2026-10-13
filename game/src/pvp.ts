@@ -3,12 +3,12 @@
 //  두 구현이 같은 인터페이스를 가져 UI/게임 흐름은 상대 종류를 신경 쓰지 않는다.
 // ============================================================
 import { Game, type BoardSnapshot } from './engine';
-import { PVP, JOBS, PLAY_SPEED, STARTER_UNITS, TROPHY_ROAD, DECK_SIZE, ATTACKS, STARTER_ATTACKS, ATTACK_DECK_SIZE, UNIT_BY_ID, type AttackKey } from './config';
+import { PVP, JOBS, PLAY_SPEED, STARTER_UNITS, TROPHY_ROAD, DECK_SIZE, ATTACKS, STARTER_ATTACKS, ATTACK_DECK_SIZE, UNIT_BY_ID, RESEARCH, type AttackKey } from './config';
 import { aiStep, thinkInterval } from './ai';
 import { meta } from './meta';
 import { unitLevels } from './progress';
 import { isOnlineEnv } from './platform';
-import type { AttackPayload, Job, Rarity } from './types';
+import type { AttackPayload, Job, Rarity, ResearchKey } from './types';
 import type { PvpReward } from './econ';
 
 export interface MatchInfo {
@@ -193,6 +193,13 @@ export function createBotSession(): PvpSession {
 
 /** 봇 실력 0~0.75: 트로피가 오를수록 강해지되 사람이 이길 만한 수준에서 멈춘다.
  *  연승하면 조금 세게, 연패하면 확실히 약하게 (매스마켓: 지기만 하는 판이 이어지지 않게). tools/pvpsim.ts */
+/** 봇 연구 레벨: 트로피에 맞춰 (1500 트로피에서 최대). 첫 3판은 연구 없음 */
+export function botResearch(trophies: number): Partial<Record<ResearchKey, number>> {
+  const p = meta.pvp;
+  const k = p.wins + p.losses < 3 ? 0 : Math.min(1, Math.max(0, trophies) / 1500);
+  return Object.fromEntries(RESEARCH.map((r) => [r.key, Math.floor(r.max * k)]));
+}
+
 export function botSkill(): number {
   const p = meta.pvp;
   if (p.wins + p.losses < 3) return 0.05; // 첫 3판은 가장 약한 봇 - 처음 대전에서 이기는 경험
@@ -259,7 +266,7 @@ class BotSession implements PvpSession {
     // 덱: 플레이어 덱과 같은 수, 해금 유닛 중 무작위 (레벨은 플레이어 평균 수준)
     const deck = botDeck(this.match.opponent.trophies);
     const avg = botLevel();
-    const game = new Game({ mode: 'pvp', seed: this.match.seed, useResearch: false, track: false, deck, atkMult: botAtkMult(skill),
+    const game = new Game({ mode: 'pvp', seed: this.match.seed, useResearch: true, research: botResearch(this.match.opponent.trophies), track: false, deck, atkMult: botAtkMult(skill),
       attackDeck: botAttackDeck(this.match.opponent.trophies), unitLevels: Object.fromEntries(deck.map((j) => [j, avg])) });
     this.game = game;
     game.on('attack', (p) => h.onAttack(p));

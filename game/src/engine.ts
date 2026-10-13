@@ -190,7 +190,8 @@ export class Game {
 
   /** 연구 레벨 (PvP 등 연구 미적용 모드에서는 0) */
   res(key: ResearchKey): number {
-    return this.opts.useResearch ? researchLevel(key) : 0;
+    if (!this.opts.useResearch) return 0;
+    return this.opts.research ? (this.opts.research[key] ?? 0) : researchLevel(key);
   }
 
   reset(): void {
