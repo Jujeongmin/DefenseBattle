@@ -370,8 +370,11 @@ setInterval(() => {
 // ---------------------------------------------------------------
 async function boot(): Promise<void> {
   // iOS Safari 는 viewport 의 user-scalable=no 를 무시한다: 두 손가락 확대·두 번 탭 확대를 막는다
-  document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
-  document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+  for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+  // 두 번 탭 기본 동작(확대·글자 선택 돋보기) 막기 - 입력칸(닉네임)은 두 번 탭으로 글자를 고를 수 있게 둔다
+  document.addEventListener('dblclick', (e) => {
+    if (!(e.target as HTMLElement | null)?.closest?.('input, textarea')) e.preventDefault();
+  }, { passive: false });
   translateStatic(); // index.html 고정 문구를 지금 언어로
   initUnitTips(); // 유닛 아이콘 말풍선 (몹 카드의 '막는 유닛' 등)
   $('main-menu').classList.remove('hidden');

@@ -63,8 +63,9 @@ html, body {
   overflow-wrap: break-word; /* 단어가 칸보다 길 때만 끊는다 */
 }
 /* 두 번 탭 확대 끄기 (iOS 는 viewport user-scalable=no 를 무시한다). 끌기용 touch-action: none 은 클래스 규칙이 이긴다 */
-* { touch-action: manipulation; }
-input, textarea { -webkit-user-select: text; user-select: text; }
+/* iOS 돋보기: 글자 선택·길게 누르기 메뉴가 생기지 않게 모든 요소에 (상속에 기대지 않는다) */
+* { touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 button { font-family: inherit; }
 b, strong { font-weight: 700; }
 #app {
@@ -591,6 +592,8 @@ b, strong { font-weight: 700; }
   max-width: 420px;
   max-height: 88%;
   overflow-y: auto;
+  overflow-x: hidden;              /* 창은 위아래로만 (폰에서 1px 오차·옆으로 밀기에 창이 좌우로 움직였다) */
+  overscroll-behavior-x: none;
   color: var(--ink);
   --text: var(--ink);
   --muted: var(--ink-2);
@@ -1453,7 +1456,7 @@ input.vol::-moz-range-thumb {
 input.vol::-moz-range-track { background: transparent; }
 
 /* ---------- 확률 정보 (상점) ---------- */
-.section-title .odds-btn { margin-left: auto; padding: 2px 8px; font-size: 11px; white-space: nowrap; flex: none; }
+.section-title .odds-btn { margin-left: auto; padding: 5px 13px 8px; min-height: 30px; font-size: 11px; white-space: nowrap; flex: none; } /* 글자가 테두리에 닿지 않고 가운데 */
 /* 제목은 한 줄로, 옆 설명만 줄을 바꾼다 (영어처럼 긴 언어) */
 .section-title { gap: 6px; white-space: nowrap; }
 .section-title > .fine { white-space: normal; flex: 1 1 auto; min-width: 0; text-align: right; }
@@ -1463,7 +1466,7 @@ table.odds th { background: rgba(42, 29, 22, 0.18); font-weight: 700; padding: 4
 table.odds td, table.odds th { white-space: normal; overflow-wrap: anywhere; line-height: 1.25; } /* 긴 언어(영어 등)는 칸 안에서 줄바꿈 - 표가 창보다 넓어져 좌우로 밀리던 문제 */
 table.odds td { padding: 4px 1px; border-bottom: 1px solid rgba(42, 29, 22, 0.15); font-weight: 700; }
 table.odds th .pi { width: 12px; height: 12px; }
-.odds-dialog .fine { text-align: left; line-height: 1.5; }
+.odds-dialog > .fine { text-align: center; line-height: 1.5; text-wrap: pretty; } /* 표·제목과 같이 가운데 */
 
 /* ---------- 로딩 화면 (main.ts boot) - 전체 화면 키아트 위에 로고(위)와 진행 막대(아래) ---------- */
 .loading {
