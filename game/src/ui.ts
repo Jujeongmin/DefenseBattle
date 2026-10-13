@@ -2,7 +2,7 @@
 //  게임 화면 DOM UI - 상단바/소환/강화/합성·판매/소환권/PvP HUD/결과/튜토리얼
 // ============================================================
 import {
-  JOB_KR, RACE_KR, GRADES, DMG_MULT, ECONOMY, WAVE, GRADE_INDEX, MERGE_COUNT, PLAY_SPEED, ATTACKS, JOBS,
+  JOB_KR, RACE_KR, GRADES, DMG_MULT, WAVE, GRADE_INDEX, MERGE_COUNT, PLAY_SPEED, ATTACKS, JOBS,
 } from './config';
 import { MAP, Game, pathPosNear, type BoardSnapshot } from './engine';
 import { mobPortraitSrc, unitIconUrl, mobSprite, preloadUnits } from './assets';
@@ -86,7 +86,7 @@ export class UI {
     const summonOnce = () => {
       const u = this.game.summon();
       if (u) audio.summon(u.gradeIndex >= GRADE_INDEX['mythic']);
-      else if (this.game.gold < ECONOMY.summonCost) this.flashGold();
+      else if (this.game.gold < this.game.summonCost) this.flashGold();
       return !!u;
     };
     let holdTimer: ReturnType<typeof setTimeout> | null = null;
@@ -182,7 +182,10 @@ export class UI {
       banner.classList.add('hidden');
     }
 
-    ($('btn-summon') as HTMLButtonElement).disabled = g.gold < ECONOMY.summonCost || g.over;
+    ($('btn-summon') as HTMLButtonElement).disabled = g.gold < g.summonCost || g.over;
+    const costEl = document.querySelector('#btn-summon .summon-cost');
+    const costHtml = `${icon('coin')}${g.summonCost}`;
+    if (costEl && costEl.innerHTML !== costHtml) costEl.innerHTML = costHtml;
     if (g.isPvp) {
       document.querySelectorAll<HTMLButtonElement>('#attack-row .attack-card').forEach((b) => {
         const t = Number(b.dataset.card);

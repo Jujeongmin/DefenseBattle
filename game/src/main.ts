@@ -14,7 +14,7 @@ import { meta, saveMeta, reloadMeta } from './meta';
 import { starsFor, STAGE_BY_ID, STAGES, PVP, PLAY_SPEED, PVP_TIERS, CHESTS } from './config';
 import { afterMatch } from './offers';
 import { pendingReveals } from './chests';
-import { stageOptions, endlessOptions, stageUnlocked, unitLevels } from './progress';
+import { stageOptions, endlessOptions, stageUnlocked, unitLevels, deckMin } from './progress';
 import { syncPurchases } from './shop';
 import { act, runStart, stageResult, endlessResult, applyEcon, online, pvpRewardLocal, syncEcon } from './econ';
 import { showRewarded, rewardedAvailable } from './ads';
@@ -65,7 +65,7 @@ function launch(l: Launch): void {
   if (l.kind === 'stage') game = new Game(stageOptions(l.stageId, booster));
   else if (l.kind === 'endless') game = new Game(endlessOptions(booster));
   else {
-    game = new Game({ mode: 'pvp', seed: l.session.match.seed, useResearch: true, deck: [...meta.deck], attackDeck: [...meta.attackDeck], unitLevels: unitLevels() });
+    game = new Game({ mode: 'pvp', seed: l.session.match.seed, useResearch: true, deck: [...meta.deck], deckMin: deckMin(), attackDeck: [...meta.attackDeck], unitLevels: unitLevels() });
     game.paused = true; // 카운트다운 후 동시에 시작
   }
   preloadUnits(game.opts.deck); // 이 판에 나올 유닛 (등급 6개)

@@ -6,7 +6,7 @@ import {
   UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, unitUpgradeCost, SKILL_KR,
   DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, UNIT_PACK, CHESTS, RARITY_KR, RARITY_COLOR, GACHA, chestOpenCost, type RoadStep, type AttackKey,
   SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, productEfficiency,
-  CAMPAIGN, TROPHY_ROAD, PVP_TIERS, UNIT_PRESETS, ATTACK_PRESETS, type DeckPreset,
+  CAMPAIGN, TROPHY_ROAD, PVP_TIERS, ECONOMY, UNIT_PRESETS, ATTACK_PRESETS, type DeckPreset,
 } from './config';
 import { meta, saveMeta, researchLevel, currentSeasonId } from './meta';
 import { getPlatform } from './platform';
@@ -18,7 +18,7 @@ import {
   chapterStarReward, starRewardClaimed, featureUnlocked, featureNew, markFeatureSeen,
   nextRoadStep, roadUnlockAt,
   unitUnlocked, unitLevel, canUpgradeUnit, toggleDeck,
-  placeDeck, removeDeck, attackUnlocked, attackUnlockAt, placeAttack, unitCards,
+  placeDeck, removeDeck, attackUnlocked, attackUnlockAt, placeAttack, unitCards, deckMin,
 } from './progress';
 import {
   purchase, productOwned, monthlyActive, monthlyDaysLeft, canClaimMonthly, claimMonthly,
@@ -573,7 +573,8 @@ export class Menu {
         <div class="sk" data-tip-skill="${u.id}"><b>${SKILL_KR[u.id]}</b> <span class="info-dot">?</span></div>
         <div class="acts">${acts}</div></div>`;
     }).join('');
-    return `<div class="deck-hint">${icon('pointer')} 끌어서 칸에 놓기${RECS_BTN}</div>
+    const gap = deckMin() - meta.deck.length;
+    return `${gap > 0 ? `<div class="deck-warn">${icon('warning')} 덱에 빈 칸이 ${gap}개 있어요 · 소환 비용 ${icon('coin')}${Math.round(ECONOMY.summonCost * (1 + gap * ECONOMY.deckGapPenalty))} (4칸을 채우면 ${icon('coin')}${ECONOMY.summonCost})</div>` : ''}<div class="deck-hint">${icon('pointer')} 끌어서 칸에 놓기${RECS_BTN}</div>
       <div class="deck-row">${slots}</div>
       <div class="unit-grid">${cards}</div>`;
   }

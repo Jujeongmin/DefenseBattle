@@ -1455,3 +1455,5 @@ table.odds th .pi { width: 12px; height: 12px; }
 /* 뽑기: 가장 높은 등급 색으로 소환 아이콘이 빛난다 */
 .rv-scene .rv-box .pi-summon { filter: drop-shadow(0 0 10px var(--cc)) drop-shadow(0 0 22px var(--cc)); }
 .summon-btn { touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.deck-warn { display: flex; align-items: center; justify-content: center; gap: 3px; flex-wrap: wrap; margin: -4px 0 8px; padding: 5px 8px; font-size: 11px; font-weight: 700; color: #fff; background: var(--red); border: 2px solid var(--edge); text-shadow: var(--outline-thin); }
+.deck-warn .pi { width: 14px; height: 14px; }

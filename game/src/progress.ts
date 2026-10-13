@@ -157,15 +157,20 @@ export function unitLevels(): Partial<Record<Job, number>> {
 }
 
 // ---------- 게임 시작 옵션 ----------
+/** 덱에 넣을 수 있는 최대 유닛 수 (보유 유닛 수와 덱 칸 중 작은 값) - 이보다 적게 넣으면 소환이 비싸진다 */
+export function deckMin(): number {
+  return Math.min(DECK_SIZE, Object.values(meta.units).filter((lv) => (lv ?? 0) > 0).length);
+}
+
 export function stageOptions(id: string, goldBooster: boolean): Partial<GameOptions> {
   const st = STAGE_BY_ID[id];
   return {
     mode: 'solo', stageId: id, waves: st.waves, hpMult: st.hpMult, races: st.races,
-    deck: [...meta.deck], unitLevels: unitLevels(), startGoldMult: goldBooster ? 2 : 1,
+    deck: [...meta.deck], deckMin: deckMin(), unitLevels: unitLevels(), startGoldMult: goldBooster ? 2 : 1,
   };
 }
 export function endlessOptions(goldBooster: boolean): Partial<GameOptions> {
-  return { mode: 'solo', deck: [...meta.deck], unitLevels: unitLevels(), startGoldMult: goldBooster ? 2 : 1 };
+  return { mode: 'solo', deck: [...meta.deck], deckMin: deckMin(), unitLevels: unitLevels(), startGoldMult: goldBooster ? 2 : 1 };
 }
 
 // ---------- 트로피 로드 ----------

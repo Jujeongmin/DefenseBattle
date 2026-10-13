@@ -183,6 +183,8 @@ export const GLOBAL_RANGE_FROM_INDEX = 5;
 export const ECONOMY = {
   startGold: 200,
   summonCost: 20,
+  /** 덱을 덜 채운 만큼 소환 비용 증가 (빈 칸 1개당 +N배). 한 유닛만 넣고 그 유닛만 합성하는 전략 견제 - tools/decksim.ts */
+  deckGapPenalty: 0.5,
   killGold: 3,
   bossGold: 100,
   upgradeBase: 20,

@@ -190,6 +190,8 @@ export interface GameOptions {
   track: boolean;
   /** 출전 덱 - 소환 시 이 중에서 랜덤 */
   deck: Job[];
+  /** 덱에 넣을 수 있는 최대 유닛 수 (보유 유닛 수와 덱 칸 중 작은 값). 덱이 이보다 적으면 소환이 비싸진다. 없으면 페널티 없음 */
+  deckMin?: number;
   /** PvP 공격 덱 (몹 카드 4장) */
   attackDeck: AttackKey[];
   /** 유닛 영구 레벨 (컬렉션 성장) */

@@ -443,9 +443,16 @@ export class Game {
   private scripted: { job: Job; grade: GradeKey }[] = [];
   scriptSummons(list: { job: Job; grade: GradeKey }[]): void { this.scripted.push(...list); }
 
+  /** 소환 비용: 덱 빈 칸 1개당 ECONOMY.deckGapPenalty 배씩 비싸진다 (넣을 수 있는데 안 넣은 칸만) */
+  get summonCost(): number {
+    const gap = Math.max(0, (this.opts.deckMin ?? 0) - new Set(this.opts.deck).size);
+    return Math.round(ECONOMY.summonCost * (1 + gap * ECONOMY.deckGapPenalty));
+  }
+
   summon(): Unit | null {
-    if (this.gold < ECONOMY.summonCost || this.over) return null;
-    this.gold -= ECONOMY.summonCost;
+    const cost = this.summonCost;
+    if (this.gold < cost || this.over) return null;
+    this.gold -= cost;
     this.summons += 1;
     this.progress('summons');
 

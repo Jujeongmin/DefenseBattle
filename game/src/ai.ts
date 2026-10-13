@@ -2,7 +2,7 @@
 //  AI 플레이어 - PvP 연습 상대(봇)가 사용하는 자동 플레이 정책
 //  skill(0~1): 높을수록 판단이 빠르고 합성/강화/몹 보내기를 잘 활용
 // ============================================================
-import { GRADE_INDEX, ECONOMY, ATTACKS, JOBS, PLAY_SPEED } from './config';
+import { GRADE_INDEX, ATTACKS, JOBS, PLAY_SPEED } from './config';
 import { MAP, SEG_ZONE, pathAt, type Game, type BoardSnapshot } from './engine';
 import type { Job } from './types';
 
@@ -124,12 +124,12 @@ export function aiStep(game: Game, skill: number, opp: BoardSnapshot | null = nu
   // 3) 군대 확보 → 강화
   const target = 16 + Math.round(skill * 10);
   if (game.units.length < target) {
-    if (game.gold >= ECONOMY.summonCost) game.summon();
+    if (game.gold >= game.summonCost) game.summon();
     return;
   }
   const jobs = game.getJobStacks().sort((a, b) => b.count - a.count);
   for (const s of jobs) {
     if (game.gold >= game.upgradeCost(s.job)) { game.upgrade(s.job); return; }
   }
-  if (game.gold >= ECONOMY.summonCost) game.summon();
+  if (game.gold >= game.summonCost) game.summon();
 }
