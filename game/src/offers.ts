@@ -6,7 +6,7 @@
 //  빈도(보통): 판이 끝날 때 최대 하나, 같은 한정 상품 팝업은 하루 한 번. 한정 상품은 24시간 동안 상점에도 보인다.
 // ============================================================
 import {
-  PRODUCT_BY_ID, PRODUCTS, OFFER_PRODUCT, OFFER_HOURS, UNIT_PACK, ITEM_KR, UNIT_BY_ID,
+  PRODUCT_BY_ID, PRODUCTS, OFFER_PRODUCT, OFFER_HOURS, UNIT_PACK, ITEM_KR, UNIT_BY_ID, TROPHY_ROAD,
   productEfficiency, type OfferKind, type ProductDef,
 } from './config';
 import { meta, saveMeta } from './meta';
@@ -33,11 +33,37 @@ export function timeLeft(id: string): string {
   const h = Math.floor(ms / HOUR), m = Math.floor((ms % HOUR) / 60000), s = Math.floor((ms % 60000) / 1000);
   return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
-/** 유닛 패키지를 아직 살 수 있나 (안 샀고, 그 유닛이 Lv5 미만) */
+/**
+ * 유닛 패키지는 트로피 로드에서 그 유닛이 열리기 바로 앞 단계에 닿으면 하나씩 등장한다 (팝업 + 상점).
+ * 한 번 등장하면 트로피가 내려가도 상점에 남는다 (offerShownAt 에 'pack:<상품 id>' 로 기록).
+ */
+export function unitPackOpenAt(job: Job): number | null {
+  const i = TROPHY_ROAD.findIndex((s) => s.unit === job);
+  return i > 0 ? TROPHY_ROAD[i - 1].at : i === 0 ? 0 : null;
+}
+const packKey = (id: string) => `pack:${id}`;
+/** 유닛 패키지를 지금 살 수 있나 (등장했고, 안 샀고, 그 유닛이 Lv5 미만) */
 export function unitPackAvailable(job: Job): string | null {
   const id = UNIT_PACK[job];
-  if (!id || productOwned(id)) return null;
+  if (!id || productOwned(id) || !meta.offerShownAt[packKey(id)]) return null;
   return (meta.units[job] ?? 0) < (PRODUCT_BY_ID[id].grant.units?.[job] ?? 5) ? id : null;
+}
+/** 새로 닿은 유닛 패키지를 하나 등장시키고 팝업 (로드 순서대로, 한 번에 하나). 띄웠으면 true */
+export function revealNextUnitPack(): boolean {
+  const order = TROPHY_ROAD.filter((s) => s.unit && UNIT_PACK[s.unit]).map((s) => s.unit!) as Job[];
+  for (const job of order) {
+    const id = UNIT_PACK[job]!;
+    if (meta.offerShownAt[packKey(id)]) continue;
+    const at = unitPackOpenAt(job);
+    if (at === null || meta.pvp.trophies < at) return false; // 아직 다음 패키지 지점 전
+    meta.offerShownAt[packKey(id)] = Date.now();
+    saveMeta();
+    if (productOwned(id) || (meta.units[job] ?? 0) >= 5) continue; // 이미 샀거나 Lv5 이상이면 조용히 넘어간다
+    const u = UNIT_BY_ID[job];
+    setTimeout(() => popup(id, `${u.kr} 패키지 등장!`, `곧 트로피 로드에서 ${u.kr}이(가) 열려요. 지금 바로 받아 Lv5로 시작하세요 · 상점에서도 살 수 있어요`), 700);
+    return true;
+  }
+  return false;
 }
 
 const price = (id: string) => getPlatform().priceOf(id) ?? PRODUCT_BY_ID[id].vx;
@@ -118,6 +144,7 @@ function tryOffer(kind: OfferKind): boolean {
 /** 판이 끝난 뒤 (결과 화면 위). 판마다 최대 하나: 승급·챕터 > 연패 */
 export function afterMatch(ev: { tierUp?: boolean; chapterUp?: boolean; losing?: boolean }): void {
   if (ev.tierUp && tryOffer('arena')) return;
+  if (revealNextUnitPack()) return;
   if (ev.chapterUp && tryOffer('chapter')) return;
   if (ev.losing) tryOffer('comeback');
 }
