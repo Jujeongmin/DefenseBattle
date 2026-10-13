@@ -571,5 +571,8 @@ const d: Record<string, string> = {
   "공격력": "Attack",
   "사거리": "Range",
   "/초": "/s",
+  "마리": "Count",
+  "체력": "HP",
+  "속도": "Speed",
 };
 export default d;

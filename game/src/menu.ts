@@ -642,6 +642,7 @@ export class Menu {
       return `<div class="mob-card ${inDeck ? 'in-deck' : ''} ${open ? '' : 'locked'} ${pick === a.key ? 'picked' : ''}" ${open ? `data-drag="${a.key}"` : ''}>
         <div class="head">${mobIc(a.key)}<div><div class="nm">${a.kr}</div><div class="cost">${icon('coin')}${a.cost}${a.cooldown ? ` · ${icon('timer')}${Math.round(a.cooldown / PLAY_SPEED)}s` : ''}</div></div></div>
         <div class="ds">${a.desc}</div>
+        ${mobStatsHtml(a)}
         <div class="ctr"><span>${tl('막는 유닛')}</span>${counters}</div>
         <div class="acts">${act}</div></div>`;
     }).join('');
@@ -1008,6 +1009,12 @@ function unitStatsHtml(job: Job, lv: number): string {
   const atk = Math.round(base * u.atkMult * RARITY_ATK[u.rarity] * (1 + (lv - 1) * UNIT_LEVEL_ATK)); // 희귀도 보너스 포함 (engine unitDamage 와 같은 식)
   const cell = (label: string, v: string) => `<div><span>${label}</span><b>${v}</b></div>`;
   return `<div class="u-stats">${cell(tl('공격력'), String(atk))}${cell(tl('공속'), `${(1 / u.cooldown).toFixed(1)}<small>${tl('/초')}</small>`)}${cell(tl('사거리'), `${Math.round(u.rangeMult * 100)}%`)}</div>`;
+}
+
+/** 몹 카드 능력치 3칸: 마리 수 · 한 마리 체력 · 이동 속도 (체력·속도는 같은 웨이브 일반 몹 대비 %) */
+function mobStatsHtml(a: (typeof ATTACKS)[number]): string {
+  const cell = (label: string, v: string) => `<div><span>${label}</span><b>${v}</b></div>`;
+  return `<div class="u-stats">${cell(tl('마리'), String(a.count))}${cell(tl('체력'), `${Math.round(a.hpMult * 100)}%`)}${cell(tl('속도'), `${Math.round(a.speed * 100)}%`)}</div>`;
 }
 
 function esc(s: string): string {

@@ -108,8 +108,18 @@ export function confirmModal(title: string, body: string, ok = tl('확인'), can
 export function fitText(el: HTMLElement, min = 8): void {
   el.style.fontSize = '';
   if (!el.clientWidth) return;
-  let fs = parseFloat(getComputedStyle(el).fontSize);
-  while (el.scrollWidth > el.clientWidth + 0.5 && fs > min) {
+  const cs = getComputedStyle(el);
+  // 소수점까지 잰다 (scrollWidth 는 정수라 0.x px 넘침을 놓쳐 말줄임 … 이 붙었다).
+  // 글자 폭(Range)은 창이 열리는 확대 애니메이션 배율이 곱해져 나오므로 칸 폭도 같은 배율로 비교한다
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const over = () => {
+    const k = el.getBoundingClientRect().width / (el.offsetWidth || 1);
+    const avail = (el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) * k;
+    return range.getBoundingClientRect().width > avail + 0.05;
+  };
+  let fs = parseFloat(cs.fontSize);
+  while (over() && fs > min) {
     fs -= 0.5;
     el.style.fontSize = `${fs}px`;
   }
