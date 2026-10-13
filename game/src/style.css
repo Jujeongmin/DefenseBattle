@@ -767,6 +767,8 @@ b, strong { font-weight: 700; }
 @keyframes pulse-slot { 50% { outline: 3px solid var(--gold); outline-offset: 2px; } }
 .deck-dragging .deck-row .deck-slot { box-shadow: 0 0 0 2px rgba(255, 201, 40, 0.5); }
 .drag-src { opacity: 0.45; }
+/* 꾹 눌러 들린 카드 (이제 움직이면 끌기) */
+.drag-armed { transform: scale(1.04); box-shadow: 0 0 0 3px var(--gold), 0 6px 12px rgba(0, 0, 0, 0.35); transition: transform 0.12s, box-shadow 0.12s; position: relative; z-index: 2; }
 .deck-ghost {
   position: fixed; z-index: 200; pointer-events: none;
   width: 64px !important; height: 64px !important;
@@ -1460,7 +1462,7 @@ input.vol::-moz-range-track { background: transparent; }
 /* 제목은 한 줄로, 옆 설명만 줄을 바꾼다 (영어처럼 긴 언어) */
 .section-title { gap: 6px; white-space: nowrap; }
 .section-title > .fine { white-space: normal; flex: 1 1 auto; min-width: 0; text-align: right; }
-.odds-dialog { width: min(440px, 100%); }
+.odds-dialog { width: min(440px, 100%); touch-action: pan-y; } /* iOS: 옆으로 미는 손가락에 창이 움직이지 않게 (위아래 스크롤만) */
 table.odds { width: 100%; border-collapse: collapse; font-size: 10px; letter-spacing: -0.3px; margin: 4px 0 6px; text-align: center; }
 table.odds th { background: rgba(42, 29, 22, 0.18); font-weight: 700; padding: 4px 2px; }
 table.odds td, table.odds th { white-space: normal; overflow-wrap: anywhere; line-height: 1.25; } /* 긴 언어(영어 등)는 칸 안에서 줄바꿈 - 표가 창보다 넓어져 좌우로 밀리던 문제 */

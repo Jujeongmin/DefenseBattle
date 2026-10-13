@@ -617,7 +617,7 @@ export class Menu {
         <div class="acts">${acts}</div></div>`;
     }).join('');
     const gap = deckMin() - meta.deck.length;
-    return `${gap > 0 ? `<div class="deck-warn">${icon('warning')} ${tl('덱에 빈 칸이 {0}개 있어요 · 소환 비용 {1}{2} (4칸을 채우면 {1}{3})', gap, icon('coin'), Math.round(ECONOMY.summonCost * (1 + gap * ECONOMY.deckGapPenalty)), ECONOMY.summonCost)}</div>` : ''}<div class="deck-hint">${icon('pointer')} ${tl('끌어서 칸에 놓기')}${RECS_BTN}</div>
+    return `${gap > 0 ? `<div class="deck-warn">${icon('warning')} ${tl('덱에 빈 칸이 {0}개 있어요 · 소환 비용 {1}{2} (4칸을 채우면 {1}{3})', gap, icon('coin'), Math.round(ECONOMY.summonCost * (1 + gap * ECONOMY.deckGapPenalty)), ECONOMY.summonCost)}</div>` : ''}<div class="deck-hint">${icon('pointer')} ${tl('꾹 눌러 칸으로 끌기')}${RECS_BTN}</div>
       <div class="deck-row">${slots}</div>
       <div class="unit-grid">${cards}</div>`;
   }
@@ -644,7 +644,7 @@ export class Menu {
         <div class="ctr"><span>${tl('막는 유닛')}</span>${counters}</div>
         <div class="acts">${act}</div></div>`;
     }).join('');
-    return `<div class="deck-hint">${pick ? tl('{0} 넣을 칸을 누르세요', icon('pointer')) : tl('{0} 끌어서 칸에 놓기 · 대전에서 상대에게 던져요', icon('pointer'))}${RECS_BTN}</div>
+    return `<div class="deck-hint">${pick ? tl('{0} 넣을 칸을 누르세요', icon('pointer')) : tl('{0} 꾹 눌러 칸으로 끌기 · 대전에서 상대에게 던져요', icon('pointer'))}${RECS_BTN}</div>
       <div class="deck-row">${slots}</div>
       <div class="unit-grid">${cards}</div>`;
   }
