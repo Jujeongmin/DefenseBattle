@@ -621,8 +621,9 @@ b, strong { font-weight: 700; }
   60% { transform: translateY(3px) rotate(1.5deg); opacity: 1; }
   100% { transform: none; opacity: 1; }
 }
-.pop-in { animation: itemPop 0.32s cubic-bezier(0.3, 1.6, 0.6, 1) both; animation-delay: calc(0.14s + var(--i, 0) * 0.035s); }
-@keyframes itemPop { from { transform: translateY(10px) scale(0.85); opacity: 0; } to { transform: none; opacity: 1; } }
+/* 항목은 처음부터 보이고(투명 시작 X - 줄 배경이 늦게 그려져 보였다) 살짝 튀어 오르기만 한다 */
+.pop-in { animation: itemPop 0.26s cubic-bezier(0.3, 1.6, 0.6, 1) both; animation-delay: calc(0.04s + var(--i, 0) * 0.015s); }
+@keyframes itemPop { from { transform: translateY(6px) scale(0.94); } to { transform: none; } }
 .overlay.closing { animation: dimOut 0.16s ease-in forwards; pointer-events: none; }
 .overlay.closing .dialog { animation: dlgOut 0.16s ease-in forwards; }
 @keyframes dimOut { to { background-color: rgba(26, 18, 12, 0); } }
@@ -1536,7 +1537,7 @@ table.odds th .pi { width: 12px; height: 12px; }
 .sp-tier:first-child::before { display: none; }
 .sp-tier.reached .sp-n { color: #fff; background: var(--gold-ink, #c98a14); border-color: var(--edge); text-shadow: var(--outline-thin); }
 .sp-tier.current .sp-n { box-shadow: 0 0 0 3px var(--gold), 0 0 12px var(--gold); }
-.sp-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 6px 9px; min-height: 128px; border: 0; cursor: pointer;
+.sp-cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 6px 9px; min-height: 128px; border: 0; background: none; cursor: pointer;
   font-family: inherit; color: var(--cream); text-shadow: var(--outline-thin); border-image: url('/ui/frame/btn_gray.png') 44 fill / 12px; }
 .sp-cell.prem { border-image-source: url('/ui/frame/btn_purple.png'); }
 .sp-cell.free { border-image-source: url('/ui/frame/btn_blue.png'); }
@@ -1550,7 +1551,7 @@ table.odds th .pi { width: 12px; height: 12px; }
 .sp-amt .pi { width: 13px; height: 13px; }
 .sp-state { margin-top: auto; font-size: 12px; font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 2px; }
 .sp-state .pi { width: 14px; height: 14px; }
-.sp-arrow { position: absolute; top: 50%; z-index: 2; width: 28px; height: 44px; transform: translateY(-50%); border: 0; cursor: pointer;
+.sp-arrow { position: absolute; top: 50%; z-index: 2; width: 28px; height: 44px; transform: translateY(-50%); border: 0; background: none; cursor: pointer; /* 기본 버튼 흰 배경이 테두리 모서리로 비치지 않게 */
   border-image: url('/ui/frame/btn_gold.png') 44 fill / 10px; display: flex; align-items: center; justify-content: center; }
 .sp-arrow .pi { width: 14px; height: 14px; }
 .sp-arrow.l { left: 0; } .sp-arrow.l .pi { transform: scaleX(-1); }

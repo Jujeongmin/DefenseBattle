@@ -77,6 +77,7 @@ export class Menu {
     this.selectedChapter = STAGE_BY_ID[nextStageId()].chapter;
     this.render();
     audio.switchBgm('menu');
+    this.prefetchRanking(); // 랭킹 창을 처음 열 때도 바로 보이게
   }
   hide(): void {
     $('main-menu').classList.add('hidden');
@@ -917,6 +918,29 @@ export class Menu {
     void draw();
   }
 
+  /**
+   * 랭킹: 받아 온 목록을 기억해 두고 창을 열면 바로 그린 뒤 새로 받아 바꾼다 (서버 응답을 기다리는 동안 빈 창이 보이지 않게).
+   * 로비에 들어올 때 미리 한 번 받아 둔다 (prefetchRanking).
+   */
+  private rankHtml = '';
+  private rankFetch: Promise<string> | null = null;
+  private fetchRanking(): Promise<string> {
+    if (this.rankFetch) return this.rankFetch;
+    this.rankFetch = (async () => {
+      const net = await import('./net/server');
+      const res = await net.callGlobal<{ top: { account: string; nick: string; trophies: number }[]; me: { trophies: number } }>('pvpLeaderboard');
+      const mine = net.myAccount();
+      this.rankHtml = res.top.length
+        ? res.top.map((r, i) => `<div class="rank-row ${r.account === mine ? 'me' : ''}"><span class="r">${i < 3 ? icon((['medal', 'medal_silver', 'medal_bronze'] as const)[i]) : i + 1}</span>
+            <span>${esc(r.nick)} <span class="fine">${pvpTier(r.trophies).kr}</span></span><span class="trophy">${icon('trophy')} ${r.trophies}</span></div>`).join('')
+        : tl('<div class="fine">아직 기록이 없습니다. 첫 승리를 차지하세요!</div>');
+      return this.rankHtml;
+    })().finally(() => { this.rankFetch = null; });
+    return this.rankFetch;
+  }
+  prefetchRanking(): void {
+    if (onlineAvailable() && !this.rankHtml) void this.fetchRanking().catch(() => {});
+  }
   private async drawRanking(): Promise<void> {
     const body = $('pvp-body');
     if (!onlineAvailable()) {
@@ -924,16 +948,12 @@ export class Menu {
         <div class="rank-row me"><span class="r">-</span><span>${esc(meta.nick)}</span><span class="trophy">${icon('trophy')} ${meta.pvp.trophies}</span></div>`;
       return;
     }
+    if (this.rankHtml) body.innerHTML = this.rankHtml; // 지난번 목록을 바로
     try {
-      const net = await import('./net/server');
-      const res = await net.callGlobal<{ top: { account: string; nick: string; trophies: number }[]; me: { trophies: number } }>('pvpLeaderboard');
-      const mine = net.myAccount();
-      body.innerHTML = res.top.length
-        ? res.top.map((r, i) => `<div class="rank-row ${r.account === mine ? 'me' : ''}"><span class="r">${i < 3 ? icon((['medal', 'medal_silver', 'medal_bronze'] as const)[i]) : i + 1}</span>
-            <span>${esc(r.nick)} <span class="fine">${pvpTier(r.trophies).kr}</span></span><span class="trophy">${icon('trophy')} ${r.trophies}</span></div>`).join('')
-        : tl('<div class="fine">아직 기록이 없습니다. 첫 승리를 차지하세요!</div>');
+      const html = await this.fetchRanking();
+      if (document.body.contains(body)) body.innerHTML = html;
     } catch {
-      body.innerHTML = tl('<div class="fine">랭킹을 불러오지 못했어요.</div>');
+      if (!this.rankHtml) body.innerHTML = tl('<div class="fine">랭킹을 불러오지 못했어요.</div>');
     }
   }
 
