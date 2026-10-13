@@ -262,7 +262,7 @@ async function doubleReward(): Promise<void> {
     // 결과 보상 칸의 보석 옆에 초록색으로 더 받은 만큼 (+40 → +40 +40)
     const gemRw = [...document.querySelectorAll<HTMLElement>('#gameover-panel .rw')].find((r) => r.querySelector('.pi-gem'));
     if (gemRw && amount > 0 && !gemRw.querySelector('.rw-bonus')) gemRw.insertAdjacentHTML('beforeend', ` <span class="rw-bonus">+${amount}</span>`);
-    toast(tl('보상 2배! {0} +{1}', icon('gem'), amount));
+    toast(tl('보상 2배! {0} +{1}', icon('gem'), amount * 2)); // 더 받은 양(amount)이 아니라 2배가 된 합계
     if (btn) btn.innerHTML = tl('{0} 2배 보상 받음', icon('check'));
   } else if (btn) {
     btn.disabled = false;
