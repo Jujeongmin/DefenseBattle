@@ -744,11 +744,12 @@ export class Menu {
         ${eff > 100 ? `<span class="eff">${tl('효율')}<b>${eff}%</b></span>` : ''}<img class="shop-img" src="/ui/shop/${p.id}.png" alt=""><div>${p.kr}</div>
         <button class="btn small gold" data-act="buy" data-id="${p.id}">VX ${price(p.id)}</button></div>`;
       }).join('');
-      // 무료: 광고 보고 소환권 (오늘 남은 횟수가 있으면 빨간 점 - 로비 상점 아이콘 점과 같은 조건)
+      const tix = meta.items.gachaTicket || 0;
+      // 무료: 광고 보고 뽑기권 (오늘 남은 횟수가 있으면 빨간 점)
       const adLeft = freeTicketAdsLeft();
       const free = rewardedAvailable()
-        ? `<div class="section-title">${tl('무료')} <span class="fine">${tl('캠페인·무한 모드 전용')}</span></div>
-          <div class="row free-row"><div class="ic">${icon('tv')}${adLeft ? '<span class="dot"></span>' : ''}</div><div class="info"><div class="t">${tl('광고 보고 소환권 {0}장', FREE_TICKET_AMOUNT)}</div><div class="d">${tl('오늘 {0}회 남음', adLeft)}</div></div>
+        ? `<div class="section-title">${tl('무료')}</div>
+          <div class="row free-row"><div class="ic">${icon('tv')}${adLeft ? '<span class="dot"></span>' : ''}</div><div class="info"><div class="t">${tl('광고 보고 뽑기권 {0}장', FREE_TICKET_AMOUNT)}</div><div class="d">${tl('오늘 {0}회 남음', adLeft)}</div></div>
             <button class="btn small blue" data-act="adTicket" ${adLeft ? '' : 'disabled'}>${tl('받기')}</button></div>` : '';
       const items = Object.entries(meta.items).map(([k, n]) => `<span class="tip-item" data-tip-item="${k}">${icon(ITEM_KR[k as keyof typeof ITEM_KR].icon)}${n}</span>`).join(' · ');
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
@@ -759,10 +760,11 @@ export class Menu {
         ${activeOffers().length ? `<div class="section-title hot-title">${icon('timer')} ${tl('한정 특가')}</div>${activeOffers().map((o) => card(o.id, true)).join('')}` : ''}
         <div class="section-title">${tl('유닛 뽑기')} <span class="fine">${tl('카드로 해금·레벨업')}</span><button class="btn small odds-btn" data-act="odds">${tl('확률 정보')}</button></div>
         <div class="gacha-row">
-          <button class="btn blue gacha-btn" data-act="gacha" data-n="1">${tl('1회')}<small>${icon('gem')}${GACHA.one}</small></button>
-          <button class="btn gold gacha-btn" data-act="gacha" data-n="10">${tl('10회')}<small>${icon('gem')}${GACHA.ten} ${tl('· 영웅+ 보장')}</small></button>
+          <button class="btn blue gacha-btn" data-act="gacha" data-n="1"${tix >= 1 ? ' data-ticket="1"' : ''}>${tl('1회')}<small>${tix >= 1 ? `${icon('ticket')}1 ${tl('(보유 {0})', tix)}` : `${icon('gem')}${GACHA.one}`}</small></button>
+          <button class="btn gold gacha-btn" data-act="gacha" data-n="10"${tix >= 10 ? ' data-ticket="1"' : ''}>${tl('10회')}<small>${tix >= 10 ? `${icon('ticket')}10` : `${icon('gem')}${GACHA.ten}`} ${tl('· 영웅+ 보장')}</small></button>
         </div>
         <div class="fine" style="margin:-4px 0 8px">${(['common', 'rare', 'epic', 'legendary'] as const).map((r) => `<span style="color:${RARITY_COLOR[r]}">${RARITY_KR[r]} ${Math.round(GACHA.rates[r] * 100)}%</span>`).join(' · ')}</div>
+        ${card('summon_ticket_pack')}
         <div class="section-title">${tl('상자')} <button class="btn small odds-btn" data-act="odds">${tl('확률 정보')}</button></div>
         ${card('chest_gold')}${card('chest_magic')}${card('chest_legend', true)}
         <div class="section-title">${tl('추천 패키지')}</div>
@@ -772,13 +774,13 @@ export class Menu {
         ${UNITS.some((u) => unitPackAvailable(u.id)) ? `<div class="section-title">${tl('유닛 패키지')} <span class="fine">${tl('바로 해금 + Lv5')}</span></div>${UNITS.filter((u) => unitPackAvailable(u.id)).map((u) => card(UNIT_PACK[u.id]!)).join('')}` : ''}
         <div class="section-title">${tl('PvP 시즌 패스')}</div>${card('season_premium')}
         <div class="section-title">${tl('부스터')} <span class="fine">${tl('캠페인·무한 모드 전용')}</span></div>
-        ${card('summon_ticket_pack')}${card('mythic_ticket')}${card('gold_booster_pack')}
+        ${card('gold_booster_pack')}
         <div class="section-title">${tl('보석')}</div><div class="gem-grid">${gems}</div>
         <div class="fine">${vx !== null ? tl('* 로컬 개발 환경: 데모 VX 로 결제를 흉내냅니다.') : tl('* 결제는 Verse8 VX 로 진행되며, 결제 완료 후 자동 지급됩니다.')}</div></div>`, () => this.render());
       bindActions(el, {
         odds: () => { audio.button(); this.openOdds(); },
         adTicket: async () => {
-          if (await watchForTickets()) { audio.coin(); toast(tl('소환권 +{0} {1}', FREE_TICKET_AMOUNT, icon('ticket'))); }
+          if (await watchForTickets()) { audio.coin(); toast(tl('뽑기권 +{0} {1}', FREE_TICKET_AMOUNT, icon('ticket'))); }
           draw();
         },
         buy: async (b) => {
@@ -796,9 +798,10 @@ export class Menu {
         },
         gacha: async (b) => {
           const n = Number(b.dataset.n) as 1 | 10;
+          const ticket = b.dataset.ticket === '1'; // 뽑기권이 있으면 보석 대신 뽑기권
           const cost = n === 1 ? GACHA.one : GACHA.ten;
-          if (meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, draw); return; }
-          const r = await act<Reveal | null>('gacha', { n });
+          if (!ticket && meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, draw); return; }
+          const r = await act<Reveal | null>('gacha', { n, ticket });
           if (r) { draw(); showReveal(r, draw); }
         },
       });
@@ -817,7 +820,7 @@ export class Menu {
         const t = seasonTier();
         const inTier = meta.season.xp % SEASON_XP_PER_TIER;
         // 단계마다 큰 카드 (위: 프리미엄, 아래: 무료). 옆으로 넘기는 띠 - 열면 지금 단계로 이동
-        const bigIc = (r: SeasonReward) => icon(r.items?.mythicTicket ? 'star' : r.items?.summonTicket ? 'ticket' : r.items?.goldBooster ? 'bag' : 'gem');
+        const bigIc = (r: SeasonReward) => icon(r.items?.gachaTicket ? 'ticket' : r.items?.goldBooster ? 'bag' : 'gem');
         const cell = (r: SeasonReward, n: number, prem: boolean, cls: string) => `<button class="sp-cell ${prem ? 'prem' : 'free'} ${cls}" data-act="claim" data-n="${n}" data-p="${prem ? 1 : 0}">
             <span class="sp-tag">${prem ? tl('프리미엄') : tl('무료')}</span>
             <span class="sp-ic">${bigIc(r)}</span><span class="sp-amt">${rewardText(r)}</span>

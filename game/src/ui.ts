@@ -1,5 +1,5 @@
 // ============================================================
-//  게임 화면 DOM UI - 상단바/소환/강화/합성·판매/소환권/PvP HUD/결과/튜토리얼
+//  게임 화면 DOM UI - 상단바/소환/강화/합성·판매/PvP HUD/결과/튜토리얼
 // ============================================================
 import {
   JOB_KR, RACE_KR, GRADES, DMG_MULT, WAVE, GRADE_INDEX, MERGE_COUNT, PLAY_SPEED, ATTACKS, JOBS,
@@ -7,7 +7,6 @@ import {
 import { MAP, Game, pathPosNear, type BoardSnapshot } from './engine';
 import { mobPortraitSrc, unitIconUrl, mobSprite, preloadUnits } from './assets';
 import { meta, saveMeta } from './meta';
-import { act } from './econ';
 import { audio } from './audio';
 import { $, toast, spriteIcon, popIn } from './dom';
 import { icon } from './icons';
@@ -64,7 +63,6 @@ export class UI {
   private speedIdx = 0;
   private lastRace: Race | null = null;
   private lastMergeKey = '';
-  private lastTickets = '';
   private sellOpen: (() => void) | null = null;
   private coachTimer: ReturnType<typeof setTimeout> | null = null;
   private opp: OppRenderer | null = null; // PvP 상대 전장
@@ -102,7 +100,6 @@ export class UI {
     $('coach').classList.add('hidden');
     $('countdown').classList.add('hidden');
     this.renderStacks();
-    this.renderTickets();
   }
 
   private bind(): void {
@@ -363,29 +360,6 @@ export class UI {
     this.summonLock = false;
     this.hintEl?.remove();
     this.hintEl = null;
-  }
-
-  // ---------- 소환권 (일반 모드 전용) ----------
-  renderTickets(): void {
-    const row = $('ticket-row');
-    if (this.ctx.kind === 'pvp') { row.innerHTML = ''; return; }
-    const key = `${meta.items.summonTicket}:${meta.items.mythicTicket}`;
-    if (key === this.lastTickets) return;
-    this.lastTickets = key;
-    const chips: string[] = [];
-    if (meta.items.summonTicket > 0) chips.push(`<button class="ticket-chip" data-t="summonTicket" title="${tl('무료 소환권')}" aria-label="${tl('무료 소환권')}">${icon('ticket')}×${meta.items.summonTicket}</button>`);
-    if (meta.items.mythicTicket > 0) chips.push(`<button class="ticket-chip mythic" data-t="mythicTicket" title="${tl('신화 확정 소환권')}" aria-label="${tl('신화 확정 소환권')}">${icon('star')}×${meta.items.mythicTicket}</button>`);
-    row.innerHTML = chips.join('');
-    row.querySelectorAll<HTMLButtonElement>('[data-t]').forEach((b) => {
-      b.onclick = async () => {
-        if (this.game.over || (meta.items[b.dataset.t as 'summonTicket'] ?? 0) <= 0) return;
-        const t = b.dataset.t as 'summonTicket' | 'mythicTicket';
-        if (!(await act<boolean>('useItem', { key: t }))) return; // 서버가 차감해야 소환
-        const u = this.game.summonFree(t === 'mythicTicket' ? 'mythic' : undefined);
-        if (u) audio.summon(u.gradeIndex >= GRADE_INDEX['mythic']);
-        this.renderTickets();
-      };
-    });
   }
 
   // ---------- 하단 유닛 카드 (덱 순서, 직업 단위 강화) ----------

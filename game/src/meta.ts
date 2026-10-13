@@ -5,6 +5,7 @@
 import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS, FEATURE_UNLOCK, STARTER_ATTACKS, ATTACK_BY_KEY, PVP_TIERS } from './config';
 import { getPlatform } from './platform';
 import type { MetaData, ResearchKey, QuestStat, AchievementDef } from './types';
+import { convertLegacyItems } from './econ/rules';
 
 import { tl } from './i18n';
 export function todayStr(): string {
@@ -31,7 +32,7 @@ function freshMeta(): MetaData {
       claimed: Object.fromEntries(DAILY_QUESTS.map((q) => [q.key, false])),
     },
     bestWave: 0,
-    items: { summonTicket: 0, mythicTicket: 0, goldBooster: 0 },
+    items: { gachaTicket: 0, goldBooster: 0 },
     season: freshSeason(),
     monthly: { expires: 0, lastClaim: '' },
     grantedPurchases: [],
@@ -66,7 +67,9 @@ function load(): MetaData {
   const fresh = freshMeta();
   m.research = Object.assign(fresh.research, m.research || {});
   m.achievements = Object.assign(fresh.achievements, m.achievements || {});
-  m.items = Object.assign(fresh.items, m.items || {});
+  const items = { ...(m.items || {}) } as Record<string, number>;
+  convertLegacyItems(items); // 예전 소환권·신화 확정권 → 뽑기권 (온라인이면 서버 값이 곧 덮어쓴다)
+  m.items = Object.assign(fresh.items, items);
   m.monthly = Object.assign(fresh.monthly, m.monthly || {});
   m.pvp = Object.assign(fresh.pvp, m.pvp || {});
   m.oneTime = m.oneTime || {};

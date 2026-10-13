@@ -95,7 +95,7 @@ export function rewardText(r: SeasonReward): string {
   const parts: string[] = [];
   if (r.crystals) parts.push(`${icon('gem')}${r.crystals}`);
   if (r.items) {
-    const icons: Record<ItemKey, IconName> = { summonTicket: 'ticket', mythicTicket: 'star', goldBooster: 'bag' };
+    const icons: Record<ItemKey, IconName> = { gachaTicket: 'ticket', goldBooster: 'bag' };
     for (const [k, n] of Object.entries(r.items)) if (n) parts.push(`${icon(icons[k as ItemKey])}${n}`);
   }
   return parts.join(' ');

@@ -87,6 +87,25 @@ describe('경제는 서버 권위', () => {
     expect(rich.econ.crystals).toBe(0);
   });
 
+  test('뽑기권: 광고로 1장 받고, 뽑기권으로 뽑으면 보석 대신 뽑기권이 줄어든다', async (server) => {
+    server.connect({ account: 'tix' });
+    const none = await server.econ({ action: 'gacha', args: { n: 1, ticket: true } });
+    expect(none.result).toBe(null);
+    const ad = await server.econ({ action: 'adReward', args: { kind: 'tickets' } });
+    expect(ad.result).toBe(1);
+    expect(ad.econ.items.gachaTicket).toBe(1);
+    const ten = await server.econ({ action: 'gacha', args: { n: 10, ticket: true } });
+    expect(ten.result).toBe(null); // 10회는 10장 필요
+    const one = await server.econ({ action: 'gacha', args: { n: 1, ticket: true } });
+    expect(one.result.drops.length > 0).toBe(true);
+    expect(one.econ.items.gachaTicket).toBe(0);
+    expect(one.econ.crystals).toBe(0);
+    await server.$onItemPurchased({ account: 'tix', purchaseId: 't1', productId: 'summon_ticket_pack', quantity: 1 });
+    server.connect({ account: 'tix' });
+    const got = await server.claimPurchases();
+    expect(got.econ.items.gachaTicket).toBe(3);
+  });
+
   test('없는 동작·서버 전용 동작은 거부', async (server) => {
     server.connect({ account: 'hal' });
     let err = '';
@@ -112,11 +131,13 @@ describe('경제는 서버 권위', () => {
 
   test('예전 저장본은 한 번만, 상한으로 잘라서 옮긴다', async (server) => {
     server.connect({ account: 'old' });
-    await server.saveProfile({ crystals: 5000000, units: { archer: 7, ranger: 3 }, items: { summonTicket: 9999 } });
+    await server.saveProfile({ crystals: 5000000, units: { archer: 7, ranger: 3 }, items: { summonTicket: 9999, mythicTicket: 2 } });
     const sync = await server.econSync();
     expect(sync.econ.crystals).toBe(20000);
     expect(sync.econ.units.archer).toBe(7);
-    expect(sync.econ.items.summonTicket).toBe(100);
+    // 예전 소환권(상한 100 → 10장당 1)·신화 확정권(1장당 6)은 뽑기권으로
+    expect(sync.econ.items.gachaTicket).toBe(10 + 12);
+    expect(sync.econ.items.summonTicket).toBeUndefined();
     await server.saveProfile({ crystals: 7777 }); // 옮긴 뒤로는 무시
     const s2 = await server.econSync();
     expect(s2.econ.crystals).toBe(20000);

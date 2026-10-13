@@ -1243,16 +1243,6 @@ b, strong { font-weight: 700; }
 .side-btn:active { border-image-source: url('/ui/frame/btn_gold_down.png'); padding: 6px 0 2px; }
 .side-btn .dot { top: -4px; right: -4px; }
 .summon-wrap { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
-#ticket-row { display: flex; gap: 4px; justify-content: center; }
-#ticket-row:empty { display: none; }
-.ticket-chip {
-  border: 0; background: none; cursor: pointer;
-  border-image: url('/ui/frame/btn_blue.png') 44 fill / 12px;
-  padding: 6px 11px 9px; font-size: 11px; font-weight: 700; white-space: nowrap;
-  min-width: 0; overflow: hidden; text-overflow: ellipsis;
-  color: var(--cream); text-shadow: var(--outline-thin);
-}
-.ticket-chip.mythic { border-image-source: url('/ui/frame/btn_purple.png'); }
 .summon-btn {
   width: 100%;
   border: 0; background: none; cursor: pointer;

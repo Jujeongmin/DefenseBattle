@@ -217,7 +217,8 @@ export interface AttackPayload {
 }
 
 // 소모성/영구 아이템 인벤토리 (결제·보상으로 획득)
-export type ItemKey = 'summonTicket' | 'mythicTicket' | 'goldBooster';
+// gachaTicket: 상점 유닛 뽑기 1회. (예전 판 안 아이템 summonTicket·mythicTicket 은 econ/rules.ts convertLegacyItems 가 바꿔 준다)
+export type ItemKey = 'gachaTicket' | 'goldBooster';
 
 // meta.ts
 export interface MetaData {

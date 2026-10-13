@@ -343,7 +343,6 @@ function step(now: number): void {
     if (snapAcc >= PVP.reportInterval) { snapAcc = 0; session.sendSnapshot(game.snapshot()); }
   }
   lastFrame = now;
-  ui.renderTickets();
 }
 function loop(now: number): void {
   step(now);

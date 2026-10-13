@@ -53,7 +53,7 @@ const MS_PER_WAVE = 2500;
 function freshEcon(): Omit<Econ, 'deck' | 'daily' | 'pvp'> {
   return {
     crystals: 0,
-    items: { summonTicket: 0, mythicTicket: 0, goldBooster: 0 },
+    items: { gachaTicket: 0, goldBooster: 0 },
     cards: {},
     units: { archer: 1, wizard: 1, warrior: 1 },
     research: Object.fromEntries(RESEARCH.map((r) => [r.key, 0])) as Econ['research'],
@@ -74,7 +74,10 @@ function migrateEcon(old: Record<string, any> | null | undefined): Omit<Econ, 'd
   const e = freshEcon();
   if (!old) return e;
   e.crystals = clampN(old.crystals, 20000);
-  for (const k of Object.keys(e.items) as (keyof Econ['items'])[]) e.items[k] = clampN(old.items?.[k], 100);
+  const oldItems: Record<string, number> = {};
+  for (const k of ['summonTicket', 'mythicTicket', 'gachaTicket', 'goldBooster']) oldItems[k] = clampN(old.items?.[k], 100);
+  R.convertLegacyItems(oldItems); // 예전 판 안 소환권·신화 확정권 → 뽑기권
+  for (const k of Object.keys(e.items) as (keyof Econ['items'])[]) e.items[k] = clampN(oldItems[k], 100);
   for (const u of UNITS) {
     const lv = clampN(old.units?.[u.id], 10);
     if (lv) e.units[u.id] = lv;
@@ -100,6 +103,7 @@ async function loadEcon(account: string): Promise<Econ> {
   const st = await $global.getUserState(account, ['econ', 'meta', 'pvp']);
   const rec = st.econ as EconRec | undefined;
   const data = rec?.v === ECON_VERSION ? rec.data : migrateEcon(st.meta);
+  R.convertLegacyItems(data.items as Record<string, number>); // 소환권·신화 확정권이 남은 계정 (뽑기권으로 바뀌기 전 저장본)
   const deck = Array.isArray(st.meta?.deck) ? [...st.meta.deck] : ['archer', 'wizard', 'warrior'];
   return { ...data, deck, daily: st.meta?.daily ?? { date: '', progress: {}, claimed: {} }, pvp: { ...freshStats(), ...(st.pvp || {}) } } as Econ;
 }

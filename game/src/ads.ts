@@ -13,8 +13,8 @@ export const AD_PLACEMENTS = {
   revive: 'reward_revive',
   freeTicket: 'reward_ticket',
 } as const;
-export const FREE_TICKET_ADS_PER_DAY = 3;
-export const FREE_TICKET_AMOUNT = 5;
+export const FREE_TICKET_ADS_PER_DAY = 3; // econ/rules.ts AD_TICKETS_PER_DAY 와 같게
+export const FREE_TICKET_AMOUNT = 1;      // 광고 1번 = 뽑기권 1장 (econ/rules.ts AD_TICKET_AMOUNT)
 
 type AdsModule = typeof import('@verse8/ads');
 let mod: Promise<AdsModule> | null = null;

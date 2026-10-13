@@ -491,7 +491,7 @@ export interface ProductGrant {
   chest?: ChestKind;        // 상자 바로 열기
 }
 // offer = 팝업으로 뜨는 24시간 한정 상품 (뜬 동안만 상점에도 보임), unit = 유닛 패키지
-export type ProductCategory = 'crystal' | 'package' | 'booster' | 'pass' | 'offer' | 'unit' | 'chest';
+export type ProductCategory = 'crystal' | 'package' | 'booster' | 'pass' | 'offer' | 'unit' | 'chest' | 'gacha' | 'retired';
 export interface ProductDef {
   id: string;
   kr: string;
@@ -509,7 +509,7 @@ export const MONTHLY_DAILY_CRYSTALS = 40;
 // 가성비(효율) 계산 기준: 1 VX = 보석 1. 아이템은 보석 가치로 환산한다.
 // 상점에 '효율 300%' 처럼 보여 줘 패키지 구매를 유도한다 (가격은 VX Shop 등록 가격 기준으로 계산).
 export const GEM_PER_VX = 1;
-export const ITEM_GEM_VALUE: Record<ItemKey, number> = { summonTicket: 10, mythicTicket: 600, goldBooster: 50 };
+export const ITEM_GEM_VALUE: Record<ItemKey, number> = { gachaTicket: 100, goldBooster: 50 }; // 뽑기권 = 유닛 뽑기 1회 (GACHA.one)
 /** 상품의 보석 환산 가치 (광고 제거·시즌 패스처럼 환산이 안 되는 혜택은 빼고) */
 export function productGemValue(p: ProductDef): number {
   const g = p.grant;
@@ -532,8 +532,8 @@ export function productEfficiency(p: ProductDef, price = p.vx): number {
 export const PRODUCTS: ProductDef[] = [
   // 패키지
   { id: 'starter_pack', kr: tl('스타터 패키지'), icon: 'chest', category: 'package', vx: 100, oneTime: true, badge: tl('1회 한정'),
-    desc: tl('보석 150 + 소환권 10 + 골드 부스터 1'),
-    grant: { crystals: 150, items: { summonTicket: 10, goldBooster: 1 } } },
+    desc: tl('보석 150 + 뽑기권 1 + 골드 부스터 1'),
+    grant: { crystals: 150, items: { gachaTicket: 1, goldBooster: 1 } } },
   { id: 'monthly_pass', kr: tl('월정액 (30일)'), icon: 'calendar', category: 'package', vx: 500, badge: tl('추천'),
     desc: tl('즉시 보석 300 + 30일간 매일 보석 {0}', MONTHLY_DAILY_CRYSTALS),
     grant: { crystals: 300, monthlyDays: 30 } },
@@ -544,20 +544,22 @@ export const PRODUCTS: ProductDef[] = [
   { id: 'season_premium', kr: tl('PvP 시즌 패스'), icon: 'trophy', category: 'pass', vx: 1000,
     desc: tl('이번 시즌 프리미엄 보상 트랙 해금 (지난 단계 보상도 수령 가능)'),
     grant: { seasonPremium: true } },
+  // 뽑기권 (상품 id 는 Verse8 대시보드 등록 그대로 - 예전 '소환권 24장')
+  { id: 'summon_ticket_pack', kr: tl('뽑기권 3장'), icon: 'ticket', category: 'gacha', vx: 200,
+    desc: tl('유닛 뽑기 3회'), grant: { items: { gachaTicket: 3 } } },
+  // 판매 중단 (상점에 안 보임): 대시보드에서 내리기 전에 결제되면 같은 가치의 뽑기권으로 지급
+  { id: 'mythic_ticket', kr: tl('뽑기권 6장'), icon: 'ticket', category: 'retired', vx: 500,
+    desc: tl('유닛 뽑기 6회'), grant: { items: { gachaTicket: 6 } } },
   // 부스터 (일반 모드 전용 - PvP 에서는 사용 불가)
-  { id: 'summon_ticket_pack', kr: tl('소환권 24장'), icon: 'ticket', category: 'booster', vx: 200,
-    desc: tl('골드 없이 소환 24회 (일반 모드)'), grant: { items: { summonTicket: 24 } } },
-  { id: 'mythic_ticket', kr: tl('신화 확정 소환권'), icon: 'star', category: 'booster', vx: 500,
-    desc: tl('신화 등급 유닛 1회 확정 소환 (일반 모드)'), grant: { items: { mythicTicket: 1 } } },
   { id: 'gold_booster_pack', kr: tl('골드 부스터 5개'), icon: 'bag', category: 'booster', vx: 200,
     desc: tl('사용한 판의 시작 골드 2배 (일반 모드)'), grant: { items: { goldBooster: 5 } } },
   // 팝업 한정 패키지 (24시간) - 패배 연속 / 새 아레나 / 새 챕터 때 뜬다 (offers.ts)
   { id: 'offer_comeback', kr: tl('다시 일어서기 패키지'), icon: 'chest', category: 'offer', vx: 200, badge: tl('24시간 한정'),
-    desc: tl('보석 300 + 소환권 10 + 골드 부스터 2'), grant: { crystals: 300, items: { summonTicket: 10, goldBooster: 2 } } },
+    desc: tl('보석 300 + 뽑기권 1 + 골드 부스터 2'), grant: { crystals: 300, items: { gachaTicket: 1, goldBooster: 2 } } },
   { id: 'offer_arena', kr: tl('승급 축하 패키지'), icon: 'crown', category: 'offer', vx: 500, badge: tl('24시간 한정'),
-    desc: tl('보석 1,000 + 신화 확정 소환권 1'), grant: { crystals: 1000, items: { mythicTicket: 1 } } },
+    desc: tl('보석 1,000 + 뽑기권 6'), grant: { crystals: 1000, items: { gachaTicket: 6 } } },
   { id: 'offer_chapter', kr: tl('새 챕터 패키지'), icon: 'map', category: 'offer', vx: 500, badge: tl('24시간 한정'),
-    desc: tl('보석 800 + 소환권 30 + 골드 부스터 4'), grant: { crystals: 800, items: { summonTicket: 30, goldBooster: 4 } } },
+    desc: tl('보석 800 + 뽑기권 3 + 골드 부스터 4'), grant: { crystals: 800, items: { gachaTicket: 3, goldBooster: 4 } } },
   // 유닛 패키지 - 바로 해금 + Lv5 (계정당 1회)
   { id: 'unit_ranger', kr: tl('레인저 패키지'), icon: 'helmet', category: 'unit', vx: 300, oneTime: true,
     desc: tl('레인저 즉시 해금 + Lv5 + 보석 200'), grant: { units: { ranger: 5 }, crystals: 200 } },
@@ -595,8 +597,7 @@ export const UNIT_PACK: Partial<Record<Job, string>> = {
 export const PRODUCT_BY_ID: Record<string, ProductDef> = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
 
 export const ITEM_KR: Record<ItemKey, { kr: string; icon: IconName; desc: string }> = {
-  summonTicket: { kr: tl('소환권'), icon: 'ticket', desc: tl('판 안에서 골드 없이 유닛 1회 소환') },
-  mythicTicket: { kr: tl('신화 확정권'), icon: 'star', desc: tl('판 안에서 신화 등급 유닛을 바로 소환') },
+  gachaTicket: { kr: tl('뽑기권'), icon: 'ticket', desc: tl('상점에서 유닛 뽑기 1회 (보석 대신)') },
   goldBooster: { kr: tl('골드 부스터'), icon: 'bag', desc: tl('켜고 시작하면 그 판 시작 골드 2배 (일반 모드)') },
 };
 
@@ -605,10 +606,10 @@ export interface SeasonReward { crystals?: number; items?: Partial<Record<ItemKe
 export const SEASON_XP_PER_TIER = 200;
 export const SEASON_TIERS: { free: SeasonReward; premium: SeasonReward }[] = Array.from({ length: 20 }, (_, i) => {
   const tier = i + 1;
-  const free: SeasonReward = tier % 5 === 0 ? { items: { summonTicket: 5 } } : { crystals: 20 + tier * 2 };
+  const free: SeasonReward = tier % 5 === 0 ? { items: { gachaTicket: 1 } } : { crystals: 20 + tier * 2 };
   const premium: SeasonReward =
-    tier % 10 === 0 ? { items: { mythicTicket: 1 }, crystals: 200 }
-      : tier % 5 === 0 ? { items: { goldBooster: 2, summonTicket: 10 } }
+    tier % 10 === 0 ? { items: { gachaTicket: 6 }, crystals: 200 }
+      : tier % 5 === 0 ? { items: { goldBooster: 2, gachaTicket: 1 } }
         : { crystals: 60 + tier * 5 };
   return { free, premium };
 });

@@ -465,16 +465,6 @@ export class Game {
     return this.createUnit(job, gradeKey);
   }
 
-  // 골드 없이 소환 (소환권/신화 확정권, 개발 모드 디버그 버튼).
-  // gradeKey 를 주면 해당 등급 확정, 없으면 일반 확률.
-  summonFree(gradeKey?: GradeKey): Unit | null {
-    if (this.over) return null;
-    this.summons += 1;
-    this.progress('summons');
-    const g = gradeKey ?? rollGrade(this.res('rare') * RESEARCH_PER.rare);
-    return this.createUnit(rollJob(this.opts.deck), g);
-  }
-
   // ---------------- 합성 ----------------
   // 같은 직업·등급 3개 → 같은 직업 상위 등급 1개 (태초는 합성 불가)
   canMerge(job: Job, gradeKey: GradeKey): boolean {

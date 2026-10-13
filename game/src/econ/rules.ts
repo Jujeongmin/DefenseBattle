@@ -49,6 +49,17 @@ export function addCards(e: Econ, job: Job, n: number): boolean {
 export function addItem(e: Econ, key: ItemKey, n: number): void {
   e.items[key] = Math.max(0, (e.items[key] || 0) + n);
 }
+/** 예전 판 안 아이템 → 뽑기권 (가치 기준: 소환권 10장 = 1장(올림), 신화 확정권 1장 = 6장). 바뀌었으면 true */
+export const LEGACY_TICKETS_PER_GACHA = 10;
+export const MYTHIC_TO_GACHA = 6;
+export function convertLegacyItems(items: Record<string, number>): boolean {
+  const old = Number(items.summonTicket) || 0, mythic = Number(items.mythicTicket) || 0;
+  if (!('summonTicket' in items) && !('mythicTicket' in items)) return false;
+  items.gachaTicket = (Number(items.gachaTicket) || 0) + Math.ceil(Math.max(0, old) / LEGACY_TICKETS_PER_GACHA) + Math.max(0, mythic) * MYTHIC_TO_GACHA;
+  delete items.summonTicket;
+  delete items.mythicTicket;
+  return true;
+}
 export function upgradeUnit(e: Econ, job: Job): boolean {
   const lv = e.units[job] ?? 0;
   const need = cardsNeeded(UNIT_BY_ID[job].rarity, lv);
@@ -75,7 +86,7 @@ export function research(e: Econ, key: ResearchKey): boolean {
   e.research[key] = lv + 1;
   return true;
 }
-/** 소환권·신화 확정권·골드 부스터 1개 사용 */
+/** 골드 부스터 1개 사용 */
 export function useItem(e: Econ, key: ItemKey): boolean {
   if ((e.items[key] || 0) <= 0) return false;
   e.items[key] -= 1;
@@ -143,10 +154,16 @@ export function openSlot(e: Econ, i: number, pay: boolean, ctx: Ctx): Reveal | n
   e.chests[i] = null;
   return openChestNow(e, c.kind, ctx);
 }
-export function gacha(e: Econ, n: 1 | 10, ctx: Ctx): Reveal | null {
-  const cost = n === 1 ? GACHA.one : GACHA.ten;
-  if (e.crystals < cost) return null;
-  e.crystals -= cost;
+/** 유닛 뽑기: 보석으로, 또는 ticket=true 면 뽑기권 n장으로 (10회도 영웅+ 보장 그대로) */
+export function gacha(e: Econ, n: 1 | 10, ctx: Ctx, ticket = false): Reveal | null {
+  if (ticket) {
+    if ((e.items.gachaTicket || 0) < n) return null;
+    e.items.gachaTicket -= n;
+  } else {
+    const cost = n === 1 ? GACHA.one : GACHA.ten;
+    if (e.crystals < cost) return null;
+    e.crystals -= cost;
+  }
   const roll = (): Rarity => {
     let r = ctx.rng();
     for (const k of ['legendary', 'epic', 'rare', 'common'] as Rarity[]) { if (r < GACHA.rates[k]) return k; r -= GACHA.rates[k]; }
@@ -222,9 +239,9 @@ export function endlessEnd(e: Econ, wave: number, ctx: Ctx): number {
   setLastReward(e, c, ctx);
   return c;
 }
-/** 광고 보상: 'double' 직전 판 보상 한 번 더, 'tickets' 소환권 (하루 횟수 제한) */
+/** 광고 보상: 'double' 직전 판 보상 한 번 더, 'tickets' 뽑기권 (하루 횟수 제한) */
 export const AD_TICKETS_PER_DAY = 3;
-export const AD_TICKET_AMOUNT = 5;
+export const AD_TICKET_AMOUNT = 1;
 export function adReward(e: Econ, kind: 'double' | 'tickets', ctx: Ctx): number {
   const o = e.oneTime as Record<string, any>;
   if (kind === 'double') {
@@ -237,7 +254,7 @@ export function adReward(e: Econ, kind: 'double' | 'tickets', ctx: Ctx): number 
   const k = `adTicket:${todayOf(ctx.now)}`;
   if (Number(o[k] || 0) >= AD_TICKETS_PER_DAY) return 0;
   o[k] = Number(o[k] || 0) + 1;
-  addItem(e, 'summonTicket', AD_TICKET_AMOUNT);
+  addItem(e, 'gachaTicket', AD_TICKET_AMOUNT);
   return AD_TICKET_AMOUNT;
 }
 export function claimStarReward(e: Econ, chapter: number, goalIdx: number): number {
@@ -326,11 +343,11 @@ const str = (v: unknown) => (typeof v === 'string' ? v : '');
 export const CLIENT_ACTIONS: Record<string, (e: Econ, a: Args, ctx: Ctx) => unknown> = {
   startUnlock: (e, a, ctx) => startUnlock(e, num(a.i), ctx),
   openSlot: (e, a, ctx) => openSlot(e, num(a.i), a.pay === true, ctx),
-  gacha: (e, a, ctx) => (a.n === 10 ? gacha(e, 10, ctx) : gacha(e, 1, ctx)),
+  gacha: (e, a, ctx) => gacha(e, a.n === 10 ? 10 : 1, ctx, a.ticket === true),
   upgradeUnit: (e, a) => upgradeUnit(e, str(a.job) as Job),
   buyUnit: (e, a) => buyUnit(e, str(a.job) as Job),
   research: (e, a) => research(e, str(a.key) as ResearchKey),
-  useItem: (e, a) => (['summonTicket', 'mythicTicket', 'goldBooster'].includes(str(a.key)) ? useItem(e, str(a.key) as ItemKey) : false),
+  useItem: (e, a) => (str(a.key) === 'goldBooster' ? useItem(e, 'goldBooster') : false), // 뽑기권은 gacha 로만 쓴다
   claimRoad: (e, _a, ctx) => claimRoad(e, ctx),
   adReward: (e, a, ctx) => adReward(e, a.kind === 'double' ? 'double' : 'tickets', ctx),
   claimStarReward: (e, a) => claimStarReward(e, num(a.chapter), num(a.goal)),
