@@ -567,9 +567,9 @@ const d: Record<string, string> = {
   "상점에서 유닛 뽑기 1회 (보석 대신)": "One unit draw in the shop (instead of gems)",
   "유닛 뽑기 3회": "3 unit draws",
   "유닛 뽑기 6회": "6 unit draws",
-  "{0}/초": "{0}/s",
   "공속": "Speed",
   "공격력": "Attack",
   "사거리": "Range",
+  "/초": "/s",
 };
 export default d;

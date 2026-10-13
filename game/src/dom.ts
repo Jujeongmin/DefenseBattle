@@ -118,6 +118,14 @@ export function fitText(el: HTMLElement, min = 8): void {
 const FIT_SEL = '.fit, .unit-card .nm, .chest-slot .cn, .rv-name, .deck-slot > div:last-child, .pr-card span, .u-stats span, .u-stats b, .attack-card b, .stack .name, .stack .skill';
 export function fitAll(root: ParentNode): void {
   root.querySelectorAll<HTMLElement>(FIT_SEL).forEach((f) => fitText(f));
+  // 나란히 놓인 칸(능력치 3칸)은 하나만 작아지면 줄이 어긋나 보인다 → 가장 작은 크기로 맞춘다
+  root.querySelectorAll<HTMLElement>('.u-stats').forEach((row) => {
+    for (const sel of ['span', 'b']) {
+      const els = [...row.querySelectorAll<HTMLElement>(`:scope > div > ${sel}`)];
+      const min = Math.min(...els.map((e) => parseFloat(getComputedStyle(e).fontSize)));
+      els.forEach((e) => { e.style.fontSize = `${min}px`; });
+    }
+  });
 }
 
 /** 스프라이트 시트 1프레임 아이콘 HTML */
