@@ -216,13 +216,18 @@ describe('PvP 룸', () => {
     expect(await server.pvpAttack({ card: 42, wave: 4 })).toBe(true);
   });
 
-  test('봇전 결과: 잘못된 id·너무 짧은 경기는 트로피 반영 안 함', async (server) => {
+  test('봇전 결과: 잘못된 id 는 무시, 맞는 id 는 경기 시간과 상관없이 한 번만 반영', async (server) => {
     server.connect({ account: 'b1' });
     const { id } = await server.pvpBotStart();
     expect(await server.pvpBotResult({ id: 'wrong', won: true })).toBe(null);
-    expect(await server.pvpBotResult({ id, won: true })).toBe(null); // 시작 직후 (최소 경기 시간 전)
+    const won = await server.pvpBotResult({ id, won: true }); // 시작 직후여도 반영
+    expect(won.delta > 0).toBe(true);
+    expect(await server.pvpBotResult({ id, won: true })).toBe(null); // 같은 판 두 번은 안 됨
+    const lost = await server.pvpBotResult({ id: (await server.pvpBotStart()).id, won: false }); // 일찍 나가도 패배 반영
+    expect(lost.delta <= 0).toBe(true);
     const lb = await server.pvpLeaderboard();
-    expect(lb.me.trophies).toBe(0);
+    expect(lb.me.wins).toBe(1);
+    expect(lb.me.losses).toBe(1);
   });
 
   test('경기 중 이탈하면 상대 승리', async (server) => {
@@ -243,9 +248,7 @@ describe('닉네임', () => {
   test('닉네임을 바꾸면 랭킹에 바로 반영된다', async (server) => {
     server.connect({ account: 'nicky' });
     const t = (await server.pvpBotStart()).id;
-    const realNow = Date.now;
-    Date.now = () => realNow() + 120000; // 봇전 최소 시간이 지난 것으로
-    try { await server.pvpBotResult({ id: t, won: true }); } finally { Date.now = realNow; }
+    await server.pvpBotResult({ id: t, won: true });
     await server.setNick({ nick: '새이름' });
     const lb = await server.pvpLeaderboard();
     const row = lb.top.find((r: any) => r.account === 'nicky');
