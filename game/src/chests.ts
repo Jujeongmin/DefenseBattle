@@ -32,6 +32,13 @@ export function chestLeftMs(i: number): number {
   const c = meta.chests[i];
   return c?.openAt ? Math.max(0, c.openAt - Date.now()) : c ? CHESTS[c.kind].hours * HOUR : 0;
 }
+/** 여는 중인 상자 남은 시간 - 시:분:초 (1시간 미만이면 분:초) */
+export function clockText(ms: number): string {
+  const t = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+  const two = (n: number) => String(n).padStart(2, '0');
+  return h ? `${h}:${two(m)}:${two(sec)}` : `${two(m)}:${two(sec)}`;
+}
 export function leftText(ms: number): string {
   const m = Math.ceil(ms / 60000);
   return m >= 60 ? `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}` : `${m}분`;

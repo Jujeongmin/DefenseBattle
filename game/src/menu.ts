@@ -31,7 +31,7 @@ import { enableDeckDrag } from './dragdeck';
 import { Spotlight } from './tutorial';
 import { act, type Reveal } from './econ';
 import { showShortage, activeOffers, unitPackAvailable, timeLeft } from './offers';
-import { chestState, chestLeftMs, leftText, opening, showReveal, flushReveals, pendingReveals } from './chests';
+import { chestState, chestLeftMs, leftText, clockText, opening, showReveal, flushReveals, pendingReveals } from './chests';
 import type { Job, Race, ResearchKey } from './types';
 
 /** 덱 화면 안내 줄의 '추천 덱' 버튼 */
@@ -136,7 +136,7 @@ export class Menu {
           <button class="btn red play-btn" data-act="battle">${icon('sword')} 대전 시작</button>
           <div class="arena-sub">${p.wins}승 ${p.losses}패${p.streak > 1 ? ` · ${p.streak}연승` : ''}
             <button class="btn small gold pass-btn" data-act="pass">${icon('trophy')} 시즌 패스${this.seasonClaimable() ? dot : ''}</button></div>
-          <div class="arena-chests"><div class="ac-title">${icon('chest')} 내 상자</div><div class="chest-row">${this.chestSlotsHtml()}</div></div>
+          <div class="arena-chests"><div class="ac-title">${icon('chest')} 내 상자 <span class="ac-hint">한 번에 하나씩 열려요</span></div><div class="chest-row">${this.chestSlotsHtml()}</div></div>
         </div>
         <div class="mode-row">
           <button class="mode-card camp" data-act="stages">
@@ -182,7 +182,7 @@ export class Menu {
       document.querySelectorAll<HTMLElement>('[data-chest-left]').forEach((el) => {
         const i = Number(el.dataset.chestLeft);
         if (chestState(i) === 'ready') { this.render(); return; }
-        el.textContent = leftText(chestLeftMs(i));
+        el.textContent = clockText(chestLeftMs(i));
       });
     }, 1000);
   }
@@ -231,8 +231,8 @@ export class Menu {
       const d = CHESTS[c.kind];
       const ic = `<span class="chest-ic" style="--cc:${d.color}">${icon('chest')}</span>`;
       const label = st === 'ready' ? '<b class="open">열기!</b>'
-        : st === 'opening' ? `<span data-chest-left="${i}">${leftText(chestLeftMs(i))}</span><small>${icon('gem')}${chestOpenCost(chestLeftMs(i))}</small>`
-        : `<span>${leftText(chestLeftMs(i))}</span><small>${opening() < 0 ? '탭해서 열기' : '대기'}</small>`;
+        : st === 'opening' ? `<span class="clock" data-chest-left="${i}">${clockText(chestLeftMs(i))}</span><small>${icon('gem')}${chestOpenCost(chestLeftMs(i))}</small>`
+        : `<span>${leftText(chestLeftMs(i))}</span><small>${opening() < 0 ? '탭해서 열기' : '차례 대기'}</small>`;
       return `<button class="chest-slot ${st}" data-act="chest" data-i="${i}">${ic}<span class="cn">${d.kr}</span>${label}</button>`;
     }).join('');
   }
@@ -243,8 +243,13 @@ export class Menu {
     if (st === 'ready') { const r = await act<Reveal | null>('openSlot', { i, pay: false }); if (r) showReveal(r, () => this.render()); return; }
     if (st === 'locked' && opening() < 0) { await act('startUnlock', { i }); audio.button(); this.render(); return; }
     const cost = chestOpenCost(chestLeftMs(i));
-    if (meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, () => this.render()); return; }
-    if (await confirmModal('바로 열기', `${CHESTS[meta.chests[i]!.kind].kr}를 ${icon('gem')}${cost}로 바로 열까요?`)) {
+    // 다른 상자를 여는 중에 잠긴 상자를 누른 경우: 한 번에 하나씩만 열린다는 걸 먼저 알려 준다 (보석 부족 창보다 먼저)
+    const waiting = st === 'locked';
+    const msg = waiting
+      ? `상자는 <b>한 번에 하나씩</b>만 열 수 있어요.<br>지금 여는 상자가 끝나면 이 상자를 열 수 있어요.<br><br>${CHESTS[meta.chests[i]!.kind].kr}를 ${icon('gem')}${cost}로 바로 열까요?`
+      : `${CHESTS[meta.chests[i]!.kind].kr}를 ${icon('gem')}${cost}로 바로 열까요?`;
+    if (await confirmModal(waiting ? '상자 대기 중' : '바로 열기', msg)) {
+      if (meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, () => this.render()); return; }
       const r = await act<Reveal | null>('openSlot', { i, pay: true });
       if (r) showReveal(r, () => this.render());
     }

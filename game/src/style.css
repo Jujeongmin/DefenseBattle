@@ -1446,3 +1446,5 @@ table.odds th .pi { width: 12px; height: 12px; }
 
 /* 첫 화면 튜토리얼 시작 버튼: 패널 없이 버튼만 크게 */
 .tut-start { width: 100%; max-width: 340px; font-size: 22px; padding: 16px 14px 20px; }
+.ac-hint { margin-left: auto; font-size: 10px; font-weight: 400; color: var(--cream-2); opacity: 0.8; }
+.chest-slot .clock { font-size: 12px; letter-spacing: 0.5px; font-variant-numeric: tabular-nums; }
