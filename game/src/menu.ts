@@ -25,7 +25,7 @@ import {
   seasonTier, claimSeasonReward, rewardText,
 } from './shop';
 import { freeTicketAdsLeft, watchForTickets, rewardedAvailable, FREE_TICKET_AMOUNT } from './ads';
-import { onlineAvailable, findMatch, type PvpSession } from './pvp';
+import { onlineAvailable, findMatch, createBotSession, type PvpSession } from './pvp';
 import { $, toast, openOverlay, closeOverlay, bindActions, spriteIcon, confirmModal } from './dom';
 import { enableDeckDrag } from './dragdeck';
 import { Spotlight } from './tutorial';
@@ -191,11 +191,12 @@ export class Menu {
   /**
    * 로비 안내: 새로 열린 메뉴를 하나씩 밝혀 설명하고, 밝힌 버튼을 누르면 그 메뉴가 열린다.
    * 한 번 안내한 것은 seenFeatures 에 남겨 다시 띄우지 않는다 (설정 > 튜토리얼 다시 하기 로 초기화).
-   * 순서: 대전 → 캠페인 → 덱 → 연구 → 퀘스트 → 무한 모드 (스테이지 1-1 튜토리얼을 마친 뒤부터)
+   * 순서: 대전 → 덱 → 캠페인 → 연구 → 퀘스트 → 무한 모드 (스테이지 1-1 튜토리얼을 마친 뒤부터)
+   * 덱은 캠페인보다 먼저 - 캠페인을 시작한 뒤에야 덱 안내가 나오면 늦다
    */
   private guideRetry: ReturnType<typeof setTimeout> | null = null;
   private maybeGuide(): void {
-    if (this.guiding || !featureUnlocked('pvp') || meta.tutorial < 2) return;
+    if (this.guiding || !featureUnlocked('pvp') || meta.tutorial < 2 || $('main-menu').classList.contains('hidden')) return;
     // 팝업(연패 상품 등)이 떠 있으면 닫힐 때까지 기다렸다가 안내한다. 닫히는 중이면 닫힌 것
     if (['modal', 'panel'].some((id) => { const c = $(id).classList; return !c.contains('hidden') && !c.contains('closing'); })) {
       if (!this.guideRetry) this.guideRetry = setTimeout(() => {
@@ -207,10 +208,10 @@ export class Menu {
     const steps: { key: string; sel: string; text: string; on: boolean }[] = [
       { key: 'pvp', sel: '[data-act="battle"]', on: true,
         text: tl('<b>대전 시작</b>을 눌러 보세요!<br>상대 전장에 몹을 던지고, 이기면 상자를 받아요') },
-      { key: 'campaign', sel: '[data-act="stages"]', on: stageStars('1-2') === 0,
-        text: tl('<b>캠페인</b>에서 스테이지를 깨면<br>새 유닛과 보석을 얻어요') },
       { key: 'units', sel: '.lobby-nav [data-act="units"]', on: featureUnlocked('units'),
         text: tl('<b>덱</b>에서 유닛과 몹 카드를 고르고<br>모은 카드로 강화해요') },
+      { key: 'campaign', sel: '[data-act="stages"]', on: stageStars('1-2') === 0,
+        text: tl('<b>캠페인</b>에서 스테이지를 깨면<br>새 유닛과 보석을 얻어요') },
       { key: 'research', sel: '.lobby-nav [data-act="research"]', on: featureUnlocked('research'),
         text: tl('<b>연구소</b>가 열렸어요!<br>보석으로 대전과 모든 판의 능력을 올려요') },
       { key: 'quests', sel: '.lobby-nav [data-act="quests"]', on: featureUnlocked('quests'),
@@ -222,6 +223,12 @@ export class Menu {
     if (!g) return;
     this.guiding = true;
     setTimeout(async () => {
+      // 기다리는 사이 다른 창을 열었거나 판에 들어갔으면 다음 기회로
+      if ($('main-menu').classList.contains('hidden') || ['modal', 'panel'].some((id) => !$(id).classList.contains('hidden'))) {
+        this.guiding = false;
+        this.maybeGuide();
+        return;
+      }
       const spot = new Spotlight();
       await spot.step({ target: () => document.querySelector<HTMLElement>(g.sel), text: g.text });
       spot.close();
@@ -898,6 +905,12 @@ export class Menu {
   }
 
   private startMatchmaking(): void {
+    // 첫 대전(배우는 판): 매칭 화면 없이 바로 봇과 시작
+    if (meta.pvp.wins + meta.pvp.losses === 0) {
+      closeOverlay('panel');
+      this.onLaunch({ kind: 'pvp', session: createBotSession() });
+      return;
+    }
     const signal = { cancelled: false };
     const el = openOverlay('modal', `<div class="dialog matching"><h2>${tl('상대를 찾는 중...')}</h2>
       <div class="spinner"></div><div id="mm-time" class="fine">${tl('0초')}</div>

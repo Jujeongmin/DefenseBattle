@@ -109,6 +109,7 @@ export class UI {
     // 소환: 탭하면 1번, 꾹 누르고 있으면 골드가 떨어질 때까지 계속 (0.38초 뒤부터 0.14초마다)
     const summonBtn = $('btn-summon') as HTMLButtonElement;
     const summonOnce = () => {
+      if (this.summonLock) return false;
       const u = this.game.summon();
       if (u) audio.summon(u.gradeIndex >= GRADE_INDEX['mythic']);
       else if (this.game.gold < this.game.summonCost) this.flashGold();
@@ -207,7 +208,7 @@ export class UI {
       banner.classList.add('hidden');
     }
 
-    ($('btn-summon') as HTMLButtonElement).disabled = g.gold < g.summonCost || g.over;
+    ($('btn-summon') as HTMLButtonElement).disabled = g.gold < g.summonCost || g.over || this.summonLock;
     const costEl = document.querySelector('#btn-summon .summon-cost');
     const costHtml = `${icon('coin')}${g.summonCost}`;
     if (costEl && costEl.innerHTML !== costHtml) costEl.innerHTML = costHtml;
@@ -326,14 +327,20 @@ export class UI {
   }
 
   // ---------- 첫 대전: 몹 카드를 끌어 던지는 법 (던질 때까지 손가락이 반복해서 보여 준다) ----------
+  // 시작하자마자 보여 주고, 한 번 던질 때까지 소환을 잠근다 (소환에 골드를 다 써서 못 던지는 일이 없게)
   private hintEl: HTMLElement | null = null;
   private hintTimer: ReturnType<typeof setInterval> | null = null;
+  private summonLock = false;
   showThrowHint(): void {
     if (this.hintTimer) return;
+    this.summonLock = true;
     this.hintTimer = setInterval(() => {
       const card = document.querySelector<HTMLButtonElement>('#attack-row .attack-card:not(:disabled)');
-      // 유닛을 몇 개 뽑은 뒤에 보여 준다 (막을 준비가 된 다음 던지기)
-      if (!card || this.game.over || this.game.paused || this.game.units.length < 5) { this.hintEl?.classList.add('hidden'); return; }
+      if (!card || this.game.over || this.game.paused) {
+        if (!card && !this.game.paused) this.summonLock = false; // 던질 카드가 없으면 막아 둘 이유가 없다
+        this.hintEl?.classList.add('hidden');
+        return;
+      }
       if (!this.hintEl) {
         this.hintEl = document.createElement('div');
         this.hintEl.className = 'throw-hint';
@@ -353,6 +360,7 @@ export class UI {
   hideThrowHint(): void {
     if (this.hintTimer) clearInterval(this.hintTimer);
     this.hintTimer = null;
+    this.summonLock = false;
     this.hintEl?.remove();
     this.hintEl = null;
   }
