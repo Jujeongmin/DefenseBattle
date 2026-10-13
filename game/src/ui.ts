@@ -20,6 +20,8 @@ export interface UIContext {
   kind: 'stage' | 'endless' | 'pvp';
   stageId?: string;
   onExit: () => void;
+  /** 첫 튜토리얼 판(1-1 미클리어): 나가기 버튼을 숨긴다 */
+  tutorial?: boolean;
 }
 
 export interface ResultView {
@@ -90,6 +92,7 @@ export class UI {
     this.opp = pvp ? new OppRenderer($<HTMLCanvasElement>('opp-canvas')) : null;
     if (pvp) bindOppPeek();
     $('attack-row').classList.toggle('hidden', !pvp);
+    $('btn-menu').style.visibility = ctx.tutorial ? 'hidden' : ''; // 자리는 남겨 소환 버튼 배치가 그대로
     $('btn-speed').classList.toggle('hidden', pvp);
     $('btn-pause').classList.toggle('hidden', pvp);
     $('btn-speed').textContent = '1x';

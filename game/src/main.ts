@@ -76,6 +76,7 @@ function launch(l: Launch): void {
     kind: l.kind,
     stageId: l.kind === 'stage' ? l.stageId : undefined,
     onExit: () => void exitGame(),
+    tutorial: l.kind === 'stage' && l.stageId === '1-1' && !featureUnlocked('pvp'),
   });
   const g = game;
   const u = ui;
