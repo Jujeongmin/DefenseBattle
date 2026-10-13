@@ -198,6 +198,16 @@ export class UI {
       $('my-count').textContent = `${g.mobs.length}/${WAVE.gameOverMobCount}`;
     }
 
+    // 대전 경과 시간: 서버가 정한 시작 시각부터 (두 사람 화면이 같게), 판이 끝나면 멈춤
+    const mt = $('match-timer');
+    mt.classList.toggle('hidden', !g.isPvp);
+    if (g.isPvp) {
+      if (g.over && !this.matchEndAt) this.matchEndAt = Date.now();
+      const sec = this.matchStartAt ? Math.max(0, Math.floor(((this.matchEndAt || Date.now()) - this.matchStartAt) / 1000)) : 0;
+      const txt = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+      if (mt.dataset.t !== txt) { mt.dataset.t = txt; mt.innerHTML = `${icon('timer')}${txt}`; }
+    }
+
     const bt = $('boss-timer');
     if (g.waveState === 'waiting_boss' || (g.isBossWave && g.waveState === 'spawning')) {
       bt.classList.remove('hidden');
@@ -365,6 +375,8 @@ export class UI {
   private hintEl: HTMLElement | null = null;
   private hintTimer: ReturnType<typeof setInterval> | null = null;
   private summonLock = false;
+  private matchStartAt = 0; // 대전 시작 시각 (Date.now() 기준, 서버 시각에 맞춤)
+  private matchEndAt = 0;
   showThrowHint(): void {
     if (this.hintTimer) return;
     this.summonLock = true;
@@ -558,6 +570,8 @@ export class UI {
 
   // ---------- 카운트다운 ----------
   countdown(startAt: number, onGo: () => void): void {
+    this.matchStartAt = startAt; // 서버 시각에 맞춘 시작 시각 (pvp.ts 가 기기 시계로 바꿔 줌)
+    this.matchEndAt = 0;
     const el = $('countdown');
     el.classList.remove('hidden');
     const tick = () => {
