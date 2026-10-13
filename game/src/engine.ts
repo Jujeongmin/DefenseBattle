@@ -103,6 +103,10 @@ export interface BoardSnapshot {
   mobs: number[];
   /** 유닛 [직업 index, 등급 index, x, y] 평탄화 (x,y 는 0~255 양자화) */
   units: number[];
+  /** 유닛마다 방향 | 공격 중 4 (units 와 같은 순서) */
+  uc?: number[];
+  /** 지난 스냅샷 뒤 생긴 공격 이펙트 (engine logFx 형식) */
+  fx?: number[][];
   bossHp: number; // 보스 체력 비율 (없으면 -1)
   /** 유닛 덱 (JOBS 번호) - 상대가 무엇으로 막는지 보고 카드를 고른다 */
   deck?: number[];
@@ -424,7 +428,14 @@ export class Game {
       mobs.push(m.id, q(m.x), q(m.y), RACES.indexOf(m.race) | (kind << 2) | (m.dir << 4) | (m.variant << 6), Math.round(m.size));
     }
     const units: number[] = [];
-    for (const u of this.units.slice(0, 80)) units.push(JOBS.indexOf(u.job), u.gradeIndex, q(u.x), q(u.y));
+    const uc: number[] = []; // 유닛마다 방향 | 이번 구간에 공격했으면 4 - 상대 화면에서 몹 쪽을 보고 휘두르게 (units 와 같은 순서)
+    for (const u of this.units.slice(0, 80)) {
+      units.push(JOBS.indexOf(u.job), u.gradeIndex, q(u.x), q(u.y));
+      uc.push((u.face ?? 0) | (this.shotUnits.has(u.id) ? 4 : 0));
+    }
+    this.shotUnits.clear();
+    const fx = this.fxLog;
+    this.fxLog = [];
     const boss = this.mobs.find((m) => m.boss);
     return {
       wave: this.wave,
@@ -437,8 +448,10 @@ export class Game {
       bossHp: boss ? boss.hp / boss.maxHp : -1,
       deck: this.opts.deck.map((j) => JOBS.indexOf(j)),
       atk: this.attackCards,
-      v: 2,
+      v: 2, // 형식은 그대로 (방향·공격·이펙트는 추가 필드라 예전 클라이언트도 읽는다)
       t: Math.round(this.time * 100) / 100,
+      uc,
+      fx,
     };
   }
 
@@ -715,6 +728,22 @@ export class Game {
 
   private addEffect(e: Effect): void {
     if (this.effects.length < MAX_EFFECTS) this.effects.push(e);
+    if (this.isPvp) this.logFx(e);
+  }
+
+  // ---------------- PvP: 상대 화면에 보여 줄 공격 이펙트·공격 중인 유닛 (스냅샷마다 비운다) ----------------
+  private fxLog: number[][] = [];
+  private shotUnits = new Set<number>();
+  /** 투사체·폭발·처치만 (양자화 좌표). [0 투사체, x1,y1,x2,y2, 직업, 등급] [1 폭발, x,y, 반지름, 색] [2 처치, x,y, 보스] */
+  private logFx(e: Effect): void {
+    const q = (v: number) => Math.max(0, Math.min(255, Math.round((v / MAP.size) * 255)));
+    let f: number[] | null = null;
+    if (e.type === 'proj') f = [0, q(e.x1), q(e.y1), q(e.x2), q(e.y2), JOBS.indexOf(e.job), e.grade];
+    else if (e.type === 'splash') f = [1, q(e.x), q(e.y), Math.round(e.r), parseInt(e.color.slice(1), 16) || 0xffffff];
+    else if (e.type === 'pop') f = [2, q(e.x), q(e.y), e.boss ? 1 : 0];
+    if (!f) return;
+    this.fxLog.push(f);
+    if (this.fxLog.length > 40) this.fxLog.shift(); // 오래된 것부터 버린다 (스냅샷 크기 제한)
   }
 
   // ---------------- 메인 업데이트 ----------------
@@ -948,6 +977,7 @@ export class Game {
       u.cooldown = UNIT_BY_ID[u.job].cooldown * this.hasteFor(u);
       this.hitter = u;
       u.flash = 0.1;
+      if (this.isPvp) this.shotUnits.add(u.id);
       this.emit('shoot', u.job);
       // 투사체: 거리에 비례한 비행 시간 (시각 전용)
       const dur = Math.min(0.22, 0.06 + bestD / 2600);

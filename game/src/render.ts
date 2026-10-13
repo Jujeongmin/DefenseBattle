@@ -15,7 +15,7 @@ export const FRAME = 32;
 /** 유닛 그리기 크기 (논리 720 기준) */
 export const UNIT_DRAW = 62;
 export const WALK_SEQ = [1, 0, 1, 2]; // 걷기 컬럼 순서 (1=정지 기준)
-const ATTACK_SEQ = [1, 2, 0, 1]; // 공격 스윙 프레임 순서 (1=정지 기준)
+export const ATTACK_SEQ = [1, 2, 0, 1]; // 공격 스윙 프레임 순서 (1=정지 기준) - oppRender 도 쓴다
 const ATTACK_ANIM_DUR = 0.1;     // engine.ts 의 u.flash 초기값과 동일해야 함
 
 // ---- Tiny Swords 지형 타일 ----

@@ -5,13 +5,15 @@
 // ============================================================
 import { MAP, SNAP_KIND, DROP_WARN, pathAt, type BoardSnapshot } from './engine';
 import { unitSprite, mobSprite } from './assets';
-import { GRADES, JOBS, RACES, PLAY_SPEED, PVP, ATTACKS } from './config';
-import { fieldBackground, FRAME, WALK_SEQ, JOB_TINT, UNIT_DRAW } from './render';
+import { GRADES, JOBS, RACES, PLAY_SPEED, PVP, ATTACKS, UNIT_BY_ID } from './config';
+import { fieldBackground, FRAME, WALK_SEQ, ATTACK_SEQ, JOB_TINT, UNIT_DRAW } from './render';
 import type { Job, Race } from './types';
 
 interface SnapMob { x: number; y: number; race: Race; kind: number; dir: number; size: number; variant: number }
-interface SnapUnit { job: Job; grade: number; x: number; y: number }
-interface SnapFrame { at: number; t: number; mobs: Map<number, SnapMob>; units: SnapUnit[] }
+interface SnapUnit { job: Job; grade: number; x: number; y: number; face: number; atk: boolean }
+interface SnapFrame { at: number; t: number; mobs: Map<number, SnapMob>; units: SnapUnit[]; fx: number[][]; played: boolean }
+/** 다시 그리는 공격 이펙트 (상대 화면 전용, 실제 시간 ms 기준) */
+interface Fx { kind: number; a: number[]; start: number; dur: number }
 /** 상대 화면은 이만큼(게임 초) 늦게 따라간다 - 다음 스냅샷이 조금 늦게 와도 그 사이를 이어 그릴 여유 */
 const DELAY = 1.5 * PVP.reportInterval * PLAY_SPEED;
 
@@ -33,13 +35,14 @@ function parse(s: BoardSnapshot, at: number, t: number): SnapFrame {
     });
   }
   const units: SnapUnit[] = [];
-  for (let i = 0; i + 3 < s.units.length; i += 4) {
+  for (let i = 0, k = 0; i + 3 < s.units.length; i += 4, k++) {
     const job = JOBS[s.units[i]];
     if (!job) continue;
-    units.push({ job, grade: s.units[i + 1], x: deq(s.units[i + 2]), y: deq(s.units[i + 3]) });
+    const code = s.uc?.[k] ?? 0; // 방향 | 공격 중 4 (예전 클라이언트는 없음 → 정면·대기)
+    units.push({ job, grade: s.units[i + 1], x: deq(s.units[i + 2]), y: deq(s.units[i + 3]), face: code & 3, atk: (code & 4) !== 0 });
   }
   units.sort((a, b) => a.y - b.y);
-  return { at, t, mobs, units };
+  return { at, t, mobs, units, fx: Array.isArray(s.fx) ? s.fx : [], played: false };
 }
 
 export class OppRenderer {
@@ -52,6 +55,7 @@ export class OppRenderer {
   private lastDraw = 0;
   private aim: number | null = null;              // 드래그 중인 던질 위치
   private throws: { pos: number; at: number; card: number }[] = []; // 방금 던진 몹 (상대 쪽 결과가 오기 전까지 미리 보여 줌)
+  private fx: Fx[] = [];
 
   setAim(pos: number | null): void { this.aim = pos; }
   markThrow(pos: number, card: number): void { this.throws.push({ pos, at: performance.now(), card }); }
@@ -113,6 +117,7 @@ export class OppRenderer {
     const f1 = this.frames[Math.min(i + 1, this.frames.length - 1)];
     const span = f1.t - f0.t;
     const a = span > 0 ? Math.min(1, Math.max(0, (clock - f0.t) / span)) : 1;
+    this.spawnFx(clock, now);
     if (i > 2) this.frames.splice(0, i - 1); // 지난 스냅샷 정리 (f0 앞 하나는 남김)
     const cur = f1; // 유닛·오라는 가까운 쪽(최신) 상태로
     const t = (now / 1000) * PLAY_SPEED;
@@ -154,16 +159,92 @@ export class OppRenderer {
       }
     }
 
-    for (const u of cur.units) {
+    for (const [n, u] of cur.units.entries()) {
       const spr = unitSprite(u.job, GRADES[u.grade]?.key ?? 'common');
       if (spr.ready) {
-        ctx.drawImage(spr.img, FRAME, 0, FRAME, FRAME, u.x - UNIT_SIZE / 2, u.y - UNIT_SIZE / 2, UNIT_SIZE, UNIT_SIZE);
+        // 몹 쪽을 보고, 이번 구간에 공격했으면 휘두르는 프레임을 돌린다 (내 화면 유닛과 같은 동작)
+        const col = u.atk ? ATTACK_SEQ[Math.floor(now / 70 + n) % ATTACK_SEQ.length] : 1;
+        ctx.drawImage(spr.img, col * FRAME, u.face * FRAME, FRAME, FRAME, u.x - UNIT_SIZE / 2, u.y - UNIT_SIZE / 2, UNIT_SIZE, UNIT_SIZE);
       } else {
         ctx.fillStyle = JOB_TINT[u.job];
         ctx.fillRect(u.x - 8, u.y - 8, 16, 16);
       }
     }
+    this.drawFx(ctx, now);
     this.drawEcho(ctx, now);
+  }
+
+  /**
+   * 그리는 시점이 어떤 스냅샷 구간(앞 스냅샷 시간 ~ 그 스냅샷 시간)에 들어오면 그 구간에 있었던 공격 이펙트를
+   * 구간 길이만큼 흩어서 다시 재생한다 (몹 움직임과 같은 시점에 맞춰 보인다).
+   */
+  private spawnFx(clock: number, now: number): void {
+    for (let j = 0; j < this.frames.length; j++) {
+      const fr = this.frames[j];
+      if (fr.played) continue;
+      const prev = this.frames[j - 1];
+      if (!prev) { fr.played = true; continue; } // 앞 구간을 모르는 첫 스냅샷
+      if (clock < prev.t) break;
+      fr.played = true;
+      const windowMs = Math.max(50, ((fr.t - prev.t) / PLAY_SPEED) * 1000);
+      for (const a of fr.fx) {
+        const kind = a[0];
+        const dur = kind === 0 ? 150 : kind === 1 ? 260 : 300;
+        this.fx.push({ kind, a, start: now + Math.random() * windowMs, dur });
+      }
+    }
+    if (this.fx.length > 160) this.fx.splice(0, this.fx.length - 160);
+  }
+
+  /** 투사체(직업별 모양)·폭발 고리·처치 파편 - render.ts 와 같은 모양을 작게 */
+  private drawFx(ctx: CanvasRenderingContext2D, now: number): void {
+    this.fx = this.fx.filter((f) => now < f.start + f.dur);
+    for (const f of this.fx) {
+      const p = (now - f.start) / f.dur;
+      if (p < 0) continue;
+      const a = f.a;
+      if (f.kind === 0) {
+        const x1 = deq(a[1]), y1 = deq(a[2]) - 8, x2 = deq(a[3]), y2 = deq(a[4]);
+        const x = x1 + (x2 - x1) * p, y = y1 + (y2 - y1) * p;
+        const job = JOBS[a[5]];
+        const base = job ? UNIT_BY_ID[job].base : 'archer';
+        const color = a[6] === 0 && job ? JOB_TINT[job] : GRADES[a[6]]?.color ?? '#fff';
+        ctx.save();
+        if (base === 'wizard') {
+          const r = 6 + a[6] * 0.8;
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r * 2.2);
+          g.addColorStop(0, 'rgba(255,255,255,0.95)');
+          g.addColorStop(0.35, color);
+          g.addColorStop(1, 'rgba(142,91,216,0)');
+          ctx.fillStyle = g;
+          ctx.beginPath(); ctx.arc(x, y, r * 2.2, 0, Math.PI * 2); ctx.fill();
+        } else {
+          ctx.translate(x, y);
+          ctx.rotate(Math.atan2(y2 - y1, x2 - x1));
+          ctx.strokeStyle = base === 'archer' ? '#f5e6c8' : color;
+          ctx.lineWidth = base === 'archer' ? 4 : 6;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          if (base === 'archer') { ctx.moveTo(-14, 0); ctx.lineTo(10, 0); } else ctx.arc(-6, 0, 14, -1.1, 1.1);
+          ctx.stroke();
+        }
+        ctx.restore();
+      } else if (f.kind === 1) {
+        const x = deq(a[1]), y = deq(a[2]), r = a[3];
+        const c = a[4] ?? 0xffffff;
+        const rgb = `${(c >> 16) & 255},${(c >> 8) & 255},${c & 255}`;
+        ctx.fillStyle = `rgba(${rgb},${0.4 * (1 - p)})`;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = `rgba(${rgb},${1 - p})`;
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(x, y, r * (0.4 + p * 0.6), 0, Math.PI * 2); ctx.stroke();
+      } else {
+        const x = deq(a[1]), y = deq(a[2]), boss = a[3] === 1;
+        ctx.strokeStyle = `rgba(255,240,150,${1 - p})`;
+        ctx.lineWidth = boss ? 8 : 5;
+        ctx.beginPath(); ctx.arc(x, y, p * (boss ? 90 : 36) + 6, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
   }
 
   /**
