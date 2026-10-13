@@ -224,7 +224,8 @@ async function finishSolo(u: UI, d: GameOverData): Promise<void> {
     };
     if (crystals > 0 && rewardedAvailable()) view.buttons.push({ label: `${icon('tv')} 광고 보고 ${icon('gem')} +${crystals} 더 받기`, cls: 'blue', id: 'btn-double', action: () => void doubleReward() });
     if (canNext) view.buttons.push({ label: `${icon('play')} 다음 스테이지 ${next.id}`, cls: 'red', action: () => void exitGame(true).then(() => menu.openStage(next.id)) });
-    view.buttons.push({ label: '다시 하기', cls: canNext ? '' : 'red', action: () => void exitGame(true).then(() => menu.openStage(l.stageId)) });
+    // 다시 하기는 실패했을 때만 (클리어면 다음 스테이지 / 로비로 - 버튼을 줄인다)
+    if (!d.cleared) view.buttons.push({ label: '다시 하기', cls: 'red', action: () => void exitGame(true).then(() => menu.openStage(l.stageId)) });
     view.buttons.push({ label: '로비로', cls: '', action: () => void exitGame(true) });
     u.showResult(view);
     // 결제 팝업 조건: 새 챕터 도달 / 2연속 실패 (튜토리얼 직후는 제외)
