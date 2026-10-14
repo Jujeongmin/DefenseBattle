@@ -257,4 +257,16 @@ describe('닉네임', () => {
     const st = await server.setNick({ nick: '   ' });
     expect(st.nick).toBe('용사');
   });
+
+  test('비속어 닉네임은 기본 이름으로 바뀐다 (랭킹·대전 상대 화면 포함)', async (server) => {
+    server.connect({ account: 'bad1' });
+    expect((await server.setNick({ nick: '씨 1 발' })).nick).toBe('용사');
+    expect((await server.setNick({ nick: 'F.U.C.K' })).nick).toBe('용사');
+    expect((await server.setNick({ nick: '하늘보리' })).nick).toBe('하늘보리');
+    const t = (await server.pvpBotStart()).id;
+    await server.pvpBotResult({ id: t, won: true });
+    await server.setNick({ nick: 'ㅅㅂ' });
+    const row = (await server.pvpLeaderboard()).top.find((r: any) => r.account === 'bad1');
+    expect(row.nick).toBe('용사');
+  });
 });

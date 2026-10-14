@@ -575,5 +575,6 @@ const d: Record<string, string> = {
   "체력": "HP",
   "속도": "Speed",
   "최고 {0}웨이브": "Best: wave {0}",
+  "사용할 수 없는 닉네임이에요": "That nickname isn't allowed",
 };
 export default d;

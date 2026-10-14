@@ -17,6 +17,7 @@
  */
 import * as R from '../../game/src/econ/rules';
 import { STAGE_BY_ID, RESEARCH, UNITS, CHESTS } from '../../game/src/config';
+import { isBadNick } from '../../game/src/nickFilter';
 
 const QUEUE_KEY = 'pvpQueue';
 const QUEUE_TTL = 15_000;        // 대기열 하트비트 만료(ms) - 클라이언트가 2초마다 poll
@@ -39,8 +40,8 @@ interface PurchaseRecord { purchaseId: string; productId: string; quantity: numb
 interface PlayerSlot { nick: string; trophies: number; ready: boolean }
 
 function cleanNick(n: unknown): string {
-  const s = typeof n === 'string' ? n.trim() : '';
-  return (s || '용사').slice(0, 12);
+  const s = (typeof n === 'string' ? n.trim() : '').slice(0, 12);
+  return s && !isBadNick(s) ? s : '용사'; // 비속어 닉네임은 기본 이름으로 (랭킹·상대 화면에 나가지 않게)
 }
 
 // ---------------- 경제 ----------------

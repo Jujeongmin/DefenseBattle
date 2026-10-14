@@ -6,6 +6,7 @@ import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS, FEATURE_UNLOCK, STARTER_ATTACKS, 
 import { getPlatform } from './platform';
 import type { MetaData, ResearchKey, QuestStat, AchievementDef } from './types';
 import { convertLegacyItems } from './econ/rules';
+import { isBadNick } from './nickFilter';
 
 import { tl } from './i18n';
 export function todayStr(): string {
@@ -81,6 +82,7 @@ function load(): MetaData {
   // 예전 저장본: 지금 아레나에서 시작 (이미 오른 아레나로 승급 팝업이 뜨지 않게)
   m.arenaMax = m.arenaMax ?? PVP_TIERS.filter((t) => (m.pvp?.trophies ?? 0) >= t.min).length - 1;
   m.stageFailStreak = m.stageFailStreak ?? 0;
+  if (typeof m.nick !== 'string' || !m.nick.trim() || isBadNick(m.nick)) m.nick = fresh.nick; // 예전에 저장된 비속어 닉네임
   m.cards = m.cards || {};
   m.chests = Array.isArray(m.chests) ? m.chests : [{ kind: 'wood' }, null, null, null];
   m.chestCycle = m.chestCycle ?? 0;

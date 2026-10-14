@@ -36,6 +36,7 @@ import { chestState, chestLeftMs, leftText, clockText, opening, showReveal, flus
 import type { Job, Race, ResearchKey } from './types';
 
 import { tl, LANGS, lang, setLang, type Lang } from './i18n';
+import { isBadNick } from './nickFilter';
 /** 덱 화면 안내 줄의 '추천 덱' 버튼 */
 const RECS_BTN = `<button class="btn small gold rec-btn" data-act="recs">${icon('star')} ${tl('추천 덱')}</button>`;
 
@@ -384,6 +385,7 @@ export class Menu {
     bindActions(el, {
       save: () => {
         const v = ($('nick-input') as HTMLInputElement).value.trim().slice(0, 12);
+        if (v && isBadNick(v)) { toast(tl('사용할 수 없는 닉네임이에요')); return; } // 창은 열어 두고 다시 고치게
         if (v) {
           meta.nick = v;
           saveMeta();
