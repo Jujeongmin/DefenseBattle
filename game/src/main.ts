@@ -115,7 +115,21 @@ function startPvp(g: Game, u: UI, s: PvpSession): void {
       }, 6000);
     }
   });
+  // 연결 끊김 안내: 내 연결은 '다시 연결 중', 상대 연결은 남은 유예 시간을 센다
+  let oppAwayTimer: ReturnType<typeof setInterval> | null = null;
   void s.ready({
+    onConnection: (ok) => {
+      u.setNetBanner(ok ? null : `${icon('warning')} ${tl('연결이 끊겼어요 · 다시 연결 중…')}`);
+      if (ok) toast(tl('다시 연결됐어요'));
+    },
+    onOppAway: (away, graceMs = 20_000) => {
+      if (oppAwayTimer) { clearInterval(oppAwayTimer); oppAwayTimer = null; }
+      if (!away) { u.setNetBanner(null); return; }
+      const until = Date.now() + graceMs;
+      const show = () => u.setNetBanner(`${icon('warning')} ${tl('상대 연결 끊김 · {0}초 뒤 승리', Math.max(0, Math.ceil((until - Date.now()) / 1000)))}`);
+      show();
+      oppAwayTimer = setInterval(show, 500);
+    },
     onStart: (startAt) => u.countdown(startAt, () => { g.paused = false; }),
     onSnapshot: (snap) => u.setOpponent(snap),
     onAttack: (p) => g.receiveAttack(p),
@@ -123,7 +137,9 @@ function startPvp(g: Game, u: UI, s: PvpSession): void {
       if (resultShown) return;
       resultShown = true;
       if (fallback) clearTimeout(fallback);
-      if (!g.over) g.pvpEnd(r.won, r.won ? (r.reason === 'leave' ? tl('상대가 대전을 떠났습니다') : tl('상대 필드가 무너졌습니다!')) : tl('내 필드가 무너졌습니다'));
+      if (oppAwayTimer) { clearInterval(oppAwayTimer); oppAwayTimer = null; }
+      u.setNetBanner(null);
+      if (!g.over) g.pvpEnd(r.won, r.won ? (r.reason === 'leave' ? tl('상대가 대전을 떠났습니다') : tl('상대 필드가 무너졌습니다!')) : r.reason === 'disconnect' ? tl('연결이 끊겨 대전이 끝났어요') : tl('내 필드가 무너졌습니다'));
       showPvpResult(g, u, s, r);
     },
   }).catch((e) => {

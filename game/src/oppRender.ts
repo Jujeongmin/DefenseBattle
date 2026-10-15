@@ -16,6 +16,10 @@ interface SnapFrame { at: number; t: number; mobs: Map<number, SnapMob>; units: 
 interface Fx { kind: number; a: number[]; start: number; dur: number }
 /** 상대 화면은 이만큼(게임 초) 늦게 따라간다 - 다음 스냅샷이 조금 늦게 와도 그 사이를 이어 그릴 여유 */
 const DELAY = 1.5 * PVP.reportInterval * PLAY_SPEED;
+/** 스냅이 늦을 때 마지막 움직임을 이어 그리는 최대 길이 (게임 초 = 실제 0.25초) */
+const EXTRAPOLATE = 0.5;
+/** 그린 위치와 받은 위치가 이만큼(맵 px) 넘게 벌어지면 순간이동 대신 따라잡는다 (평소 프레임당 이동은 2px 안팎) */
+const CATCH_UP = 6; // 60fps 기준 - 프레임이 느리면 그만큼 크게
 
 const UNIT_SIZE = UNIT_DRAW;
 const deq = (v: number) => (v / 255) * MAP.size;
@@ -67,6 +71,10 @@ export class OppRenderer {
   private aim: number | null = null;              // 드래그 중인 던질 위치
   private throws: { pos: number; at: number; card: number }[] = []; // 방금 던진 몹 (상대 쪽 결과가 오기 전까지 미리 보여 줌)
   private fx: Fx[] = [];
+  private shown = new Map<number, { x: number; y: number }>(); // 몹마다 지난 프레임에 그린 위치
+  private frameDt = 0;           // 지난 프레임부터 흐른 실제 초
+  private lastPx = 0;            // 직전 프레임 화면 크기 (기기 픽셀)
+  private stable = 0;            // 같은 크기로 이어진 프레임 수
 
   setAim(pos: number | null): void { this.aim = pos; }
   markThrow(pos: number, card: number): void { this.throws.push({ pos, at: performance.now(), card }); }
@@ -96,6 +104,7 @@ export class OppRenderer {
     const target = latest.t + ((now - latest.at) / 1000) * PLAY_SPEED - DELAY;
     const dt = this.lastDraw ? Math.min(1, (now - this.lastDraw) / 1000) : 0;
     this.lastDraw = now;
+    this.frameDt = dt;
     if (this.clock === null || Math.abs(target - this.clock) > 1 * PLAY_SPEED) this.clock = target; // 처음·크게 어긋남(0.5초 이상): 바로 맞춤
     else {
       this.clock += dt * PLAY_SPEED;
@@ -106,9 +115,11 @@ export class OppRenderer {
 
   draw(): void {
     const c = this.canvas;
-    // 화면 크기 × 기기 배율로 내부 해상도를 맞춰 선명하게
+    // 화면 크기 × 기기 배율로 내부 해상도를 맞춰 선명하게. 크게 보기 애니메이션(0.15초) 중에는 크기가 매 프레임 바뀌므로
+    // 그때마다 캔버스를 새로 잡지 않고(프레임 끊김), 크기가 두 프레임 연속 같아졌을 때 한 번만 바꾼다
     const px = Math.round(c.clientWidth * (window.devicePixelRatio || 1));
-    if (px > 0 && c.width !== px) { c.width = px; c.height = px; }
+    if (px === this.lastPx) this.stable++; else { this.stable = 0; this.lastPx = px; }
+    if (px > 0 && c.width !== px && (this.stable >= 2 || c.width <= 1)) { c.width = px; c.height = px; }
     const ctx = this.ctx;
     const k = c.width / MAP.size;
     ctx.setTransform(k, 0, 0, k, 0, 0);
@@ -124,10 +135,15 @@ export class OppRenderer {
     const clock = this.tick(now);
     let i = 0;
     while (i < this.frames.length - 1 && this.frames[i + 1].t <= clock) i++;
+    // 다음 스냅이 늦어 그릴 시점이 최신 스냅을 지나면: 마지막 두 스냅의 움직임을 이어서 조금 더 그린다
+    // (멈췄다가 다음 스냅에 한꺼번에 튀지 않게, 최대 EXTRAPOLATE 만큼만)
+    const late = i === this.frames.length - 1 && i > 0;
+    if (late) i--;
     const f0 = this.frames[i];
     const f1 = this.frames[Math.min(i + 1, this.frames.length - 1)];
     const span = f1.t - f0.t;
-    const a = span > 0 ? Math.min(1, Math.max(0, (clock - f0.t) / span)) : 1;
+    const maxA = late && span > 0 ? 1 + EXTRAPOLATE / span : 1;
+    const a = span > 0 ? Math.min(maxA, Math.max(0, (clock - f0.t) / span)) : 1;
     this.spawnFx(clock, now);
     if (i > 2) this.frames.splice(0, i - 1); // 지난 스냅샷 정리 (f0 앞 하나는 남김)
     const cur = f1; // 유닛·오라는 가까운 쪽(최신) 상태로
@@ -156,6 +172,18 @@ export class OppRenderer {
       mobs.push([id, m1, m0.x + (m1.x - m0.x) * a, m0.y + (m1.y - m0.y) * a]);
     }
     if (a >= 1) for (const [id, m1] of f1.mobs) if (!f0.mobs.has(id)) mobs.push([id, m1, m1.x, m1.y]);
+    // 스냅이 오래 끊겼다 다시 오면 그동안 실제로 움직인 만큼 위치가 크게 벌어진다 → 한 번에 튀지 않고 약 0.15초에 걸쳐 따라간다
+    const ease = Math.min(1, this.frameDt * 14);
+    const seen = new Set<number>();
+    for (const e of mobs) {
+      const [id, , x, y] = e;
+      seen.add(id);
+      const s = this.shown.get(id);
+      if (s && Math.hypot(x - s.x, y - s.y) > CATCH_UP * Math.max(1, this.frameDt * 60)) { s.x += (x - s.x) * ease; s.y += (y - s.y) * ease; e[2] = s.x; e[3] = s.y; }
+      else if (s) { s.x = x; s.y = y; }
+      else this.shown.set(id, { x, y });
+    }
+    for (const id of this.shown.keys()) if (!seen.has(id)) this.shown.delete(id);
     for (const [id, m, x, y] of mobs) {
       const s = m.size;
       ctx.fillStyle = 'rgba(0,0,0,0.25)';

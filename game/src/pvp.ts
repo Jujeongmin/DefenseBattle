@@ -21,7 +21,7 @@ export interface MatchInfo {
 
 export interface PvpResult {
   won: boolean;
-  reason: 'defeat' | 'leave' | 'cancel';
+  reason: 'defeat' | 'leave' | 'cancel' | 'disconnect';
   trophyDelta: number;
   trophies: number;
   /** 서버가 준 보상과 바뀐 경제 상태 (온라인). 오프라인 봇전은 없음 → 기기 규칙으로 */
@@ -33,6 +33,10 @@ export interface PvpHandlers {
   onSnapshot(s: BoardSnapshot): void;
   onAttack(p: AttackPayload): void;
   onResult(r: PvpResult): void;
+  /** 내 연결이 끊김(false)·다시 붙음(true) - 온라인 대전만 */
+  onConnection?(ok: boolean): void;
+  /** 상대 연결이 끊김(true, 유예 ms)·돌아옴(false) - 온라인 대전만 */
+  onOppAway?(away: boolean, graceMs?: number): void;
 }
 
 export interface PvpSession {
@@ -87,60 +91,169 @@ export async function findOnlineMatch(onStatus: (sec: number) => void, signal: {
   return new OnlineSession({ ...(found as Omit<MatchInfo, 'bot'>), bot: false });
 }
 
+type ServerResult = { winner: string; reason: 'defeat' | 'leave'; delta: Record<string, number>; trophies: Record<string, number>; rewards?: Record<string, PvpResult['reward']> };
+type Net = typeof import('./net/server');
+/** 끊긴 뒤 이만큼 다시 붙지 못하면 대전을 끝낸다 (서버는 20초 뒤 상대가 승리를 요청할 수 있다) */
+const GIVE_UP_MS = 30_000;
+/** 시작 뒤 상대 스냅이 이만큼 안 오면 서버에 '방 전체 방송' 으로 바꿔 달라고 한다 */
+const SNAP_SILENCE_MS = 4_000;
+
 class OnlineSession implements PvpSession {
   private offs: (() => void)[] = [];
   private started = false;
+  private startLocal = 0;
   private finished = false;
+  private left = false;
   private me = '';
+  private h: PvpHandlers | null = null;
+  private watch: ReturnType<typeof setInterval> | null = null;
+  private lostAt = 0;            // 내 연결이 끊긴 시각 (0 = 연결됨)
+  private rejoining = false;
+  private queued: AttackPayload[] = []; // 끊긴 동안 던진 몹 (다시 붙으면 보낸다)
+  private lastSnapAt = 0;
+  private fallbackAsked = false;
+  private oppAwayAt = 0;         // 상대 연결이 끊긴 시각
+  private oppGraceMs = 20_000;
+  private claiming = false;
   constructor(readonly match: MatchInfo) {}
 
   async ready(h: PvpHandlers): Promise<void> {
+    this.h = h;
     const net = await import('./net/server');
     const server = await net.getServer();
     this.me = server.account;
+    await server.joinRoom(this.match.roomId);
+    this.subscribe(server);
+    const st = await net.callRoom<{ status?: string; startAt?: number; now?: number }>('pvpReady', { nick: meta.nick, seed: this.match.seed });
+    if (st.status === 'playing' && st.startAt) this.start(st.startAt, st.now);
+    // 연결 감시: 끊기면 같은 방에 다시 들어가고, 상대가 끊긴 채 유예 시간이 지나면 승리를 요청한다
+    this.watch = setInterval(() => void this.check(), 1000);
+  }
+
+  // 시작 시각: 서버가 정한 startAt 을 서버 시각(now) 기준 남은 시간으로 바꿔 내 기기 시계에 맞춘다
+  // (기기 시계가 몇 초 어긋나 있어도 두 사람이 같은 순간에 시작한다)
+  private start(startAt: number, serverNow?: number): void {
+    if (this.started) return;
+    this.started = true;
+    this.startLocal = typeof serverNow === 'number' ? Date.now() + (startAt - serverNow) : startAt;
+    this.h?.onStart(this.startLocal);
+  }
+
+  private subscribe(server: Awaited<ReturnType<Net['getServer']>>): void {
     const roomId = this.match.roomId;
-    await server.joinRoom(roomId);
-    // 시작 시각: 서버가 정한 startAt 을 서버 시각(now) 기준 남은 시간으로 바꿔 내 기기 시계에 맞춘다
-    // (기기 시계가 몇 초 어긋나 있어도 두 사람이 같은 순간에 시작한다)
-    const start = (startAt: number, serverNow?: number) => {
-      if (this.started) return;
-      this.started = true;
-      h.onStart(typeof serverNow === 'number' ? Date.now() + (startAt - serverNow) : startAt);
+    const h = this.h!;
+    const onSnap = (m: { account: string; snap: BoardSnapshot }) => {
+      if (!m || m.account === this.me) return;
+      this.lastSnapAt = Date.now();
+      h.onSnapshot(m.snap);
     };
     this.offs.push(
-      server.onRoomMessage(roomId, 'pvpStart', (m: { startAt: number; now?: number }) => start(m.startAt, m.now)),
-      server.onRoomMessage(roomId, 'pvpSnap', (m: { account: string; snap: BoardSnapshot }) => {
-        if (m.account !== this.me) h.onSnapshot(m.snap);
-      }),
+      server.onRoomMessage(roomId, 'pvpStart', (m: { startAt: number; now?: number }) => this.start(m.startAt, m.now)),
+      // 스냅은 서버가 상대에게만 보낸다 - 방 메시지·개인 메시지 어느 쪽으로 와도 받는다
+      server.onRoomMessage(roomId, 'pvpSnap', onSnap),
+      server.onGlobalMessage('pvpSnap', onSnap),
       server.onRoomMessage(roomId, 'pvpAttack', (m: { from: string; payload: AttackPayload }) => {
         if (m.from !== this.me) h.onAttack(m.payload);
       }),
-      server.onRoomMessage(roomId, 'pvpResult', (r: { winner: string; reason: 'defeat' | 'leave'; delta: Record<string, number>; trophies: Record<string, number>; rewards?: Record<string, PvpResult['reward']> }) => {
-        if (this.finished) return;
-        this.finished = true;
-        h.onResult({ won: r.winner === this.me, reason: r.reason, trophyDelta: r.delta[this.me] ?? 0, trophies: r.trophies[this.me] ?? meta.pvp.trophies, reward: r.rewards?.[this.me] });
+      server.onRoomMessage(roomId, 'pvpResult', (r: ServerResult) => this.result(r)),
+      server.onRoomMessage(roomId, 'pvpCancel', () => this.end({ won: false, reason: 'cancel', trophyDelta: 0, trophies: meta.pvp.trophies })),
+      server.onRoomMessage(roomId, 'pvpAway', (m: { account: string; graceMs?: number }) => {
+        if (m.account === this.me || this.oppAwayAt) return;
+        this.oppAwayAt = Date.now();
+        this.oppGraceMs = m.graceMs ?? 20_000;
+        h.onOppAway?.(true, this.oppGraceMs);
       }),
-      server.onRoomMessage(roomId, 'pvpCancel', () => {
-        if (this.finished) return;
-        this.finished = true;
-        h.onResult({ won: false, reason: 'cancel', trophyDelta: 0, trophies: meta.pvp.trophies });
+      server.onRoomMessage(roomId, 'pvpBack', (m: { account: string }) => {
+        if (m.account === this.me || !this.oppAwayAt) return;
+        this.oppAwayAt = 0;
+        h.onOppAway?.(false);
       }),
     );
-    const st = await net.callRoom<{ status?: string; startAt?: number; now?: number }>('pvpReady', { nick: meta.nick, seed: this.match.seed });
-    if (st.status === 'playing' && st.startAt) start(st.startAt, st.now);
+  }
+
+  private result(r: ServerResult): void {
+    this.end({ won: r.winner === this.me, reason: r.reason, trophyDelta: r.delta?.[this.me] ?? 0, trophies: r.trophies?.[this.me] ?? meta.pvp.trophies, reward: r.rewards?.[this.me] });
+  }
+
+  private end(r: PvpResult): void {
+    if (this.finished) return;
+    this.finished = true;
+    if (this.watch) { clearInterval(this.watch); this.watch = null; }
+    this.h?.onResult(r);
+  }
+
+  private async check(): Promise<void> {
+    if (this.finished || this.left) return;
+    const net = await import('./net/server');
+    if (net.roomConnected()) {
+      this.maybeSnapFallback(net);
+      this.maybeClaim(net);
+      return;
+    }
+    // 내 연결이 끊겼다: 같은 방에 다시 들어간다 (플랫폼 유예 시간 안이면 대전이 이어진다)
+    if (!this.lostAt) { this.lostAt = Date.now(); this.h?.onConnection?.(false); }
+    if (Date.now() - this.lostAt > GIVE_UP_MS) {
+      this.end({ won: false, reason: 'disconnect', trophyDelta: 0, trophies: meta.pvp.trophies });
+      return;
+    }
+    if (this.rejoining) return;
+    this.rejoining = true;
+    try { await this.rejoin(net); } catch (e) { console.warn('[pvp] 재접속 실패 - 1초 뒤 다시', e); } finally { this.rejoining = false; }
+  }
+
+  private async rejoin(net: Net): Promise<void> {
+    for (const off of this.offs) { try { off(); } catch { /* 끊긴 소켓 */ } }
+    this.offs = [];
+    const server = await net.getServer();
+    await server.joinRoom(this.match.roomId);
+    this.subscribe(server);
+    const st = await net.callRoom<{ status: string; result?: ServerResult; pending?: AttackPayload[] }>('pvpResume');
+    this.lostAt = 0;
+    this.h?.onConnection?.(true);
+    if (st.status === 'done' && st.result) { this.result(st.result); return; }
+    if (st.status === 'cancelled') { this.end({ won: false, reason: 'cancel', trophyDelta: 0, trophies: meta.pvp.trophies }); return; }
+    for (const p of st.pending ?? []) this.h?.onAttack(p); // 끊긴 동안 상대가 던진 몹
+    const q = this.queued;
+    this.queued = [];
+    for (const p of q) this.sendAttack(p);
+  }
+
+  /** 개별 전송된 스냅이 이 환경에서 안 닿으면 방 전체 방송으로 바꿔 달라고 한다 (한 번만) */
+  private maybeSnapFallback(net: Net): void {
+    if (this.fallbackAsked || !this.started || this.oppAwayAt) return;
+    const since = Math.max(this.startLocal, this.lastSnapAt);
+    if (Date.now() - since < SNAP_SILENCE_MS) return;
+    this.fallbackAsked = true;
+    void net.callRoom('pvpSnapFallback').catch(() => { this.fallbackAsked = false; });
+  }
+
+  /** 상대가 끊긴 채 유예 시간이 지나면 승리 요청 (서버가 시간을 다시 확인한다) */
+  private maybeClaim(net: Net): void {
+    if (!this.oppAwayAt || this.claiming || Date.now() - this.oppAwayAt < this.oppGraceMs + 500) return;
+    this.claiming = true;
+    void net.callRoom<ServerResult | null>('pvpClaimAway')
+      .then((r) => { if (r) this.result(r); })
+      .catch(() => {})
+      .finally(() => { this.claiming = false; });
   }
 
   sendSnapshot(s: BoardSnapshot): void {
     void import('./net/server').then((net) => net.sendRoom('pvpSnap', [s], PVP.reportInterval * 1000));
   }
   sendAttack(p: AttackPayload): void {
-    void import('./net/server').then((net) => net.callRoom('pvpAttack', p).catch(() => {}));
+    void import('./net/server').then((net) => {
+      // 끊긴 동안 던진 몹은 모아 두었다가 다시 붙으면 보낸다 (보내다 끊긴 것은 중복될 수 있어 다시 보내지 않는다)
+      if (!net.roomConnected()) { this.queued.push(p); return; }
+      net.callRoom('pvpAttack', p).catch(() => {});
+    });
   }
   reportDefeat(): void {
     void import('./net/server').then((net) => net.callRoom('pvpDefeat').catch(() => {}));
   }
   leave(): void {
-    this.offs.forEach((f) => f());
+    this.left = true;
+    if (this.watch) { clearInterval(this.watch); this.watch = null; }
+    this.offs.forEach((f) => { try { f(); } catch { /* 끊긴 소켓 */ } });
     this.offs = [];
     void import('./net/server').then(async (net) => (await net.getServer()).leaveRoom());
   }

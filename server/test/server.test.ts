@@ -230,6 +230,31 @@ describe('PvP 룸', () => {
     expect(lb.me.losses).toBe(1);
   });
 
+  test('연결 끊김: 바로 지지 않고, 그동안 받은 몹 공격을 다시 들어오면 돌려준다', async (server) => {
+    await server.simulateJoin('r4', 'p7');
+    await server.simulateJoin('r4', 'p8');
+    server.connect({ account: 'p7', roomId: 'r4' });
+    await server.pvpReady({});
+    server.connect({ account: 'p8', roomId: 'r4' });
+    await server.pvpReady({});
+    await server.simulateDisconnect('r4', 'p8');
+    server.connect({ account: 'p7', roomId: 'r4' });
+    expect(await server.pvpAttack({ card: 2, wave: 3, pos: 0.4 })).toBe(true);
+    expect(await server.pvpAttack({ card: 5, wave: 3, pos: 0.6 })).toBe(true);
+    // 유예 시간 전에는 승리 요청이 거절된다
+    expect(await server.pvpClaimAway()).toBe(null);
+    server.connect({ account: 'p8', roomId: 'r4' });
+    const back = await server.pvpResume();
+    expect(back.status).toBe('playing');
+    expect(back.pending.length).toBe(2);
+    expect(back.pending[1].card).toBe(5);
+    // 돌려준 뒤에는 비워진다
+    expect((await server.pvpResume()).pending.length).toBe(0);
+    // 다시 들어온 뒤에는 승리 요청 불가
+    server.connect({ account: 'p7', roomId: 'r4' });
+    expect(await server.pvpClaimAway()).toBe(null);
+  });
+
   test('경기 중 이탈하면 상대 승리', async (server) => {
     await server.simulateJoin('r2', 'p3');
     await server.simulateJoin('r2', 'p4');

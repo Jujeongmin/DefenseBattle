@@ -582,6 +582,13 @@ export class UI {
     }
   }
 
+  /** PvP 연결 끊김 안내 (null 이면 숨김) */
+  setNetBanner(html: string | null): void {
+    const el = $('net-banner');
+    el.classList.toggle('hidden', !html);
+    if (html) setHtml(el, html);
+  }
+
   // ---------- 카운트다운 ----------
   countdown(startAt: number, onGo: () => void): void {
     this.matchStartAt = startAt; // 서버 시각에 맞춘 시작 시각 (pvp.ts 가 기기 시계로 바꿔 줌)

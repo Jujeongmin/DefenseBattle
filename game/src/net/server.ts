@@ -39,6 +39,11 @@ export function sendRoom(fn: string, args: unknown[], throttleMs: number): void 
   void server.remoteFunction(fn, args, { target: 'rs', throttle: throttleMs, throttleTrailing: true }).catch(() => {});
 }
 
+/** 게임서버(GS)와 방(RS) 연결이 모두 살아 있는가 */
+export function roomConnected(): boolean {
+  return !!server?.connected && !!server.rsConnected;
+}
+
 export function myAccount(): string | null {
   return server?.account ?? null;
 }

@@ -576,5 +576,9 @@ const d: Record<string, string> = {
   "속도": "Speed",
   "최고 {0}웨이브": "Best: wave {0}",
   "사용할 수 없는 닉네임이에요": "That nickname isn't allowed",
+  "연결이 끊겼어요 · 다시 연결 중…": "Connection lost · reconnecting…",
+  "다시 연결됐어요": "Reconnected",
+  "상대 연결 끊김 · {0}초 뒤 승리": "Opponent disconnected · you win in {0}s",
+  "연결이 끊겨 대전이 끝났어요": "The battle ended because the connection was lost",
 };
 export default d;

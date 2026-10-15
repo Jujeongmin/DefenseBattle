@@ -27,6 +27,11 @@ const TROPHY_LOSS = 20;
 const ATTACK_CARD_COUNT = 10;    // 몹 카드 종류 수 (game/src/config.ts ATTACKS)
 const RANKING = 'pvpRanking';
 const MAX_META_BYTES = 60_000;
+/** 대전 중 연결이 끊긴 쪽을 기다려 주는 시간 - 지나면 남은 쪽이 승리를 요청할 수 있다 (플랫폼 유예가 더 길어도 이만큼만) */
+const AWAY_GRACE_MS = 20_000;
+const MAX_PENDING_ATTACKS = 60;
+/** 룸마다 '나 → 상대' 계정 (스냅샷을 상대에게만 보내려고 - 런타임이 재시작되면 룸 상태에서 다시 읽는다) */
+const oppCache = new Map<string, string>();
 
 interface QueueEntry { account: string; nick: string; trophies: number; t: number }
 interface PvpStats { trophies: number; wins: number; losses: number; streak: number }
@@ -331,7 +336,27 @@ export class Server {
   /** 내 필드 상태 요약 중계 (상대 미니맵) */
   async pvpSnap(snap: Record<string, any>): Promise<void> {
     if (!snap || typeof snap !== 'object') return;
-    $room.broadcastToRoom('pvpSnap', { account: $sender.account, snap });
+    const me = $sender.account;
+    const roomId = $sender.roomId || $room.getId();
+    const msg = { account: me, snap };
+    // 상대에게만 보낸다 (방 전체로 보내면 내 스냅이 나한테도 돌아와 받는 양이 2배). 상대가 못 받는다고 알리면 방 전체로
+    const key = `${roomId}:${me}`;
+    let opp = oppCache.get(key);
+    if (opp === undefined) {
+      const room = await $room.getRoomState(['players', 'snapBroadcast']);
+      if (room.snapBroadcast) { $room.broadcastToRoom('pvpSnap', msg); return; }
+      opp = Object.keys(room.players || {}).find((a) => a !== me) ?? '';
+      if (opp) oppCache.set(key, opp);
+    }
+    if (!opp || opp === '*') { $room.broadcastToRoom('pvpSnap', msg); return; }
+    $room.sendMessageToUser('pvpSnap', opp, msg);
+  }
+
+  /** 상대 스냅이 안 온다 (개별 전송이 이 환경에서 안 닿음) → 이 방은 방 전체 방송으로 */
+  async pvpSnapFallback(): Promise<void> {
+    const roomId = $sender.roomId || $room.getId();
+    await $room.updateRoomState({ snapBroadcast: true });
+    for (const k of [...oppCache.keys()]) if (k.startsWith(`${roomId}:`)) oppCache.set(k, '*');
   }
 
   /** 몹 보내기 중계 */
@@ -341,9 +366,23 @@ export class Server {
     const wave = Math.max(1, Math.min(999, Math.floor(Number(payload?.wave) || 1)));
     const p = Number(payload?.pos);
     const pos = Number.isFinite(p) ? Math.max(0, Math.min(1, p)) : 0;
-    const room = await $room.getRoomState(['status']);
+    const me = $sender.account;
+    const roomId = $sender.roomId || $room.getId();
+    const room = await $room.getRoomState(['status', 'away']);
     if (room.status !== 'playing') return false;
-    $room.broadcastToRoom('pvpAttack', { from: $sender.account, payload: { card, wave, pos } });
+    $room.broadcastToRoom('pvpAttack', { from: me, payload: { card, wave, pos } });
+    // 상대가 연결이 끊겨 있으면 못 받으니 모아 두었다가 다시 들어오면 준다
+    if (room.away && Object.keys(room.away).some((a) => a !== me)) {
+      await $lock(`room:${roomId}`, async () => {
+        const r = await $room.getRoomState(['away', 'pending']);
+        const pending: Record<string, unknown[]> = r.pending || {};
+        for (const acc of Object.keys(r.away || {})) {
+          if (acc === me) continue;
+          pending[acc] = [...(pending[acc] || []), { card, wave, pos }].slice(-MAX_PENDING_ATTACKS);
+        }
+        await $room.updateRoomState({ pending });
+      });
+    }
     return true;
   }
 
@@ -351,6 +390,50 @@ export class Server {
   async pvpDefeat(): Promise<Record<string, any> | null> {
     const roomId = $sender.roomId || $room.getId();
     return this.finishMatch(roomId, $sender.account, 'defeat');
+  }
+
+  /** 연결 끊김 (플랫폼 유예 중 - 다시 붙을 수 있다): 상대에게 알리고 기다린다 */
+  async onRoomDisconnect(roomId: string, account: string): Promise<void> {
+    await $lock(`room:${roomId}`, async () => {
+      const room = await $room.getRoomState(['status', 'away']);
+      if (room.status !== 'playing') return;
+      await $room.updateRoomState({ away: { ...(room.away || {}), [account]: Date.now() } });
+    });
+    $room.broadcastToRoom('pvpAway', { account, graceMs: AWAY_GRACE_MS });
+  }
+
+  /** 다시 들어옴 (클라이언트가 pvpResume 도 부르지만, 플랫폼이 먼저 알려 주면 바로 상대 화면의 안내를 끈다) */
+  async onRoomJoin(roomId: string, account: string): Promise<void> {
+    const room = await $room.getRoomState(['status', 'away']);
+    if (room.status === 'playing' && room.away?.[account]) $room.broadcastToRoom('pvpBack', { account });
+  }
+
+  /** 끊겼다가 같은 방에 다시 들어온 클라이언트: 그동안 끝났으면 결과, 아니면 못 받은 몹 공격을 돌려준다 */
+  async pvpResume(): Promise<{ status: string; result?: unknown; pending: unknown[] }> {
+    const me = $sender.account;
+    const roomId = $sender.roomId || $room.getId();
+    return $lock(`room:${roomId}`, async () => {
+      const room = await $room.getRoomState(['status', 'result', 'away', 'pending']);
+      const pending = (room.pending?.[me] as unknown[]) || [];
+      const away = { ...(room.away || {}) };
+      delete away[me];
+      const rest = { ...(room.pending || {}) };
+      delete rest[me];
+      await $room.updateRoomState({ away, pending: rest });
+      if (room.status === 'playing') $room.broadcastToRoom('pvpBack', { account: me });
+      return { status: room.status || 'waiting', result: room.result, pending };
+    });
+  }
+
+  /** 상대가 끊긴 채 유예 시간이 지났다 → 남은 쪽 승리 (서버가 시간을 직접 확인) */
+  async pvpClaimAway(): Promise<Record<string, any> | null> {
+    const me = $sender.account;
+    const roomId = $sender.roomId || $room.getId();
+    const room = await $room.getRoomState(['status', 'away']);
+    if (room.status !== 'playing') return null;
+    const gone = Object.entries((room.away || {}) as Record<string, number>).find(([a, t]) => a !== me && Date.now() - t >= AWAY_GRACE_MS);
+    if (!gone) return null;
+    return this.finishMatch(roomId, gone[0], 'leave');
   }
 
   async onRoomLeave(roomId: string, account: string): Promise<void> {
