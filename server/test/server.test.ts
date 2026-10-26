@@ -39,8 +39,19 @@ describe('클라우드 저장', () => {
 });
 
 describe('VX Shop 지급 (서버가 바로 지급)', () => {
+  test('미등록 상품은 성공 응답 없이 거부한다', async (server) => {
+    let failed = false;
+    try {
+      await server.$onItemPurchased({ account: 'unknownbuyer', purchaseId: 'unknown-1', productId: 'not_a_product', quantity: 1 });
+    } catch {
+      failed = true;
+    }
+    expect(failed).toBe(true);
+  });
+
   test('구매 훅에서 보석이 들어가고, 같은 purchaseId 는 한 번만, 알림은 한 번만 받는다', async (server) => {
-    await server.$onItemPurchased({ account: 'bob', purchaseId: 7, productId: 'crystal_550', quantity: 1 });
+    const ack = await server.$onItemPurchased({ account: 'bob', purchaseId: 7, productId: 'crystal_550', quantity: 1 });
+    expect(ack.success).toBe(true);
     await server.$onItemPurchased({ account: 'bob', purchaseId: 7, productId: 'crystal_550', quantity: 1 });
     server.connect({ account: 'bob' });
     const first = await server.claimPurchases();
@@ -52,10 +63,28 @@ describe('VX Shop 지급 (서버가 바로 지급)', () => {
     expect(second.econ.crystals).toBe(550);
   });
 
+  test('광고 제거 패키지는 권한·보석·구매 기록을 저장하고 재시도해도 중복 지급하지 않는다', async (server) => {
+    const ack = await server.$onItemPurchased({ account: 'adbuyer', purchaseId: 'ad-1', productId: 'ad_remove', quantity: 1 });
+    expect(ack.success).toBe(true);
+    await server.$onItemPurchased({ account: 'adbuyer', purchaseId: 'ad-1', productId: 'ad_remove', quantity: 1 });
+
+    server.connect({ account: 'adbuyer' });
+    const profile = await server.loadProfile();
+    expect(profile.meta.adRemoved).toBe(true);
+    expect(profile.meta.crystals).toBe(500);
+    const claim = await server.claimPurchases();
+    expect(claim.list.length).toBe(1);
+    expect(claim.econ.adRemoved).toBe(true);
+    expect(claim.econ.crystals).toBe(500);
+  });
+
   test('상자 상품은 사자마자 열려서 카드가 들어간다', async (server) => {
+    const ack = await server.$onItemPurchased({ account: 'cara', purchaseId: 'c1', productId: 'chest_legend', quantity: 1 });
+    expect(ack.success).toBe(true);
     await server.$onItemPurchased({ account: 'cara', purchaseId: 'c1', productId: 'chest_legend', quantity: 1 });
     server.connect({ account: 'cara' });
     const got = await server.claimPurchases();
+    expect(got.list.length).toBe(1);
     expect(got.list[0].reveals.length).toBe(1);
     const drops = got.list[0].reveals[0].drops;
     expect(drops.some((d: { n: number }) => d.n > 0)).toBe(true);

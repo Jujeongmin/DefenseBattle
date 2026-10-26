@@ -16,7 +16,7 @@
  *  - saveProfile 로 올라온 저장본의 경제 필드는 버린다
  */
 import * as R from '../../game/src/econ/rules';
-import { STAGE_BY_ID, RESEARCH, UNITS, CHESTS } from '../../game/src/config';
+import { STAGE_BY_ID, RESEARCH, UNITS, CHESTS, PRODUCT_BY_ID } from '../../game/src/config';
 import { isBadNick } from '../../game/src/nickFilter';
 
 const QUEUE_KEY = 'pvpQueue';
@@ -210,21 +210,38 @@ export class Server {
 
   // ================= VX Shop 결제 =================
   /** 결제 완료 시 플랫폼이 호출 ($sender 가 아닌 event.account 로 사용자 식별) */
-  async $onItemPurchased(event: { account: string; purchaseId: number | string; productId: string; quantity?: number }): Promise<boolean> {
+  async $onItemPurchased(event: { account: string; purchaseId: number | string; productId: string; quantity?: number }): Promise<{ success: true }> {
+    if (!event?.account || event.purchaseId === undefined || event.purchaseId === null || String(event.purchaseId) === '') {
+      throw new Error('invalid purchase event');
+    }
+    if (!PRODUCT_BY_ID[event.productId]) throw new Error(`unknown product: ${event.productId}`);
+
     const account = event.account;
     const purchaseId = String(event.purchaseId);
-    // 지급은 여기서 바로 (서버 권위). 같은 purchaseId 는 한 번만
-    await withEcon(account, async (e) => {
+    // 보상, 수령 알림, 중복 방지 기록을 같은 사용자 상태 갱신에 저장한다.
+    // 어느 한 쓰기만 먼저 성공해 재시도에서 보상이 빠지는 구간을 없앤다.
+    const committed = await $lock(`econ:${account}`, async () => {
       const st = await $global.getUserState(account, ['pendingPurchases', 'grantedIds']);
       const granted: string[] = Array.isArray(st.grantedIds) ? st.grantedIds : [];
-      if (granted.includes(purchaseId)) return;
-      const reveals = R.grantProduct(e, event.productId, Math.max(1, event.quantity || 1), econCtx());
+      if (granted.includes(purchaseId)) return false;
+
+      const e = await loadEcon(account);
+      const quantity = Math.max(1, event.quantity || 1);
+      const reveals = R.grantProduct(e, event.productId, quantity, econCtx());
       const list: Array<PurchaseRecord & { reveals?: R.Reveal[] }> = Array.isArray(st.pendingPurchases) ? st.pendingPurchases : [];
-      list.push({ purchaseId, productId: event.productId, quantity: Math.max(1, event.quantity || 1), reveals });
-      await $global.updateUserState(account, { pendingPurchases: list.slice(-50), grantedIds: [...granted, purchaseId].slice(-500) });
-    });
-    $global.sendMessageToUser('purchase', account, { productId: event.productId });
-    return true;
+      list.push({ purchaseId, productId: event.productId, quantity, reveals });
+
+      const { deck: _deck, daily: _daily, pvp: _pvp, ...data } = e;
+      await $global.updateUserState(account, {
+        econ: { v: ECON_VERSION, data },
+        pendingPurchases: list.slice(-50),
+        grantedIds: [...granted, purchaseId].slice(-500),
+      });
+      return true;
+    }, { maxWaitMs: 1500 });
+
+    if (committed) $global.sendMessageToUser('purchase', account, { productId: event.productId });
+    return { success: true };
   }
 
   /** 지급된 구매 알림을 가져가고 비운다 (지급은 이미 훅에서 끝남 - 기기는 화면 표시·상자 공개만) */
