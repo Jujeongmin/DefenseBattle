@@ -196,6 +196,13 @@ def grade(sheet: str, parts: dict, colors: dict, g: int) -> tuple[dict, dict]:
     return p, c
 
 
+def hide_hair_under_helmet(parts: dict) -> dict:
+    """머리를 통째로 덮는 병사 투구를 쓰면 머리카락(앞·뒤·추가 머리)을 그리지 않는다 - 투구 밖으로 삐져나오지 않게"""
+    if not any(str(parts.get(k, '')).startswith('帽子001_兵士') for k in ('帽子類1', '帽子類2')):
+        return parts
+    return {k: v for k, v in parts.items() if k not in ('髪', '髪追加1', '髪追加2')}
+
+
 def check(parts: dict) -> list[str]:
     """없는 파츠 이름 목록"""
     folders: dict[str, list[str]] = {}
@@ -213,6 +220,7 @@ if __name__ == '__main__':
     for sheet, parts, colors in UNITS:
         for g in range(6):
             p, c = grade(sheet, parts, colors, g)
+            p = hide_hair_under_helmet(p)
             miss = check(p)
             if miss:
                 bad.append(f'{sheet}_{g}: {miss}')
