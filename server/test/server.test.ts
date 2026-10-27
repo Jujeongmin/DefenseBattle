@@ -95,7 +95,8 @@ describe('경제는 서버 권위', () => {
     expect(ad.result).toBe(1);
     expect(ad.econ.items.gachaTicket).toBe(1);
     const ten = await server.econ({ action: 'gacha', args: { n: 10, ticket: true } });
-    expect(ten.result).toBe(null); // 10회는 10장 필요
+    expect(ten.result).toBe(null); // 뽑기권 1장 + 보석 810 이 필요한데 보석이 없다
+    expect(ten.econ.items.gachaTicket).toBe(1); // 실패하면 아무것도 빠지지 않는다
     const one = await server.econ({ action: 'gacha', args: { n: 1, ticket: true } });
     expect(one.result.drops.length > 0).toBe(true);
     expect(one.econ.items.gachaTicket).toBe(0);
@@ -104,6 +105,20 @@ describe('경제는 서버 권위', () => {
     server.connect({ account: 'tix' });
     const got = await server.claimPurchases();
     expect(got.econ.items.gachaTicket).toBe(3);
+  });
+
+  test('10회 뽑기: 뽑기권을 먼저 쓰고 모자란 횟수만 보석 (뽑기권 3장 → 3 + 보석 630)', async (server) => {
+    await server.$onItemPurchased({ account: 'mix', purchaseId: 'm1', productId: 'summon_ticket_pack', quantity: 1 });
+    await server.$onItemPurchased({ account: 'mix', purchaseId: 'm2', productId: 'crystal_1200', quantity: 1 });
+    server.connect({ account: 'mix' });
+    await server.claimPurchases();
+    const ten = await server.econ({ action: 'gacha', args: { n: 10 } });
+    expect(ten.result.drops.length > 0).toBe(true);
+    expect(ten.econ.items.gachaTicket).toBe(0);
+    expect(ten.econ.crystals).toBe(1200 - 630);
+    // 뽑기권이 없으면 보석만 (1회 100)
+    const again = await server.econ({ action: 'gacha', args: { n: 1 } });
+    expect(again.econ.crystals).toBe(1200 - 630 - 100);
   });
 
   test('없는 동작·서버 전용 동작은 거부', async (server) => {

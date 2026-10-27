@@ -130,7 +130,7 @@ function startPvp(g: Game, u: UI, s: PvpSession): void {
       show();
       oppAwayTimer = setInterval(show, 500);
     },
-    onStart: (startAt) => u.countdown(startAt, () => { g.paused = false; }),
+    onStart: (startAt) => { g.syncClock(startAt); u.countdown(startAt, () => { g.paused = false; }); }, // 웨이브 일정도 서버 기준 시작 시각으로
     onSnapshot: (snap) => u.setOpponent(snap),
     onAttack: (p) => g.receiveAttack(p),
     onResult: (r) => {

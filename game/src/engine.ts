@@ -5,7 +5,7 @@
 import {
   ECONOMY, WAVE, GRADES, GRADE_BY_KEY, GRADE_INDEX, GRADE_RANGE,
   DMG_MULT, RACES, JOB_KR, GLOBAL_RANGE_FROM_INDEX, RESEARCH_PER,
-  MOB_KINDS, SKILLS, SKILL_FROM_INDEX, skillVal, MERGE_COUNT, PVP, UNIT_BY_ID, STARTER_UNITS,
+  MOB_KINDS, SKILLS, SKILL_FROM_INDEX, skillVal, MERGE_COUNT, PLAY_SPEED, PVP, UNIT_BY_ID, STARTER_UNITS,
   UNIT_LEVEL_ATK, RARITY_ATK, perkMult,
   rollGrade, rollJob, makeRng, JOBS, MOB_VARIANTS, ATTACKS, STARTER_ATTACKS, RESIST_MULT,
 } from './config';
@@ -77,6 +77,10 @@ function makeZones(): Zone[] {
 let nextId = 1;
 
 const MAX_EFFECTS = 240; // 이펙트 상한 (성능)
+/** 첫 웨이브까지 (게임 초) - 처음 restTimer 와 같다 */
+const WAVE_FIRST = 1.0;
+/** 웨이브 한 번 길이 (게임 초) = 몹 40마리 나오는 시간 + 쉬는 시간 (보스 웨이브도 같은 길이) */
+const WAVE_PERIOD = WAVE.mobsPerWave * WAVE.spawnInterval + WAVE.restBetween;
 
 export const DEFAULT_OPTIONS: GameOptions = {
   mode: 'solo',
@@ -179,6 +183,8 @@ export class Game {
   spawnGoal = 0;
   isBossWave = false;
   bossTimer = 0;
+  /** PvP: 서버 기준 시작 시각 (null 이면 게임 시간으로 웨이브 진행) */
+  private clockStart: number | null = null;
   log: LogEntry[] = [];
   mythicBanner: Banner | null = null;
   drag: DragState | null = null; // 구역 교환 드래그 중 시각 피드백용
@@ -271,7 +277,6 @@ export class Game {
     this.spawnTimer = 0;
     this.waveState = 'spawning';
     this.spawnGoal = this.isBossWave ? 1 : WAVE.mobsPerWave;
-    if (this.isBossWave) this.bossTimer = WAVE.bossTimeLimit;
     if (this.opts.track && !this.isPvp) {
       setDailyBestWave(this.wave);
       if (this.wave > meta.bestWave) meta.bestWave = this.wave;
@@ -301,7 +306,9 @@ export class Game {
   spawnMob(): void {
     const boss = this.isBossWave;
     if (boss) {
-      this.addMob('normal', this.waveHp(), true);
+      const b = this.addMob('normal', this.waveHp(), true);
+      b.bossWave = this.wave;
+      b.bossDeadline = this.time + WAVE.bossTimeLimit; // 보스마다 따로 (다음 웨이브는 기다리지 않고 진행)
       this.shake = Math.max(this.shake, 10);
       this.emit('bossSpawn', undefined);
       return;
@@ -819,6 +826,12 @@ export class Game {
   }
 
   updateWaveState(dt: number): void {
+    // 보스 제한 시간: 살아 있는 보스 중 가장 이른 마감까지 (웨이브 진행과는 별개 - 보스를 남겨 두어 몹 생성을 멈추는 악용 방지)
+    let deadline = Infinity;
+    for (const m of this.mobs) if (m.boss && !m.dead && m.bossDeadline !== undefined) deadline = Math.min(deadline, m.bossDeadline);
+    this.bossTimer = deadline === Infinity ? 0 : deadline - this.time;
+    if (deadline !== Infinity && this.bossTimer <= 0) { this.gameOver(tl('보스 제한시간 초과')); return; }
+    if (this.clockStart !== null) { this.updateWaveClock(); return; }
     if (this.waveState === 'rest') {
       this.restTimer -= dt;
       if (this.restTimer <= 0) this.startNextWave();
@@ -832,27 +845,46 @@ export class Game {
         this.spawnTimer = WAVE.spawnInterval;
       }
       if (this.spawnedCount >= this.spawnGoal) {
-        if (this.isBossWave) {
-          this.waveState = 'waiting_boss';
+        if (this.isBossWave && this.wave >= this.totalWaves) {
+          this.waveState = 'waiting_boss'; // 스테이지 마지막 보스: 처치하면 승리 (다음 웨이브가 없다)
         } else {
+          // 보스 웨이브도 보통 웨이브와 같은 길이 뒤에 다음 웨이브 (보스 생존 여부와 상관없이)
           this.waveState = 'rest';
-          this.restTimer = WAVE.restBetween;
+          this.restTimer = WAVE.restBetween + (this.spawnGoal < WAVE.mobsPerWave ? (WAVE.mobsPerWave - this.spawnGoal) * WAVE.spawnInterval : 0);
         }
       }
       return;
     }
     if (this.waveState === 'waiting_boss') {
-      this.bossTimer -= dt;
-      const bossAlive = this.mobs.some((m) => m.boss);
-      if (!bossAlive) {
-        if (!this.opts.stageId) this.tryAchieve(`clear${this.wave}`);
-        if (this.wave >= this.totalWaves) { this.win(); return; }
-        this.waveState = 'rest';
-        this.restTimer = WAVE.restBetween;
-      } else if (this.bossTimer <= 0) {
-        this.gameOver(tl('보스 제한시간 초과'));
-      }
+      if (!this.mobs.some((m) => m.boss && !m.dead)) this.win();
     }
+  }
+
+  /**
+   * PvP: 웨이브 일정을 서버가 정한 시작 시각 기준 실제 시간으로 (두 기기가 같은 순간에 같은 웨이브).
+   * 웨이브 k 는 시작 + FIRST + (k-1)×PERIOD 에 시작하고, 그 안의 j 번째 몹은 spawnInterval 간격으로 나온다.
+   * 처치·보스 생존과 상관없고, 기기가 잠깐 멈췄다 돌아오면 밀린 몹을 한 프레임에 최대 12마리씩 내보낸다 (중복 없음).
+   */
+  private updateWaveClock(): void {
+    const elapsed = ((Date.now() - this.clockStart!) / 1000) * PLAY_SPEED; // 게임 초
+    for (let budget = 12; budget > 0;) {
+      if (this.wave === 0 || this.waveState === 'rest') {
+        if (elapsed < WAVE_FIRST + this.wave * WAVE_PERIOD) return;
+        this.startNextWave();
+        if (this.over) return;
+        continue;
+      }
+      const start = WAVE_FIRST + (this.wave - 1) * WAVE_PERIOD;
+      const due = Math.min(this.spawnGoal, Math.floor((elapsed - start) / WAVE.spawnInterval) + 1);
+      if (this.spawnedCount < due) { this.spawnMob(); this.spawnedCount += 1; budget--; continue; }
+      if (this.spawnedCount >= this.spawnGoal) { this.waveState = 'rest'; continue; }
+      return;
+    }
+  }
+
+  /** PvP: 웨이브 일정 기준 시각 (Date.now() 기준 ms - 서버 시각에 맞춘 시작 시각) */
+  syncClock(startLocal: number): void {
+    this.clockStart = startLocal;
   }
 
   updateMobs(dt: number): void {
@@ -1285,6 +1317,7 @@ export class Game {
       return;
     }
     m.dead = true; // 배열 제거는 전투 루프 끝에서 일괄 처리
+    if (m.boss && m.bossWave && !this.opts.stageId) this.tryAchieve(`clear${m.bossWave}`);
     // 분열 알: 작은 몹으로 갈라짐 (분열된 몹은 다시 갈라지지 않음)
     if (def?.split && m.gold === undefined) {
       for (let i = 0; i < def.split; i++) this.spawnFrom(m, m.card!, m.maxHp * 0.25, 1, 0.6);
@@ -1334,7 +1367,7 @@ export class Game {
     this.over = false;
     for (const m of this.mobs) if (!m.boss) this.addEffect({ type: 'pop', x: m.x, y: m.y, ttl: 0.45, boss: false, seed: Math.random() * 6.28 });
     this.mobs = this.mobs.filter((m) => m.boss);
-    if (this.waveState === 'waiting_boss') this.bossTimer = Math.max(this.bossTimer, 45);
+    for (const m of this.mobs) if (m.boss && m.bossDeadline !== undefined) m.bossDeadline = Math.max(m.bossDeadline, this.time + 45);
     this.shake = 12;
     this.pushLog(tl('부활! 필드가 정리되었습니다'));
     return true;

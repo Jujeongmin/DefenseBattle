@@ -142,6 +142,7 @@ export class Renderer {
     this.drawUnitAuras();
     this.drawMobs();
     this.drawUnits();
+    this.drawUnitSparkles();
     this.drawEffects();
     this.drawDrag(); // 드래그 화살표는 최상단
     ctx.restore();
@@ -489,6 +490,27 @@ export class Renderer {
         ctx.strokeStyle = this.hexA(color, 0.7 * pulse);
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.ellipse(u.x, u.y + 22, 36, 13, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+  }
+
+  /** 신화·태초 유닛: 몸 둘레를 도는 반짝임 (신화 금빛 2개, 태초 진홍 3개) - 옷이 처음부터 화려한 유닛도 등급이 한눈에 보이게 */
+  private drawUnitSparkles(): void {
+    const ctx = this.ctx;
+    for (const u of this.game.units) {
+      if (u.gradeIndex < 4) continue;
+      const n = u.gradeIndex >= 5 ? 3 : 2;
+      const color = GRADES[u.gradeIndex].color;
+      for (let i = 0; i < n; i++) {
+        const a = this.t * 1.6 + u.id + (i * Math.PI * 2) / n;
+        const x = u.x + Math.cos(a) * 26, y = u.y - 6 + Math.sin(a) * 10;
+        const tw = 0.5 + 0.5 * Math.sin(this.t * 6 + i * 2 + u.id); // 깜빡임
+        const r = 2 + tw * 4;
+        ctx.fillStyle = this.hexA('#ffffff', 0.55 + tw * 0.45);
+        ctx.fillRect(x - 1, y - r, 2, r * 2);
+        ctx.fillRect(x - r, y - 1, r * 2, 2);
+        ctx.fillStyle = this.hexA(color, 0.95);
+        ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
       }
     }
   }

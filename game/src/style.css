@@ -322,6 +322,29 @@ b, strong { font-weight: 700; }
 .chest-slot.ready { animation: chestReady 0.9s ease-in-out infinite; }
 .chest-slot.ready .open { color: var(--gold); font-size: 13px; }
 @keyframes chestReady { 50% { transform: translateY(-3px) rotate(-2deg); } }
+/* 상자 그림 (등급마다 다른 그림 - 빛 번짐 여백 포함 160px 원본) */
+.chest-art { display: inline-block; width: 40px; height: 40px; margin: -4px 0 -5px; background: center / contain no-repeat; image-rendering: pixelated; flex-shrink: 0; }
+.rv-box .chest-art { width: 150px; height: 150px; }
+.lobby-body.c2 .chest-slot .chest-art { width: 30px; height: 30px; margin: -3px 0 -4px; }
+/* 상자 칸 테두리도 등급 색 (은·금·마법·전설은 더 진하게) */
+.arena-card .chest-slot.k-silver { border-color: rgba(200, 208, 216, 0.6); }
+.arena-card .chest-slot.k-gold { border-color: rgba(255, 207, 63, 0.7); }
+.arena-card .chest-slot.k-magic { border-color: rgba(176, 107, 255, 0.8); background: rgba(176, 107, 255, 0.12); }
+.arena-card .chest-slot.k-legend { border-color: rgba(255, 185, 63, 0.9); background: rgba(255, 185, 63, 0.14); }
+.chest-slot.k-magic .chest-art { animation: chestGlow 1.6s ease-in-out infinite; --gc: rgba(176, 107, 255, 0.9); }
+.chest-slot.k-legend .chest-art { animation: chestGlow 1.2s ease-in-out infinite; --gc: rgba(255, 200, 60, 0.95); }
+@keyframes chestGlow { 50% { filter: drop-shadow(0 0 5px var(--gc)); } }
+/* 열 수 있는 상자: 누를 때까지 빛 띠가 지나가고 손가락이 톡톡 (누르라고 알림) */
+.chest-slot.ready { position: relative; overflow: hidden; border-color: var(--gold) !important; box-shadow: 0 0 0 2px rgba(255, 207, 63, 0.5), 0 0 12px rgba(255, 207, 63, 0.6); }
+.chest-slot.ready::after {
+  content: ''; position: absolute; inset: -20% auto -20% -60%; width: 40%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: skewX(-18deg); animation: chestShine 1.8s ease-in-out infinite;
+}
+@keyframes chestShine { 0% { left: -60%; } 55%, 100% { left: 130%; } }
+.chest-nudge { position: absolute; z-index: 2; right: 2px; bottom: 2px; pointer-events: none; animation: chestTap 0.9s ease-in-out infinite; }
+.chest-nudge .pi { width: 20px; height: 20px; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.5)); }
+@keyframes chestTap { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-3px, -5px) scale(1.08); } }
 .chest-ic { display: inline-flex; padding: 2px 5px; background: var(--cc); border: 2px solid var(--edge); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
 .chest-ic .pi { width: 20px; height: 20px; }
 /* ---------- 유닛 카드: 등급·카드 막대 ---------- */
@@ -1085,8 +1108,10 @@ b, strong { font-weight: 700; }
   transition: width 0.15s, height 0.15s, right 0.15s, top 0.15s;
 }
 #game-frame.aiming #opp-canvas, #game-frame.peek #opp-canvas {
-  width: min(330px, calc(100% - 24px)); height: auto; aspect-ratio: 1; /* 높이는 너비와 같게 (부모 VS 줄 높이를 따르지 않게) */
-  right: calc((100% - min(330px, calc(100% - 24px))) / 2);
+  /* 미니맵 자리(오른쪽 위)에 붙은 채 화면 가로를 꽉 채운다 - 확대된 맵이 원래 미니맵 자리를 덮어야
+     PC 에서 마우스가 확대 뒤에도 안쪽으로 판정된다 (가운데로 옮기면 밖으로 빠져 확대·축소가 반복됐다) */
+  width: calc(100% - 16px); height: auto; aspect-ratio: 1; /* 높이는 너비와 같게 (부모 VS 줄 높이를 따르지 않게) */
+  right: 8px;
   box-shadow: 0 0 0 3px var(--red), 0 0 0 9999px rgba(10, 6, 4, 0.45);
 }
 /* 크게 보기(.peek): 조준이 아니라 구경 - 금색 테두리 */
@@ -1415,7 +1440,7 @@ b, strong { font-weight: 700; }
 .job-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 .job-tabs button { flex: 1; padding: 9px 10px 12px; font-size: 13px; position: relative; }
 .job-tabs button.active { border-image-source: url('/ui/frame/btn_gold.png'); }
-.job-tabs button .dot { top: -3px; right: -3px; }
+.job-tabs button .dot { top: -3px; right: 1px; } /* 맨 오른쪽 탭도 패널 테두리(넘침 자름)에 잘리지 않게 버튼 안쪽 모서리에 */
 /* 안내 줄: 판매일 땐 1/10/ALL 도 이 줄에 (제목 옆에 두면 제목이 두 줄로 꺾였다). 두 모드 높이를 같게 */
 .sell-hint { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 30px; text-align: center; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
 

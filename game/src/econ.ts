@@ -10,6 +10,7 @@ import { DECK_SIZE } from './config';
 import type { Job } from './types';
 
 export type { Reveal, CardDrop } from './econ/rules';
+export { gachaCost } from './econ/rules';
 
 export const online = (): boolean => getPlatform().kind === 'verse8';
 const ctx = (): R.Ctx => ({ now: Date.now(), rng: Math.random });

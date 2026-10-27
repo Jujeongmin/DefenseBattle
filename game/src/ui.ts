@@ -223,7 +223,7 @@ export class UI {
     }
 
     const bt = $('boss-timer');
-    if (g.waveState === 'waiting_boss' || (g.isBossWave && g.waveState === 'spawning')) {
+    if (g.bossTimer > 0) { // 살아 있는 보스의 남은 제한 시간
       bt.classList.remove('hidden');
       setHtml(bt, `${icon('timer')} ${(g.bossTimer / PLAY_SPEED).toFixed(1)}s`);
     } else {

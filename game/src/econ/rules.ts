@@ -154,16 +154,22 @@ export function openSlot(e: Econ, i: number, pay: boolean, ctx: Ctx): Reveal | n
   e.chests[i] = null;
   return openChestNow(e, c.kind, ctx);
 }
-/** 유닛 뽑기: 보석으로, 또는 ticket=true 면 뽑기권 n장으로 (10회도 영웅+ 보장 그대로) */
-export function gacha(e: Econ, n: 1 | 10, ctx: Ctx, ticket = false): Reveal | null {
-  if (ticket) {
-    if ((e.items.gachaTicket || 0) < n) return null;
-    e.items.gachaTicket -= n;
-  } else {
-    const cost = n === 1 ? GACHA.one : GACHA.ten;
-    if (e.crystals < cost) return null;
-    e.crystals -= cost;
-  }
+/**
+ * 뽑기 값: 가진 뽑기권을 먼저 쓰고 모자란 횟수만 보석으로 (10회는 한 번에 90 보석 = 10회 가격 ÷ 10).
+ * 예: 뽑기권 5장으로 10회 → 뽑기권 5 + 보석 450. 상점 버튼 표시와 실제 차감이 같은 계산을 쓴다.
+ */
+export function gachaCost(tickets: number, n: 1 | 10): { tickets: number; gems: number } {
+  const use = Math.min(n, Math.max(0, Math.floor(Number(tickets) || 0)));
+  const per = n === 1 ? GACHA.one : GACHA.ten / 10;
+  return { tickets: use, gems: Math.round((n - use) * per) };
+}
+
+/** 유닛 뽑기 (10회는 영웅+ 보장). 뽑기권·보석을 둘 다 확인한 뒤 한 번에 뺀다 - 한쪽만 빠지거나 두 번 빠지지 않게 */
+export function gacha(e: Econ, n: 1 | 10, ctx: Ctx): Reveal | null {
+  const cost = gachaCost(e.items.gachaTicket || 0, n);
+  if (e.crystals < cost.gems) return null;
+  e.items.gachaTicket = (e.items.gachaTicket || 0) - cost.tickets;
+  e.crystals -= cost.gems;
   const roll = (): Rarity => {
     let r = ctx.rng();
     for (const k of ['legendary', 'epic', 'rare', 'common'] as Rarity[]) { if (r < GACHA.rates[k]) return k; r -= GACHA.rates[k]; }
@@ -343,7 +349,7 @@ const str = (v: unknown) => (typeof v === 'string' ? v : '');
 export const CLIENT_ACTIONS: Record<string, (e: Econ, a: Args, ctx: Ctx) => unknown> = {
   startUnlock: (e, a, ctx) => startUnlock(e, num(a.i), ctx),
   openSlot: (e, a, ctx) => openSlot(e, num(a.i), a.pay === true, ctx),
-  gacha: (e, a, ctx) => gacha(e, a.n === 10 ? 10 : 1, ctx, a.ticket === true),
+  gacha: (e, a, ctx) => gacha(e, a.n === 10 ? 10 : 1, ctx), // 예전 클라이언트의 ticket 값은 무시 (뽑기권 먼저 쓰는 규칙은 서버가 정한다)
   upgradeUnit: (e, a) => upgradeUnit(e, str(a.job) as Job),
   buyUnit: (e, a) => buyUnit(e, str(a.job) as Job),
   research: (e, a) => research(e, str(a.key) as ResearchKey),

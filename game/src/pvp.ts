@@ -389,6 +389,7 @@ class BotSession implements PvpSession {
     game.on('attack', (p) => h.onAttack(p));
     game.on('gameover', () => void this.finish(true));
     const startAt = Date.now() + 3000;
+    game.syncClock(startAt); // 봇 판도 같은 시각 기준으로 웨이브 진행
     h.onStart(startAt);
     let acc = 0, snapAcc = 0;
     let last = Date.now();

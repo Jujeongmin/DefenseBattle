@@ -19,3 +19,8 @@ export function icon(name: IconName, cls = ''): string {
 export function stars(n: number, total = 3): string {
   return Array.from({ length: total }, (_, i) => icon(i < n ? 'star' : 'star_off')).join('');
 }
+
+/** 상자 그림 (등급마다 다름: 나무·은·금·마법·전설 - tools/build_chest_icons.py) */
+export function chestArt(kind: string, cls = ''): string {
+  return `<i class="chest-art k-${kind}${cls ? ' ' + cls : ''}" style="background-image:url('/ui/chests/${kind}.png')" aria-hidden="true"></i>`;
+}

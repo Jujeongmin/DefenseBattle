@@ -85,6 +85,8 @@ export interface Mob {
   gen?: number;        // 번식 유령: 몇 번째 복제인지 (0 = 원본)
   bred?: boolean;      // 번식 유령: 이미 복제함
   ghost?: boolean;     // 반투명 (유령)
+  bossWave?: number;   // 보스: 나온 웨이브 (처치 업적)
+  bossDeadline?: number; // 보스: 이 게임 시각까지 처치하지 못하면 패배
   gold?: number;       // 처치 골드 덮어쓰기 (분열·졸개는 적게)
   markUntil?: number;  // 사냥꾼 표식 (받는 피해 +)
   poison?: { dps: number; until: number; stacks: number }; // 독술사 중독

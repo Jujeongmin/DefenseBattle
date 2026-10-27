@@ -9,7 +9,7 @@ import { meta } from './meta';
 import { unitLevel } from './progress';
 import { unitIconUrl } from './assets';
 import { audio } from './audio';
-import { icon } from './icons';
+import { icon, chestArt } from './icons';
 import { openOverlay, spriteIcon } from './dom';
 import type { Job, Rarity } from './types';
 
@@ -93,7 +93,7 @@ export function showReveal(r: Reveal, onDone?: () => void): void {
   }).join('');
   const el = openOverlay('modal', `<div class="rv-scene" style="--cc:${box};--hc:${RARITY_COLOR[best]}">
       <div class="rv-rays"></div>
-      <div class="rv-box ${RANK[best] >= 2 ? 'hint' : ''}">${r.kind === 'gacha' ? icon('summon') : icon('chest')}</div>
+      <div class="rv-box ${RANK[best] >= 2 ? 'hint' : ''}">${r.kind === 'gacha' ? icon('summon') : r.kind ? chestArt(r.kind) : icon('chest')}</div>
       <div class="rv-flash"></div>
       <div class="rv-skip">${tl('탭해서 건너뛰기')}</div>
     </div>

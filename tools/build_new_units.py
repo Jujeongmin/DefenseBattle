@@ -1,7 +1,8 @@
 """새 유닛 24종 x 6등급 스프라이트를 CharaMEL 파츠로 합성한다 (build_unit_sprites.py 와 같은 방식).
 
 유닛마다 '대표 모습'(옷·무기·모자·귀/꼬리·수염·안경·색)을 하나 정하고,
-등급이 오를수록 망토 → 무기 강화 → 티아라 → 왕관이 붙고 등급 색이 입혀진다.
+등급이 오를수록 정면에서 보이는 옷(계열별 갑옷·로브 → 영웅 → 왕족)·머리 장비(투구·모자 → 티아라 → 왕관)·
+무기(강화, 전설부터 방패·화살통)가 바뀌고 색이 선명해진다 (grade 참고). 망토는 옆·뒤에서 보인다.
 없는 파츠 이름은 조용히 빠지지 않고 오류로 멈춘다 (compose 는 없는 파일을 건너뛰므로).
 
 실행: python tools/build_new_units.py  → game/public/sprites/{Sheet}_{0..5}.png
@@ -100,20 +101,98 @@ UNITS: list[tuple[str, dict, dict]] = [
 ]
 
 
-def grade(parts: dict, colors: dict, g: int) -> tuple[dict, dict]:
-    """대표 모습 → g 등급 모습: 망토(1+), 무기 강화, 티아라(4), 왕관(5), 등급 색"""
+# ---- 등급 사다리: 정면(게임에서 주로 보이는 방향)에서 보이는 옷·머리 장비·무기를 등급마다 바꾼다 ----
+# 귀·꼬리·수염·안경·무기 종류·대표 색은 그대로 두어 직업은 알아볼 수 있게 한다.
+# 직업 계열: melee(근접) / ranged(원거리) / mage(마법) / priest(신성)
+FAMILY = {
+    'Spearman': 'melee', 'Slinger': 'ranged', 'Monk': 'melee', 'Hunter': 'ranged', 'Acolyte': 'priest',
+    'Poisoner': 'mage', 'Storm': 'mage', 'Crossbow': 'ranged', 'Knight': 'melee', 'Berserker': 'melee',
+    'Merchant': 'ranged', 'Drummer': 'ranged', 'Houndmaster': 'ranged', 'Pyro': 'mage', 'Reaper': 'melee',
+    'Cleric': 'priest', 'Cannoneer': 'ranged', 'Chrono': 'mage', 'Dragoon': 'melee', 'Archmage': 'mage',
+    'Shadow': 'melee', 'Angel': 'priest', 'Stormking': 'mage', 'Alchemist': 'mage',
+}
+# 옷이 곧 정체성인 유닛: 신화까지 옷은 그대로(색·장비만 오름), 태초에만 왕족 옷
+KEEP_OUTFIT = {'Monk', 'Merchant', 'Drummer', 'Reaper', 'Cleric', 'Berserker', 'Alchemist', 'Shadow'}
+
+# 계열별 옷 단계 [정예(2), 전설(3)·신화(4), 태초(5)] - 남/여
+OUTFITS = {
+    'melee': {'M': ['男_服003_兵士-02', '男_服007_勇者', '男_服006_王'], 'F': ['女_服006_戦士', '女_服005_勇者', '女_服004_王妃']},
+    'ranged': {'M': ['男_服011_盗賊', '男_服007_勇者', '男_服006_王'], 'F': ['女_服009_盗賊', '女_服005_勇者', '女_服004_王妃']},
+    'mage': {'M': ['男_服009_魔法使い', '男_服005_大臣', '男_服006_王'], 'F': ['女_服007_魔女', '女_服004_王妃', '女_服004_王妃']},
+    'priest': {'M': ['男_服010_僧侶', '男_服004_神官', '男_服006_王'], 'F': ['女_服008_僧侶', '女_服004_王妃', '女_服004_王妃']},
+}
+# 계열별 머리 장비 (대표 모자가 없을 때) [정예, 전설]
+HEADGEAR = {
+    'melee': ['帽子001_兵士-01', '帽子001_兵士-03'],
+    'ranged': ['帽子010_鉢巻', '帽子010_鉢巻'],   # 원거리는 얼굴을 가리는 투구 대신 머리띠 (색으로 등급)
+    'mage': ['帽子006_魔法使い', '帽子006_魔法使い'],
+    'priest': ['帽子008_僧侶', '帽子009_僧侶'],
+}
+# 등급 밝기 (일반은 수수하게, 위로 갈수록 선명하게)
+GRADE_BRIGHT = [0.78, 0.92, 1.0, 1.06, 1.12, 1.18]
+# 머리 장비 색: 정예 강철 → 전설 보라빛 → 신화 금 → 태초 진홍·금
+HEAD_TINT = [None, None, T(0.82, 0.88, 1.0), T(0.8, 0.55, 1.2), T(1.3, 1.05, 0.42), T(1.35, 0.42, 0.34)]  # 흑백 후 색 (원래 색과 섞여 탁해지지 않게)
+
+
+def scale(spec: str | None, k: float) -> str | None:
+    """'Color( r, g, b, 1 )' / 'Tint(...)' 의 rgb 에 k 를 곱한다"""
+    if not spec:
+        return spec
+    head = spec.split('(')[0]
+    nums = [float(x) for x in spec[spec.index('(') + 1:spec.index(')')].split(',')]
+    r, g, b = (round(v * k, 3) for v in nums[:3])
+    return f'{head}( {r}, {g}, {b}, 1 )'
+
+
+def grade(sheet: str, parts: dict, colors: dict, g: int) -> tuple[dict, dict]:
+    """대표 모습 → g 등급 모습 (0 일반 … 5 태초)"""
     p, c = dict(parts), dict(colors)
+    fam = FAMILY[sheet]
+    sex = 'F' if p['スキン'].startswith('女') else 'M'
+    tiers = OUTFITS[fam][sex]
+    # 무기: 등급마다 강화 (신화에서 최고)
     if 'アイテム1' in p:
-        p['アイテム1'] = item_at(p['アイテム1'], g)
-    if g >= 1:
-        p['マント類1'] = f'マント00{min(4, g)}'
-        c['マント類1'] = GRADE_TINT[g]
-    has_hat = '帽子類1' in p
+        p['アイテム1'] = item_at(p['アイテム1'], min(5, g + (1 if g >= 3 else 0)))
+        base = p['アイテム1'].rsplit('-', 1)[0]
+        if g >= 3 and base == '剣だけ001':
+            p['アイテム1'] = f"剣と盾001-{min(4, g):02d}"      # 전설부터 방패
+        if g >= 3 and base == '弓001' and 'マント類2' not in p:
+            p['マント類2'] = '矢筒001-01'                     # 전설부터 화살통
+    # 옷: 정예 1단계, 전설·신화 2단계, 태초 왕족 (대표 옷이 이미 더 높은 단계면 그대로)
+    sig = p.get('衣装1', '')
+    sig_rank = tiers.index(sig) if sig in tiers else -1
+    want = -1 if g < 2 else 0 if g == 2 else 1 if g <= 4 else 2
+    if fam and sheet in KEEP_OUTFIT:
+        want = -1 if g < 5 else 2
+    if want > sig_rank:
+        p['衣装1'] = tiers[want]
+    # 옷 색: 대표 색을 유지한 채 등급만큼 밝게, 태초는 금빛을 더한다
+    base_col = c.get('衣装1') or C(1, 1, 1)
+    c['衣装1'] = scale(base_col, GRADE_BRIGHT[g])
+    if g == 5 and p['衣装1'] != sig:
+        # 태초 왕족 옷: 대표 색이 '색 입히기(Tint)' 면 그 색 그대로, 아니면 진홍
+        if 'Tint' in base_col:
+            c['衣装1'] = scale(base_col, 1.15)
+        else:
+            c['衣装1'] = T(1.25, 0.55, 0.38)  # 왕족 옷 본래 색은 녹색 계열이라 진홍으로
+    # 머리 장비: 대표 모자는 유지하고 색을 올린다, 없으면 계열 장비 (정예·전설), 신화 티아라, 태초 왕관
+    has_hat = '帽子類1' in p and p['帽子類1'] not in ('帽子003_ティアラ', '帽子002_王冠')
+    if not has_hat and g >= 2 and '帽子類1' not in p and sheet not in KEEP_OUTFIT:  # 생김새가 정체성인 유닛은 강제로 씌우지 않는다
+        p['帽子類1'] = HEADGEAR[fam][0 if g == 2 else 1]   # 정예에 쓰면 그 위 등급에서도 계속 쓴다
+        has_hat = True
+    if HEAD_TINT[g] and '帽子類1' in p and p['帽子類1'] not in ('帽子003_ティアラ', '帽子002_王冠'):
+        c['帽子類1'] = HEAD_TINT[g]
     if g == 4:
         p['帽子類2' if has_hat else '帽子類1'] = '帽子003_ティアラ'
     if g == 5:
-        p['帽子類2' if has_hat and p['帽子類1'] != '帽子002_王冠' else '帽子類1'] = '帽子002_王冠'
-        c['衣装1'] = c.get('衣装1', C(1, 1, 1)).replace('Tint(', 'Tint(').strip()
+        if has_hat:
+            p['帽子類2'] = '帽子002_王冠'
+        else:
+            p['帽子類1'] = '帽子002_王冠'
+    # 망토 (옆·뒤에서 보임): 고급부터, 등급 색
+    if g >= 1:
+        p['マント類1'] = f'マント00{min(4, g)}'
+        c['マント類1'] = GRADE_TINT[g]
     return p, c
 
 
@@ -133,7 +212,7 @@ if __name__ == '__main__':
     bad = []
     for sheet, parts, colors in UNITS:
         for g in range(6):
-            p, c = grade(parts, colors, g)
+            p, c = grade(sheet, parts, colors, g)
             miss = check(p)
             if miss:
                 bad.append(f'{sheet}_{g}: {miss}')

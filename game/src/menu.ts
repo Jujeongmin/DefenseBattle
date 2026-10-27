@@ -13,7 +13,7 @@ import { meta, saveMeta, researchLevel, currentSeasonId, todayStr } from './meta
 import { getPlatform } from './platform';
 import { audio } from './audio';
 import { unitIconUrl, mobPortraitSrc, mobSprite } from './assets';
-import { icon, stars as starIcons } from './icons';
+import { icon, chestArt, stars as starIcons } from './icons';
 import {
   stageStars, stageUnlocked, nextStageId, chapterStars, chapterUnlocked, CHAPTER_STAR_GOALS,
   chapterStarReward, starRewardClaimed, featureUnlocked, featureNew, markFeatureSeen,
@@ -30,7 +30,7 @@ import { onlineAvailable, findMatch, createBotSession, type PvpSession } from '.
 import { $, toast, openOverlay, closeOverlay, bindActions, spriteIcon, confirmModal, fitAll } from './dom';
 import { enableDeckDrag } from './dragdeck';
 import { Spotlight } from './tutorial';
-import { act, online, type Reveal } from './econ';
+import { act, online, gachaCost, type Reveal } from './econ';
 import { showShortage, activeOffers, unitPackAvailable, timeLeft } from './offers';
 import { chestState, chestLeftMs, leftText, clockText, opening, showReveal, flushReveals, pendingReveals } from './chests';
 import type { Job, Race, ResearchKey } from './types';
@@ -270,11 +270,13 @@ export class Menu {
       const st = chestState(i);
       if (!c) return `<div class="chest-slot empty">${icon('chest')}<span class="es">${tl('대전 승리 시<br>획득')}</span></div>`;
       const d = CHESTS[c.kind];
-      const ic = `<span class="chest-ic" style="--cc:${d.color}">${icon('chest')}</span>`;
+      const ic = chestArt(c.kind);
       const label = st === 'ready' ? tl('<b class="open">열기!</b>')
         : st === 'opening' ? `<span class="clock" data-chest-left="${i}">${clockText(chestLeftMs(i))}</span><small>${icon('gem')}${chestOpenCost(chestLeftMs(i))}</small>`
         : `<span>${leftText(chestLeftMs(i))}</span><small>${opening() < 0 ? tl('탭해서 열기') : tl('차례 대기')}</small>`;
-      return `<button class="chest-slot ${st}" data-act="chest" data-i="${i}">${ic}<span class="cn">${d.kr}</span>${label}</button>`;
+      // 열 수 있는 상자: 누를 때까지 손가락·빛 띠로 누르라고 알린다
+      const nudge = st === 'ready' ? `<span class="chest-nudge">${icon('pointer')}</span>` : '';
+      return `<button class="chest-slot ${st} k-${c.kind}" data-act="chest" data-i="${i}">${nudge}${ic}<span class="cn">${d.kr}</span>${label}</button>`;
     }).join('');
   }
   /** 상자 칸 누르기: 다 됐으면 열기, 잠겨 있으면 열기 시작(다른 게 여는 중이면 보석으로 바로), 여는 중이면 보석으로 바로 */
@@ -778,6 +780,8 @@ export class Menu {
         <button class="btn small gold" data-act="buy" data-id="${p.id}">VX ${price(p.id)}</button></div>`;
       }).join('');
       const tix = meta.items.gachaTicket || 0;
+      // 가진 뽑기권을 먼저 쓰고 모자란 만큼 보석 (예: 뽑기권 5 + 보석 450) - 실제 차감과 같은 계산
+      const costHtml = (n: 1 | 10) => { const c = gachaCost(tix, n); return [c.tickets ? `${icon('ticket')}${c.tickets}` : '', c.gems ? `${icon('gem')}${c.gems}` : ''].filter(Boolean).join(' + '); };
       // 무료: 광고 보고 뽑기권 (오늘 남은 횟수가 있으면 빨간 점)
       const adLeft = freeTicketAdsLeft();
       const free = rewardedAvailable()
@@ -793,8 +797,8 @@ export class Menu {
         ${activeOffers().length ? `<div class="section-title hot-title">${icon('timer')} ${tl('한정 특가')}</div>${activeOffers().map((o) => card(o.id, true)).join('')}` : ''}
         <div class="section-title">${tl('유닛 뽑기')} <span class="fine">${tl('카드로 해금·레벨업')}</span><button class="btn small odds-btn" data-act="odds">${tl('확률 정보')}</button></div>
         <div class="gacha-row">
-          <button class="btn blue gacha-btn" data-act="gacha" data-n="1"${tix >= 1 ? ' data-ticket="1"' : ''}>${tl('1회')}<small>${tix >= 1 ? `${icon('ticket')}1 ${tl('(보유 {0})', tix)}` : `${icon('gem')}${GACHA.one}`}</small></button>
-          <button class="btn gold gacha-btn" data-act="gacha" data-n="10"${tix >= 10 ? ' data-ticket="1"' : ''}>${tl('10회')}<small>${tix >= 10 ? `${icon('ticket')}10` : `${icon('gem')}${GACHA.ten}`}</small><small class="g-note">${tl('영웅+ 보장')}</small></button>
+          <button class="btn blue gacha-btn" data-act="gacha" data-n="1">${tl('1회')}<small>${costHtml(1)}${tix >= 1 ? ` ${tl('(보유 {0})', tix)}` : ''}</small></button>
+          <button class="btn gold gacha-btn" data-act="gacha" data-n="10">${tl('10회')}<small>${costHtml(10)}</small><small class="g-note">${tl('영웅+ 보장')}</small></button>
         </div>
         <div class="fine" style="margin:-4px 0 8px">${(['common', 'rare', 'epic', 'legendary'] as const).map((r) => `<span style="color:${RARITY_COLOR[r]}">${RARITY_KR[r]} ${Math.round(GACHA.rates[r] * 100)}%</span>`).join(' · ')}</div>
         ${card('summon_ticket_pack')}
@@ -831,10 +835,10 @@ export class Menu {
         },
         gacha: async (b) => {
           const n = Number(b.dataset.n) as 1 | 10;
-          const ticket = b.dataset.ticket === '1'; // 뽑기권이 있으면 보석 대신 뽑기권
-          const cost = n === 1 ? GACHA.one : GACHA.ten;
-          if (!ticket && meta.crystals < cost) { showShortage(cost - meta.crystals, undefined, draw); return; }
-          const r = await act<Reveal | null>('gacha', { n, ticket });
+          const { gems } = gachaCost(meta.items.gachaTicket || 0, n); // 뽑기권 먼저, 모자란 만큼 보석
+          if (meta.crystals < gems) { showShortage(gems - meta.crystals, undefined, draw); return; }
+          (b as HTMLButtonElement).disabled = true; // 결과가 오기 전에 한 번 더 눌러 두 번 뽑히지 않게
+          const r = await act<Reveal | null>('gacha', { n }).finally(() => { (b as HTMLButtonElement).disabled = false; });
           if (r) { draw(); showReveal(r, draw); }
         },
       });
