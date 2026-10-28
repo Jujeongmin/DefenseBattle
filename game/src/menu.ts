@@ -4,7 +4,7 @@
 import {
   RESEARCH, researchCost, DAILY_QUESTS, ACHIEVEMENTS, PRODUCTS, ITEM_KR,
   UNITS, UNIT_BY_ID, UNIT_MAX_LEVEL, unitUpgradeCost, SKILL_KR,
-  DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, UNIT_PACK, CHESTS, RARITY_KR, RARITY_COLOR, GACHA, chestOpenCost, type RoadStep, type AttackKey,
+  DECK_SIZE, STAGES, STAGE_BY_ID, CHAPTERS, ATTACKS, ATTACK_BY_KEY, ATTACK_DECK_SIZE, PLAY_SPEED, UNIT_PACK, CHESTS, RARITY_KR, RARITY_COLOR, GACHA, SEASON_RESET_ABOVE, chestOpenCost, type RoadStep, type AttackKey,
   SEASON_TIERS, SEASON_XP_PER_TIER, pvpTier, productEfficiency,
   CAMPAIGN, TROPHY_ROAD, PVP_TIERS, ECONOMY, type SeasonReward, UNIT_PRESETS, ATTACK_PRESETS, type DeckPreset,
   GRADES, UNIT_LEVEL_ATK, RARITY_ATK,
@@ -883,6 +883,7 @@ export class Menu {
       }
       const el = openOverlay('panel', `<div class="dialog"><button class="close-x">${icon('close')}</button>
         <h2>${tab === 'pass' ? tl('시즌 패스') : tl('랭킹')}</h2>
+        ${tab === 'rank' ? `<div class="fine season-note fit">${icon('calendar')} ${tl('매달 1일 초기화: {0} 넘는 트로피 절반', SEASON_RESET_ABOVE)}</div>` : ''}
         <div id="pvp-body">${body}</div></div>`, () => this.render());
       // 시즌 패스 띠: 처음 열 때는 지금 단계를 가운데로, 다시 그릴 때(보상 받기)는 보던 위치 그대로
       const track = el.querySelector<HTMLElement>('#sp-track');

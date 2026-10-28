@@ -1605,3 +1605,6 @@ table.odds th .pi { width: 12px; height: 12px; }
 .lang-row .info { display: flex; flex-direction: column; gap: 6px; }
 .lang-list { display: flex; flex-wrap: wrap; gap: 4px; }
 .lang-list .btn { padding: 9px 10px 12px; font-size: 12px; } /* 금·회색 테두리 안쪽 면 가운데 */
+/* 랭킹: 시즌 초기화 안내 한 줄 */
+.season-note { text-align: center; margin: -4px 0 8px; white-space: nowrap; overflow: hidden; }
+.season-note .pi { vertical-align: -3px; }

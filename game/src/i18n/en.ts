@@ -580,5 +580,6 @@ const d: Record<string, string> = {
   "다시 연결됐어요": "Reconnected",
   "상대 연결 끊김 · {0}초 뒤 승리": "Opponent disconnected · you win in {0}s",
   "연결이 끊겨 대전이 끝났어요": "The battle ended because the connection was lost",
+  "매달 1일 초기화: {0} 넘는 트로피 절반": "Resets on the 1st: trophies over {0} halved",
 };
 export default d;
