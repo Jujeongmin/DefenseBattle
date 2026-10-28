@@ -428,6 +428,27 @@ export const ATTACK_BY_KEY = Object.fromEntries(ATTACKS.map((a) => [a.key, a])) 
 export const STARTER_ATTACKS: AttackKey[] = ['swarm', 'rush', 'giant', 'egg'];
 export const ATTACK_DECK_SIZE = 4;
 
+// ---------- PvP 트로피 규칙 (클라이언트·서버·시뮬레이터 공용) ----------
+/** 이 트로피부터(플래티넘) 질 때도 이길 때만큼 잃는다 - 승률 40% 만 넘어도 끝없이 오르던 것을 막는다 */
+export const TROPHY_EVEN_FROM = 320;
+/** 한 판 트로피 변화 (이기면 +30, 연승 보너스 최대 +10 / 지면 -20, 플래티넘부터 -30) */
+export function trophyChange(trophies: number, streak: number, won: boolean): number {
+  if (won) return PVP.trophyWin + Math.min(10, Math.max(0, streak) * 2);
+  const loss = trophies >= TROPHY_EVEN_FROM ? PVP.trophyWin : PVP.trophyLoss;
+  return -Math.min(loss, Math.max(0, trophies));
+}
+/** 시즌 id (월 단위: 2026-10 → "S2026-10") */
+export function seasonIdOf(now = new Date()): string {
+  return `S${now.toISOString().slice(0, 7)}`;
+}
+/** 시즌이 바뀌면 이 트로피를 넘는 만큼의 절반을 깎는다 (마스터 같은 최상위 단계가 계속 소수로 남게) */
+export const SEASON_RESET_ABOVE = 500;
+/** 트로피 초기화를 처음 하는 시즌 (이 규칙 전에 쌓인 기록은 이 시즌으로 넘어갈 때부터 적용 - 지금 바로 깎지 않는다) */
+export const SEASON_RESET_FROM = "S2026-11";
+export function seasonResetTrophies(trophies: number): number {
+  return trophies > SEASON_RESET_ABOVE ? SEASON_RESET_ABOVE + Math.floor((trophies - SEASON_RESET_ABOVE) / 2) : trophies;
+}
+
 export const PVP = {
   hpMult: 3,            // PvP 몹 시작 체력 배율 - pvpHpGrowth 와 함께 한 판 ~4분 (tools/pvpsim.ts)
   reportInterval: 0.25,  // 상태 보고 주기(초) - 상대 전장을 거의 실시간으로 (스냅샷 최대 ~2.5KB × 4번/초)

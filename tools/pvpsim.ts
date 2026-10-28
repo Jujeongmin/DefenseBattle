@@ -7,7 +7,7 @@ import { Game } from '../game/src/engine';
 import { meta } from '../game/src/meta';
 import { aiStep, thinkInterval } from '../game/src/ai';
 import { botSkill, botDeck, botAttackDeck, botAtkMult } from '../game/src/pvp';
-import { PVP, PLAY_SPEED, TROPHY_ROAD } from '../game/src/config';
+import { PVP, PLAY_SPEED, TROPHY_ROAD, trophyChange } from '../game/src/config';
 if (process.env.PVP_HPM) (PVP as { hpMult: number }).hpMult = Number(process.env.PVP_HPM);
 import type { BoardSnapshot } from '../game/src/engine';
 import type { Job } from '../game/src/types';
@@ -22,7 +22,7 @@ function match(playerSkill: number, bot: number, levels = 1): { won: boolean; se
   const seed = Math.floor(Math.random() * 2 ** 31);
   const bDeck = botDeck(meta.pvp.trophies);
   const a = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: DECK, unitLevels: Object.fromEntries(DECK.map((j) => [j, levels])) });
-  const b = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: bDeck, atkMult: botAtkMult(bot),
+  const b = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: bDeck, atkMult: botAtkMult(bot, meta.pvp.trophies),
     attackDeck: botAttackDeck(meta.pvp.trophies), unitLevels: Object.fromEntries(bDeck.map((j) => [j, levels])) });
   a.on('attack', (p) => b.receiveAttack(p));
   b.on('attack', (p) => a.receiveAttack(p));
@@ -64,8 +64,9 @@ for (let n = 1; n <= 400 && marks.length; n++) {
   const r = match(player, botSkill());
   totalSec += r.sec + 20; // 매칭·결과 화면 20초
   const p = meta.pvp;
-  if (r.won) { p.trophies += PVP.trophyWin + Math.min(10, p.streak * 2); p.wins++; p.streak++; p.lossStreak = 0; }
-  else { p.trophies -= Math.min(PVP.trophyLoss, p.trophies); p.losses++; p.streak = 0; p.lossStreak = (p.lossStreak ?? 0) + 1; }
+  p.trophies += trophyChange(p.trophies, p.streak, r.won);
+  if (r.won) { p.wins++; p.streak++; p.lossStreak = 0; }
+  else { p.losses++; p.streak = 0; p.lossStreak = (p.lossStreak ?? 0) + 1; }
   while (marks.length && p.trophies >= marks[0]) reached.push(`${marks.shift()}트로피: ${n}판 ${(totalSec / 3600).toFixed(1)}시간`);
 }
 console.log(reached.join('\n'));

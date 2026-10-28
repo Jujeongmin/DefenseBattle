@@ -299,6 +299,19 @@ describe('PvP 룸', () => {
     expect(await server.pvpClaimAway()).toBe(null);
   });
 
+  test('트로피: 플래티넘(320) 전에는 지면 -20, 플래티넘부터는 -30', async (server) => {
+    server.connect({ account: 'climb' });
+    const play = async (won: boolean) => server.pvpBotResult({ id: (await server.pvpBotStart()).id, won });
+    const early = await play(false);
+    expect(early.delta).toBe(0); // 0 트로피에서는 잃을 게 없다
+    let r = await play(true);
+    while (r.trophies < 320) r = await play(true);
+    const loss = await play(false);
+    expect(loss.delta).toBe(-30);
+    const low = await play(false); // 320 아래로 내려가면 다시 -20
+    expect(low.delta).toBe(loss.trophies >= 320 ? -30 : -20);
+  });
+
   test('경기 중 이탈하면 상대 승리', async (server) => {
     await server.simulateJoin('r2', 'p3');
     await server.simulateJoin('r2', 'p4');

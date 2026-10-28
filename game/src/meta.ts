@@ -2,7 +2,7 @@
 //  글로벌(계정) 상태 - localStorage 영구 저장
 //  크리스탈, 연구소 레벨, 퀘스트/업적 진행도
 // ============================================================
-import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS, FEATURE_UNLOCK, STARTER_ATTACKS, ATTACK_BY_KEY, PVP_TIERS } from './config';
+import { RESEARCH, DAILY_QUESTS, ACHIEVEMENTS, FEATURE_UNLOCK, STARTER_ATTACKS, ATTACK_BY_KEY, PVP_TIERS, seasonIdOf } from './config';
 import { getPlatform } from './platform';
 import type { MetaData, ResearchKey, QuestStat, AchievementDef } from './types';
 import { convertLegacyItems } from './econ/rules';
@@ -15,7 +15,7 @@ export function todayStr(): string {
 
 // PvP 시즌 id (월 단위 시즌: 2026-10 → "S2026-10")
 export function currentSeasonId(now = new Date()): string {
-  return `S${now.toISOString().slice(0, 7)}`;
+  return seasonIdOf(now);
 }
 
 function freshSeason(): MetaData['season'] {

@@ -11,7 +11,7 @@ import { meta } from '../game/src/meta';
 import { aiStep, thinkInterval } from '../game/src/ai';
 import { botSkill, botDeck, botAttackDeck, botAtkMult, botLevel } from '../game/src/pvp';
 import {
-  PVP, PLAY_SPEED, UNITS, STAGES, RESEARCH, researchCost, unitUpgradeCost, UNIT_MAX_LEVEL, DECK_SIZE, starsFor,
+  PVP, PLAY_SPEED, UNITS, STAGES, RESEARCH, trophyChange, researchCost, unitUpgradeCost, UNIT_MAX_LEVEL, DECK_SIZE, starsFor,
 } from '../game/src/config';
 import { nextStageId, stageStars, stageOptions, unitLevels, canUpgradeUnit } from '../game/src/progress';
 import { chestState, opening } from '../game/src/chests';
@@ -104,7 +104,7 @@ function playPvp(): boolean {
   const lv = unitLevels();
   const avg = botLevel();
   const a = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: [...meta.deck], attackDeck: [...meta.attackDeck], unitLevels: lv });
-  const b = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: bDeck, atkMult: botAtkMult(sk),
+  const b = new Game({ mode: 'pvp', seed, useResearch: false, track: false, deck: bDeck, atkMult: botAtkMult(sk, meta.pvp.trophies),
     attackDeck: botAttackDeck(meta.pvp.trophies), unitLevels: Object.fromEntries(bDeck.map((j) => [j, avg])) });
   a.on('attack', (p) => b.receiveAttack(p));
   b.on('attack', (p) => a.receiveAttack(p));
@@ -119,8 +119,9 @@ function playPvp(): boolean {
   const won = b.over && !a.over ? true : a.over && !b.over ? false : a.mobs.length < b.mobs.length;
   clock += t / PLAY_SPEED + OVERHEAD;
   const p = meta.pvp;
-  if (won) { p.trophies += PVP.trophyWin + Math.min(10, p.streak * 2); p.wins++; p.streak++; p.lossStreak = 0; }
-  else { p.trophies -= Math.min(PVP.trophyLoss, p.trophies); p.losses++; p.streak = 0; p.lossStreak = (p.lossStreak ?? 0) + 1; }
+  p.trophies += trophyChange(p.trophies, p.streak, won);
+  if (won) { p.wins++; p.streak++; p.lossStreak = 0; }
+  else { p.losses++; p.streak = 0; p.lossStreak = (p.lossStreak ?? 0) + 1; }
   R.pvpReward(E(), won, C()); // 보석·시즌 XP·승리 상자·트로피 로드 (서버와 같은 규칙)
   noteUnlocks(`트로피 ${p.trophies}`);
   return won;

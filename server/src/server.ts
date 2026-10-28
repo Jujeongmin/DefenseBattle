@@ -16,14 +16,14 @@
  *  - saveProfile 로 올라온 저장본의 경제 필드는 버린다
  */
 import * as R from '../../game/src/econ/rules';
-import { STAGE_BY_ID, RESEARCH, UNITS, CHESTS, PRODUCT_BY_ID } from '../../game/src/config';
+import { STAGE_BY_ID, RESEARCH, UNITS, CHESTS, PRODUCT_BY_ID, trophyChange, seasonIdOf, seasonResetTrophies, SEASON_RESET_FROM } from '../../game/src/config';
 import { isBadNick } from '../../game/src/nickFilter';
 
 const QUEUE_KEY = 'pvpQueue';
 const QUEUE_TTL = 15_000;        // 대기열 하트비트 만료(ms) - 클라이언트가 2초마다 poll
 const MATCH_TTL = 60_000;        // 매칭 결과 보관(ms)
-const TROPHY_WIN = 30;
-const TROPHY_LOSS = 20;
+/** 시즌 필드가 없던 예전 기록은 이 시즌 것으로 본다 (규칙을 넣은 달 - 지금 바로 깎지 않는다) */
+const LEGACY_SEASON = 'S2026-10';
 const ATTACK_CARD_COUNT = 10;    // 몹 카드 종류 수 (game/src/config.ts ATTACKS)
 const RANKING = 'pvpRanking';
 const MAX_META_BYTES = 60_000;
@@ -34,7 +34,7 @@ const MAX_PENDING_ATTACKS = 60;
 const oppCache = new Map<string, string>();
 
 interface QueueEntry { account: string; nick: string; trophies: number; t: number }
-interface PvpStats { trophies: number; wins: number; losses: number; streak: number }
+interface PvpStats { trophies: number; wins: number; losses: number; streak: number; season?: string }
 interface MatchInfo {
   roomId: string;
   seed: number;
@@ -138,14 +138,26 @@ function freshStats(): PvpStats {
 
 async function getStats(account: string): Promise<PvpStats> {
   const st = await $global.getUserState(account, ['pvp']);
-  return { ...freshStats(), ...(st.pvp || {}) };
+  const s: PvpStats = { ...freshStats(), ...(st.pvp || {}) };
+  // 시즌이 바뀐 뒤 처음 읽을 때 한 번: 500 넘는 트로피의 절반을 깎는다 (SEASON_RESET_FROM 시즌부터)
+  const cur = seasonIdOf();
+  if ((s.season ?? LEGACY_SEASON) !== cur) {
+    if (cur >= SEASON_RESET_FROM) s.trophies = seasonResetTrophies(s.trophies);
+    s.season = cur;
+    await $global.updateUserState(account, { pvp: s });
+  }
+  return s;
+}
+/** 랭킹 한 줄 (어느 시즌 트로피인지도 적어 둔다 - 시즌이 바뀌면 표시할 때 초기화 값으로) */
+function rankRow(account: string, nick: string, s: PvpStats): Record<string, unknown> {
+  return { account, nick, trophies: s.trophies, wins: s.wins, season: s.season ?? seasonIdOf() };
 }
 
 export class Server {
   // ================= 클라우드 저장 =================
   async loadProfile(): Promise<{ account: string; meta: Record<string, any>; pvp: PvpStats }> {
-    const st = await $global.getMyState(['meta', 'pvp']);
-    const pvp = { ...freshStats(), ...(st.pvp || {}) };
+    const st = await $global.getMyState(['meta']);
+    const pvp = await getStats($sender.account); // 시즌이 바뀌었으면 여기서 트로피 초기화
     const { econ } = await withEcon($sender.account, () => null); // 처음이면 여기서 옮겨 둔다
     // PvP 기록·경제는 서버 값이 권위 (기기 저장본 덮어쓰기).
     // 처음 온 계정도 빈 저장본 대신 이 계정의 경제·PvP 를 준다 - 기기에 남은 다른 계정 캐시를 쓰지 않게
@@ -476,7 +488,7 @@ export class Server {
       for (const acc of accounts) {
         const s = await getStats(acc);
         const won = acc === winner;
-        const d = won ? TROPHY_WIN + Math.min(10, s.streak * 2) : -Math.min(TROPHY_LOSS, s.trophies);
+        const d = trophyChange(s.trophies, s.streak, won);
         s.trophies += d;
         if (won) { s.wins += 1; s.streak = Math.max(0, s.streak) + 1; } else { s.losses += 1; s.streak = 0; }
         delta[acc] = d;
@@ -486,8 +498,8 @@ export class Server {
         const r = await withEcon(acc, (e) => { e.pvp = s; return R.pvpReward(e, won, econCtx()); });
         rewards[acc] = { ...r.result, econ: r.econ };
         const nick = room.players[acc]?.nick || '용사';
-        await $global.addCollectionItem(RANKING, { account: acc, nick, trophies: s.trophies, wins: s.wins }, { id: acc })
-          .catch(() => $global.updateCollectionItem(RANKING, { __id: acc, account: acc, nick, trophies: s.trophies, wins: s.wins }));
+        await $global.addCollectionItem(RANKING, rankRow(acc, nick, s), { id: acc })
+          .catch(() => $global.updateCollectionItem(RANKING, { __id: acc, ...rankRow(acc, nick, s) }));
       }
       const result = { winner, loser, reason, delta, trophies, rewards };
       await $room.updateRoomState({ status: 'done', result });
@@ -514,13 +526,13 @@ export class Server {
     await $global.updateMyState({ pvpBot: null });
     const s = await getStats(me);
     const won = !!opts.won;
-    const d = won ? TROPHY_WIN + Math.min(10, s.streak * 2) : -Math.min(TROPHY_LOSS, s.trophies);
+    const d = trophyChange(s.trophies, s.streak, won);
     s.trophies += d;
     if (won) { s.wins += 1; s.streak = Math.max(0, s.streak) + 1; } else { s.losses += 1; s.streak = 0; }
     await $global.updateUserState(me, { pvp: s });
     const nick = cleanNick(st.nick);
-    await $global.addCollectionItem(RANKING, { account: me, nick, trophies: s.trophies, wins: s.wins }, { id: me })
-      .catch(() => $global.updateCollectionItem(RANKING, { __id: me, account: me, nick, trophies: s.trophies, wins: s.wins }));
+    await $global.addCollectionItem(RANKING, rankRow(me, nick, s), { id: me })
+      .catch(() => $global.updateCollectionItem(RANKING, { __id: me, ...rankRow(me, nick, s) }));
     const r = await withEcon(me, (e) => { e.pvp = s; return R.pvpReward(e, won, econCtx()); });
     return { delta: d, trophies: s.trophies, reward: r.result, econ: r.econ };
   }
@@ -533,8 +545,8 @@ export class Server {
     await $global.updateMyState({ nick });
     const s = await getStats(me);
     if (s.wins + s.losses > 0) {
-      await $global.addCollectionItem(RANKING, { account: me, nick, trophies: s.trophies, wins: s.wins }, { id: me })
-        .catch(() => $global.updateCollectionItem(RANKING, { __id: me, account: me, nick, trophies: s.trophies, wins: s.wins }));
+      await $global.addCollectionItem(RANKING, rankRow(me, nick, s), { id: me })
+        .catch(() => $global.updateCollectionItem(RANKING, { __id: me, ...rankRow(me, nick, s) }));
     }
     return { nick };
   }
@@ -544,7 +556,11 @@ export class Server {
       orderBy: [{ field: 'trophies', direction: 'desc' }],
       limit: 50,
     });
-    const top = items.map((i: any) => ({ account: i.account, nick: i.nick, trophies: i.trophies, wins: i.wins || 0 }));
+    // 지난 시즌 줄(그 뒤로 대전을 안 한 계정)은 초기화된 트로피로 보여 준다
+    const cur = seasonIdOf();
+    const shown = (i: any) => ((i.season ?? LEGACY_SEASON) !== cur && cur >= SEASON_RESET_FROM ? seasonResetTrophies(i.trophies) : i.trophies);
+    const top = items.map((i: any) => ({ account: i.account, nick: i.nick, trophies: shown(i), wins: i.wins || 0 }))
+      .sort((a: { trophies: number }, b: { trophies: number }) => b.trophies - a.trophies);
     return { top, me: await getStats($sender.account) };
   }
 }

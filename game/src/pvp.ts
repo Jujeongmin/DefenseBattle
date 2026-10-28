@@ -3,7 +3,7 @@
 //  두 구현이 같은 인터페이스를 가져 UI/게임 흐름은 상대 종류를 신경 쓰지 않는다.
 // ============================================================
 import { Game, type BoardSnapshot } from './engine';
-import { PVP, JOBS, PLAY_SPEED, STARTER_UNITS, TROPHY_ROAD, DECK_SIZE, ATTACKS, STARTER_ATTACKS, ATTACK_DECK_SIZE, UNIT_BY_ID, RESEARCH, type AttackKey } from './config';
+import { trophyChange, PVP, JOBS, PLAY_SPEED, STARTER_UNITS, TROPHY_ROAD, DECK_SIZE, ATTACKS, STARTER_ATTACKS, ATTACK_DECK_SIZE, UNIT_BY_ID, RESEARCH, type AttackKey } from './config';
 import { aiStep, thinkInterval } from './ai';
 import { meta } from './meta';
 import { unitLevels } from './progress';
@@ -320,10 +320,11 @@ export function botResearch(trophies: number): Partial<Record<ResearchKey, numbe
 export function botSkill(): number {
   const p = meta.pvp;
   if (p.wins + p.losses < 3) return 0.05; // 첫 3판은 가장 약한 봇 - 처음 대전에서 이기는 경험
-  // 사람 손은 봇보다 느리고 실수도 많다 → 천천히 강해진다 (300 트로피 ≈ 0.3, 900 ≈ 0.7, 1125+ ≈ 0.85)
+  // 사람 손은 봇보다 느리고 실수도 많다 → 천천히 강해진다 (300 트로피 ≈ 0.3, 900 ≈ 0.7, 1350+ = 1.0 최고 판단력)
+  // 그 위로는 판단력 대신 봇 유닛 공격력이 계속 오른다 (botAtkMult) - 상한이 없어 잘하는 사람도 어딘가에서 승률 50% 로 멈춘다
   const base = 0.1 + p.trophies / 1500;
   const adj = Math.min(4, p.streak) * 0.05 - Math.min(3, p.lossStreak ?? 0) * 0.1;
-  return Math.max(0.05, Math.min(0.85, base + adj));
+  return Math.max(0.05, Math.min(1, base + adj));
 }
 
 /** 봇 유닛 레벨 = 내 출전 덱의 평균 레벨 (가진 유닛 전체 평균이면 덱만 키운 플레이어가 너무 유리했다) */
@@ -334,8 +335,9 @@ export function botLevel(): number {
 }
 
 /** 봇 유닛 공격력 배수: 약한 봇일수록 낮다 (0.05 → 0.62, 0.3 → 0.75, 0.85 → 1.0) */
-export function botAtkMult(skill: number): number {
-  return 0.6 + skill * 0.5;
+/** 봇 유닛 공격력 배율: 판단력에 따라, 1350 트로피 위로는 1000 트로피마다 +0.4 씩 상한 없이 */
+export function botAtkMult(skill: number, trophies = 0): number {
+  return 0.6 + skill * 0.5 + (Math.max(0, trophies - 1350) / 1000) * 0.4;
 }
 
 /** 봇 덱: 그 트로피에서 열려 있을 유닛만 (기본 3종 + 트로피 로드로 열린 유닛) */
@@ -355,7 +357,7 @@ export function botAttackDeck(trophies: number): AttackKey[] {
 
 /** 봇전 트로피 규칙 - 서버 finishMatch 와 같다 */
 function trophyDelta(won: boolean): number {
-  return won ? PVP.trophyWin + Math.min(10, meta.pvp.streak * 2) : -Math.min(PVP.trophyLoss, meta.pvp.trophies);
+  return trophyChange(meta.pvp.trophies, meta.pvp.streak, won);
 }
 
 class BotSession implements PvpSession {
@@ -383,7 +385,7 @@ class BotSession implements PvpSession {
     // 덱: 플레이어 덱과 같은 수, 해금 유닛 중 무작위 (레벨은 플레이어 평균 수준)
     const deck = botDeck(this.match.opponent.trophies);
     const avg = botLevel();
-    const game = new Game({ mode: 'pvp', seed: this.match.seed, useResearch: true, research: botResearch(this.match.opponent.trophies), track: false, deck, atkMult: botAtkMult(skill),
+    const game = new Game({ mode: 'pvp', seed: this.match.seed, useResearch: true, research: botResearch(this.match.opponent.trophies), track: false, deck, atkMult: botAtkMult(skill, this.match.opponent.trophies),
       attackDeck: botAttackDeck(this.match.opponent.trophies), unitLevels: Object.fromEntries(deck.map((j) => [j, avg])) });
     this.game = game;
     game.on('attack', (p) => h.onAttack(p));
